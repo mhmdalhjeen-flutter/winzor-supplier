@@ -1,0 +1,247 @@
+/* ================= MODAL ================= */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(6px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 25px;
+  z-index: 9999;
+  animation: fadeIn .25s ease;
+}
+
+.modal-box {
+  width: min(650px, 100%);
+  max-height: 90vh;
+  overflow-y: auto;
+
+  background: #fff;
+  border-radius: 18px;
+  padding: 28px;
+
+  box-shadow:
+      0 20px 45px rgba(0,0,0,.18);
+
+  animation: popUp .25s ease;
+}
+
+.modal-title {
+  margin: 0 0 22px;
+  font-size: 24px;
+  font-weight: 700;
+  color: #1e293b;
+  text-align: center;
+}
+
+/* ================= FORM ================= */
+
+.modal-box label {
+  display: block;
+  margin-bottom: 8px;
+  margin-top: 18px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.modal-box input,
+.modal-box textarea,
+.modal-box select {
+  width: 100%;
+  padding: 12px 14px;
+
+  border: 1px solid #dbe2ea;
+  border-radius: 12px;
+
+  background: #f8fafc;
+  color: #1e293b;
+
+  font-size: 15px;
+
+  transition: .25s;
+}
+
+.modal-box textarea{
+  min-height:110px;
+  resize:vertical;
+}
+
+.modal-box input:focus,
+.modal-box textarea:focus,
+.modal-box select:focus{
+
+  outline:none;
+  border-color:#2563eb;
+
+  background:white;
+
+  box-shadow:0 0 0 4px rgba(37,99,235,.15);
+}
+
+/* ================= Checkbox ================= */
+
+.checkbox-label{
+    display:flex !important;
+    align-items:center;
+    gap:12px;
+
+    margin-top:20px;
+
+    cursor:pointer;
+}
+
+.checkbox-label input{
+
+    width:18px !important;
+    height:18px;
+
+    accent-color:#2563eb;
+}
+
+/* ================= Buttons ================= */
+
+.modal-actions{
+
+    display:flex;
+    justify-content:flex-end;
+    gap:12px;
+
+    margin-top:30px;
+}
+
+.save-btn,
+.cancel-btn{
+
+    border:none;
+    border-radius:12px;
+
+    padding:12px 22px;
+
+    cursor:pointer;
+
+    font-weight:600;
+
+    transition:.25s;
+}
+
+.save-btn{
+
+    background:#2563eb;
+    color:white;
+}
+
+.save-btn:hover{
+
+    background:#1d4ed8;
+    transform:translateY(-2px);
+}
+
+.save-btn:disabled{
+
+    opacity:.7;
+    cursor:not-allowed;
+    transform:none;
+}
+
+.cancel-btn{
+
+    background:#e2e8f0;
+    color:#334155;
+}
+
+.cancel-btn:hover{
+
+    background:#cbd5e1;
+}
+
+/* ================= Error ================= */
+
+.error-text{
+
+    margin-bottom:16px;
+
+    background:#fee2e2;
+
+    color:#dc2626;
+
+    padding:12px;
+
+    border-radius:10px;
+
+    text-align:center;
+
+    font-weight:600;
+}
+
+/* ================= Scroll ================= */
+
+.modal-box::-webkit-scrollbar{
+    width:8px;
+}
+
+.modal-box::-webkit-scrollbar-thumb{
+    background:#cbd5e1;
+    border-radius:20px;
+}
+
+/* ================= Animation ================= */
+
+@keyframes fadeIn{
+
+    from{
+        opacity:0;
+    }
+
+    to{
+        opacity:1;
+    }
+}
+
+@keyframes popUp{
+
+    from{
+
+        opacity:0;
+        transform:translateY(25px) scale(.96);
+
+    }
+
+    to{
+
+        opacity:1;
+        transform:translateY(0) scale(1);
+
+    }
+
+}
+
+/* ================= Mobile ================= */
+
+@media(max-width:768px){
+
+.modal-box{
+
+    padding:20px;
+    border-radius:14px;
+}
+
+.modal-title{
+
+    font-size:20px;
+}
+
+.modal-actions{
+
+    flex-direction:column;
+}
+
+.save-btn,
+.cancel-btn{
+
+    width:100%;
+}
+
+}

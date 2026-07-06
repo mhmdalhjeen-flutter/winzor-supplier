@@ -1,0 +1,220 @@
+.auth-card {
+  width: 100%;
+  max-width: 420px;
+  background: #ffffff;
+  padding: 30px;
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+}
+
+.auth-card h2 {
+  margin-bottom: 8px;
+  color: #1e3a8a;
+}
+
+.auth-card p {
+  font-size: 13px;
+  color: #6b7280;
+  margin-bottom: 20px;
+}
+
+.input-group {
+  margin-bottom: 15px;
+  display: flex;
+  flex-direction: column;
+}
+
+.input-group label {
+  font-size: 12px;
+  margin-bottom: 6px;
+  color: #374151;
+}
+
+.input-group input {
+  padding: 10px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  outline: none;
+  transition: 0.2s;
+}
+
+.input-group input:focus {
+  border-color: #1e3a8a;
+}
+
+.password-box {
+  display: flex;
+  align-items: center;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 0 10px;
+}
+
+.password-box input {
+  flex: 1;
+  border: none;
+  padding: 10px;
+  outline: none;
+}
+
+.password-box span {
+  cursor: pointer;
+  color: #6b7280;
+}
+
+.primary-btn {
+  width: 100%;
+  padding: 12px;
+  background: #1e3a8a;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  margin-top: 10px;
+  transition: 0.2s;
+}
+
+.primary-btn:hover {
+  background: #163170;
+}
+
+.switch-link {
+  text-align: center;
+  margin-top: 12px;
+  font-size: 13px;
+}
+
+.switch-link a {
+  color: #1e3a8a;
+  text-decoration: none;
+  font-weight: bold;
+}
+
+.type-switch {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.type-switch button {
+  flex: 1;
+  padding: 8px;
+  border: 1px solid #e5e7eb;
+  background: #f9fafb;
+  cursor: pointer;
+  border-radius: 8px;
+}
+
+.type-switch .active {
+  background: #1e3a8a;
+  color: white;
+}
+
+.auth-link-row {
+  text-align: center;
+  margin-top: 12px;
+  font-size: 13px;
+}
+
+.auth-link-row a {
+  color: #1e3a8a;
+  text-decoration: none;
+  font-weight: bold;
+}
+
+.auth-btn {
+  width: 100%;
+  padding: 12px;
+  background: #1e3a8a;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  margin-top: 10px;
+}
+
+.hint-box {
+  background: #fef3c7;
+  color: #92400e;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  margin-bottom: 10px;
+}
+
+.auth-card-wide {
+  max-width: 480px;
+}
+
+.hierarchy-select-group {
+  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.hierarchy-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: #374151;
+}
+
+.hierarchy-select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  background: #fff;
+  font-family: inherit;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.hierarchy-select:focus {
+  border-color: #1e3a8a;
+}
+
+.hierarchy-hint {
+  font-size: 12px;
+  color: #6b7280;
+  margin: 0;
+}
+
+.hierarchy-path {
+  font-size: 11px;
+  color: #1e40af;
+  background: #eff6ff;
+  padding: 6px 10px;
+  border-radius: 8px;
+  margin: 0;
+}
+
+.hierarchy-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  color: #b91c1c;
+  background: #fef2f2;
+  padding: 8px 10px;
+  border-radius: 8px;
+}
+
+.hierarchy-error button {
+  border: none;
+  background: #fee2e2;
+  color: #991b1b;
+  padding: 4px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.primary-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}

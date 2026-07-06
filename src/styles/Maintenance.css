@@ -1,0 +1,115 @@
+.maintenance-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: radial-gradient(circle at top, #1e1b4b 0%, #07070f 45%, #050508 100%);
+  position: relative;
+  overflow: hidden;
+  font-family: 'Cairo', sans-serif;
+}
+
+.maintenance-glow {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  pointer-events: none;
+}
+
+.maintenance-glow-a {
+  width: 320px;
+  height: 320px;
+  top: 10%;
+  right: 10%;
+  background: rgba(239, 68, 68, 0.18);
+}
+
+.maintenance-glow-b {
+  width: 280px;
+  height: 280px;
+  bottom: 8%;
+  left: 8%;
+  background: rgba(99, 102, 241, 0.16);
+}
+
+.maintenance-card {
+  position: relative;
+  z-index: 1;
+  width: min(520px, 100%);
+  text-align: center;
+  padding: 40px 28px 32px;
+  border-radius: 28px;
+  background: rgba(15, 15, 25, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(12px);
+}
+
+.maintenance-icon-wrap {
+  width: 88px;
+  height: 88px;
+  margin: 0 auto 20px;
+  border-radius: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.25), rgba(249, 115, 22, 0.2));
+  color: #fca5a5;
+  border: 1px solid rgba(239, 68, 68, 0.25);
+}
+
+.maintenance-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 12px;
+  font-weight: 800;
+  margin-bottom: 16px;
+}
+
+.maintenance-card h1 {
+  margin: 0 0 14px;
+  font-size: clamp(1.4rem, 4vw, 1.85rem);
+  font-weight: 900;
+  color: #fff;
+  line-height: 1.4;
+}
+
+.maintenance-message {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.72);
+  line-height: 1.9;
+  font-size: 0.98rem;
+}
+
+.maintenance-footer {
+  margin-top: 28px;
+  padding-top: 18px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.maintenance-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #f59e0b;
+  box-shadow: 0 0 12px #f59e0b;
+  animation: maintenance-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes maintenance-pulse {
+  0%, 100% { opacity: 0.45; transform: scale(0.9); }
+  50% { opacity: 1; transform: scale(1.15); }
+}
