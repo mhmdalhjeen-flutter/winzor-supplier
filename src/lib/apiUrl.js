@@ -1,8 +1,11 @@
 /** API base — set VITE_API_URL in .env (backend root, e.g. https://winzor.onrender.com) */
+const PRODUCTION_API_ROOT = 'https://winzor.onrender.com';
+
 function normalizeApiBaseUrl(input) {
   const trimmed = String(input || '').trim();
   if (!trimmed) {
-    return import.meta.env.DEV ? 'http://localhost:5000/api' : '';
+    const root = import.meta.env.DEV ? 'http://localhost:5000' : PRODUCTION_API_ROOT;
+    return `${root.replace(/\/+$/, '')}/api`;
   }
   const withoutTrailing = trimmed.replace(/\/+$/, '');
   if (/\/api(?:\/v\d+)?$/i.test(withoutTrailing)) {

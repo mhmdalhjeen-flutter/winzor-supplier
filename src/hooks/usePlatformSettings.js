@@ -16,17 +16,27 @@ const DEFAULTS = {
     spinCost: 5,
     placements: { header: true, userCenter: true, inventory: true },
   },
+  verification: {
+    enforced: false,
+    emailAvailable: false,
+    phoneAvailable: false,
+  },
 };
 
 export function usePlatformSettings() {
   return useQuery({
     queryKey: queryKeys.platformSettings,
     queryFn: async () => {
-      const { data } = await api.get('/settings/public');
-      return { ...DEFAULTS, ...data.settings };
+      try {
+        const { data } = await api.get('/settings/public');
+        return { ...DEFAULTS, ...data.settings };
+      } catch {
+        return DEFAULTS;
+      }
     },
     staleTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false,
+    retry: 1,
   });
 }
 

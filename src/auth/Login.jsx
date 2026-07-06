@@ -11,6 +11,8 @@ import { useEffect } from "react";
 
 export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const [form, setForm] = useState({
@@ -29,21 +31,21 @@ export default function Login() {
     }
 }, [navigate]);
 
-  // 🔥 NEW: نوع الحساب
-  // إذا لاحقًا تريد زر اختيار نضيفه بدون تغيير الشكل
-
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
+    if (error) setError("");
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError("");
 
     if (!form.identifier || !form.password) {
-      alert("يرجى تعبئة جميع الحقول");
+      setError("يرجى تعبئة جميع الحقول");
       return;
     }
 
+    setLoading(true);
     try {
       const res = await login({
         identifier: form.identifier,
@@ -57,7 +59,6 @@ export default function Login() {
 
       const role = data.user.role;
 
-      // 🔥 التوجيه حسب الدور
       if (role === "supplier") {
           navigate("/supplier", { replace: true });
         } else if (role === "store") {
@@ -65,7 +66,11 @@ export default function Login() {
         } 
 
     } catch (err) {
-      alert(err.response?.data?.message || "خطأ في تسجيل الدخول");
+      const message = err.response?.data?.message
+        || (err.code === "ERR_NETWORK" ? "تعذّر الاتصال بالخادم. تحقق من الاتصال أو حاول لاحقاً." : "خطأ في تسجيل الدخول");
+      setError(message);
+    } finally {
+      setLoading(false);
     }
   };
   
@@ -76,12 +81,21 @@ export default function Login() {
         <h2>تسجيل الدخول</h2>
         <p>ادخل رقم الهاتف أو كود التفعيل وكلمة المرور</p>
 
+        {error && (
+          <div className="hint-box" style={{ background: "#fef2f2", color: "#991b1b" }} role="alert">
+            {error}
+          </div>
+        )}
+
         <div className="input-group">
           <label>رقم الهاتف أو كود التفعيل</label>
           <input
             name="identifier"
+            value={form.identifier}
             onChange={handleChange}
             placeholder="0592222222 أو TR-XXXX"
+            disabled={loading}
+            required
           />
         </div>
 
@@ -92,8 +106,11 @@ export default function Login() {
             <input
               type={showPassword ? "text" : "password"}
               name="password"
+              value={form.password}
               onChange={handleChange}
               placeholder="••••••••"
+              disabled={loading}
+              required
             />
 
             <span onClick={() => setShowPassword(!showPassword)}>
@@ -106,12 +123,12 @@ export default function Login() {
           <Link to="/forgot-password">نسيت كلمة المرور؟</Link>
         </div>
 
-        <button type="submit" className="primary-btn">
-          دخول
+        <button type="submit" className="primary-btn" disabled={loading}>
+          {loading ? "جاري الدخول..." : "دخول"}
         </button>
 
         <div className="switch-link">
-          ليس لديك حساب؟ <a href="/register">إنشاء حساب</a>
+          ليس لديك حساب؟ <Link to="/register">إنشاء حساب</Link>
         </div>
       </form>
     </AuthLayout>

@@ -200,7 +200,7 @@ export default function Register() {
         </button>
 
         <div className="switch-link">
-          لديك حساب؟ <a href="/login">تسجيل الدخول</a>
+          لديك حساب؟ <Link to="/login">تسجيل الدخول</Link>
         </div>
       </form>
     </AuthLayout>
