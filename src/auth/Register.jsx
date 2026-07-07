@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import AuthLayout from "../layouts/AuthLayout";
 import "../styles/auth.css";
 import { register } from "../services/auth.service";
