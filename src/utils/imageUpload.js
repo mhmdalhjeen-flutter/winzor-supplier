@@ -34,7 +34,7 @@ export async function uploadImage(file) {
   return data.url;
 }
 
-export async function fileToOptimizedDataUrl(file, { maxWidth = 1200, quality = 0.82, thumbnail = false } = {}) {
+export async function fileToOptimizedDataUrl(file, { maxWidth = 1600, quality = 0.8, thumbnail = false } = {}) {
   if (!file) throw new Error('لم تُختر صورة');
   if (!file.type?.startsWith('image/')) throw new Error('ملف غير صالح');
 

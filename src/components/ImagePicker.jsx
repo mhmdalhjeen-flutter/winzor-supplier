@@ -3,7 +3,6 @@ import { fileToOptimizedDataUrl } from '../utils/imageUpload';
 
 const pickOptimized = async (file) => {
   if (!file) throw new Error('لم تُختر صورة');
-  if (file.size > 600_000) throw new Error('حجم الصورة كبير — الحد 600KB');
   return fileToOptimizedDataUrl(file);
 };
 

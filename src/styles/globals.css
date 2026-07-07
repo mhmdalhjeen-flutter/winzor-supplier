@@ -38,20 +38,3 @@ textarea {
 .card-box:hover {
   transform: translateY(-3px);
 }
-@media (max-width: 768px) {
-  .dashboard {
-    flex-direction: column;
-  }
-
-  .sidebar {
-    flex-direction: row;
-    width: 100%;
-    justify-content: space-around;
-  }
-
-  .sidebar a {
-    font-size: 12px;
-    flex-direction: column;
-    gap: 5px;
-  }
-}
