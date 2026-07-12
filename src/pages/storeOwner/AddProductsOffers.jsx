@@ -4,6 +4,8 @@ import api from '../../services/api';
 import ImagePicker from '../../components/ImagePicker';
 import { FormNoticeToast, FormRulesPopup, useFormNotice } from '../../components/FormNotice';
 import { OFFER_TYPE_OPTIONS } from '../../utils/offerPricing';
+import PriceCurrencyInput from '../../components/PriceCurrencyInput';
+import { DEFAULT_CURRENCY } from '../../utils/currency';
 import '../../styles/AddProductsOffers.css';
 
 const PRODUCT_RULES = [
@@ -26,6 +28,7 @@ const OFFER_RULES = [
 const EMPTY_PRODUCT = {
   name: '',
   price: '',
+  currency: DEFAULT_CURRENCY,
   image: '',
   description: '',
   freeDelivery: 'no',
@@ -34,6 +37,7 @@ const EMPTY_PRODUCT = {
 const EMPTY_OFFER = {
   title: '',
   offerType: 'discount',
+  currency: DEFAULT_CURRENCY,
   originalPrice: '',
   value: '',
   finalPrice: '',
@@ -64,6 +68,7 @@ export default function AddProductsOffers() {
           originalPrice: offer.originalPrice,
           value: offer.value,
           finalPrice: offer.finalPrice,
+          currency: offer.currency,
         });
         if (!cancelled) setPricingPreview(data);
       } catch {
@@ -75,7 +80,7 @@ export default function AddProductsOffers() {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [tab, offer.offerType, offer.originalPrice, offer.value, offer.finalPrice]);
+  }, [tab, offer.offerType, offer.originalPrice, offer.value, offer.finalPrice, offer.currency]);
 
   const previewPricing = pricingPreview?.pricing;
   const previewValid = pricingPreview?.valid === true;
@@ -101,6 +106,7 @@ export default function AddProductsOffers() {
       await api.post('/products', {
         name: product.name.trim(),
         price: Number(product.price),
+        currency: product.currency || DEFAULT_CURRENCY,
         image: product.image,
         description: product.description.trim(),
         freeDelivery: product.freeDelivery === 'yes',
@@ -141,6 +147,7 @@ export default function AddProductsOffers() {
         originalPrice: offer.originalPrice !== '' ? Number(offer.originalPrice) : undefined,
         value: offer.value !== '' ? Number(offer.value) : undefined,
         finalPrice: offer.offerType === 'custom' ? Number(offer.finalPrice) : previewPricing.finalPrice,
+        currency: offer.currency || DEFAULT_CURRENCY,
         image: offer.image,
         description: offer.description.trim(),
         freeDelivery: offer.freeDelivery === 'yes',
@@ -164,7 +171,7 @@ export default function AddProductsOffers() {
               type="number"
               min="0"
               step="any"
-              placeholder="السعر الأصلي (₪) *"
+              placeholder="السعر الأصلي *"
               value={offer.originalPrice}
               onChange={(e) => setOffer({ ...offer, originalPrice: e.target.value })}
               required
@@ -188,7 +195,7 @@ export default function AddProductsOffers() {
               type="number"
               min="0"
               step="any"
-              placeholder="السعر القديم (₪)"
+              placeholder="السعر القديم"
               value={offer.originalPrice}
               onChange={(e) => setOffer({ ...offer, originalPrice: e.target.value })}
             />
@@ -196,7 +203,7 @@ export default function AddProductsOffers() {
               type="number"
               min="0"
               step="any"
-              placeholder="السعر الجديد (₪) *"
+              placeholder="السعر الجديد *"
               value={offer.value}
               onChange={(e) => setOffer({ ...offer, value: e.target.value })}
               required
@@ -210,7 +217,7 @@ export default function AddProductsOffers() {
               type="number"
               min="0"
               step="any"
-              placeholder="السعر الأصلي (₪) *"
+              placeholder="السعر الأصلي *"
               value={offer.originalPrice}
               onChange={(e) => setOffer({ ...offer, originalPrice: e.target.value })}
               required
@@ -219,7 +226,7 @@ export default function AddProductsOffers() {
               type="number"
               min="0"
               step="any"
-              placeholder="قيمة الخصم (₪) *"
+              placeholder="قيمة الخصم *"
               value={offer.value}
               onChange={(e) => setOffer({ ...offer, value: e.target.value })}
               required
@@ -233,7 +240,7 @@ export default function AddProductsOffers() {
             type="number"
             min="0"
             step="any"
-            placeholder="سعر الشراء (₪) *"
+            placeholder="سعر الشراء *"
             value={offer.originalPrice}
             onChange={(e) => setOffer({ ...offer, originalPrice: e.target.value })}
             required
@@ -245,7 +252,7 @@ export default function AddProductsOffers() {
             type="number"
             min="0"
             step="any"
-            placeholder="السعر النهائي (₪) *"
+            placeholder="السعر النهائي *"
             value={offer.finalPrice}
             onChange={(e) => setOffer({ ...offer, finalPrice: e.target.value })}
             required
@@ -292,14 +299,15 @@ export default function AddProductsOffers() {
             required
           />
 
-          <label className="field-label">2. السعر (₪) *</label>
-          <input
-            type="number"
-            min="0"
-            step="any"
-            value={product.price}
-            onChange={(e) => setProduct({ ...product, price: e.target.value })}
+          <label className="field-label">2. السعر *</label>
+          <PriceCurrencyInput
+            price={product.price}
+            currency={product.currency}
+            onPriceChange={(value) => setProduct({ ...product, price: value })}
+            onCurrencyChange={(value) => setProduct({ ...product, currency: value })}
+            pricePlaceholder="السعر"
             required
+            className="price-currency-row"
           />
 
           <ImagePicker
@@ -349,7 +357,17 @@ export default function AddProductsOffers() {
             ))}
           </select>
 
-          <div className="type-fields">{renderOfferFields()}</div>
+          <div className="type-fields">
+            <label className="field-label">العملة</label>
+            <PriceCurrencyInput
+              currency={offer.currency}
+              onPriceChange={() => {}}
+              onCurrencyChange={(value) => setOffer({ ...offer, currency: value })}
+              currencyOnly
+              className="price-currency-row currency-only-row"
+            />
+            {renderOfferFields()}
+          </div>
 
           {previewValid && previewPricing?.finalPrice != null && offer.offerType !== 'custom' && (
             <div className="final-price-box">
@@ -358,7 +376,7 @@ export default function AddProductsOffers() {
                   {previewPricing.displayOld}
                 </span>
               )}
-              السعر النهائي: <strong>{previewPricing.displayNew || `${previewPricing.finalPrice} ₪`}</strong>
+              السعر النهائي: <strong>{previewPricing.displayNew || `${previewPricing.finalPrice}`}</strong>
             </div>
           )}
 

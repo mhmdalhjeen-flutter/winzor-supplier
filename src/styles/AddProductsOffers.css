@@ -361,3 +361,19 @@
 .hidden-input {
   display: none;
 }
+
+.price-currency-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+}
+
+.price-currency-row input,
+.price-currency-row select {
+  width: 100%;
+}
+
+.currency-only-row {
+  grid-template-columns: 1fr;
+  max-width: 180px;
+}

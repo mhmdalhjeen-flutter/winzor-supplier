@@ -4,6 +4,8 @@ import api from "../services/api";
 import "../styles/dashboard.css";
 import "../styles/MyStore.css";
 import OfferPriceDisplay from "../components/OfferPriceDisplay";
+import PriceCurrencyInput from "../components/PriceCurrencyInput";
+import { formatPrice, DEFAULT_CURRENCY } from "../utils/currency";
 import { queryKeys } from "../lib/queryClient";
 import { unwrapList } from "../utils/unwrapList";
 import LightLoadingHint from "../shared/LightLoadingHint";
@@ -86,6 +88,7 @@ export default function MyStore() {
         name: item.name || "",
         description: item.description || "",
         price: item.price || "",
+        currency: item.currency || DEFAULT_CURRENCY,
         image: item.image || "",
         isWholesale: item.isWholesale || false,
       });
@@ -95,6 +98,7 @@ export default function MyStore() {
         description: item.description || "",
         offerType: item.offerType || "discount",
         value: item.value || "",
+        currency: item.currency || DEFAULT_CURRENCY,
         image: item.image || "",
       });
     }
@@ -158,7 +162,7 @@ export default function MyStore() {
                   <h3>{item.name || item.title}</h3>
 
                   {view === "products" ? (
-                    <p className="price-tag">{item.price} ₪</p>
+                    <p className="price-tag">{formatPrice(item.price, item.currency)}</p>
                   ) : (
                     <OfferPriceDisplay offer={item} />
                   )}
@@ -204,12 +208,13 @@ export default function MyStore() {
                   value={editForm.description}
                   onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
                 />
-                <label>السعر (₪)</label>
-                <input
-                  type="number"
-                  step="any"
-                  value={editForm.price}
-                  onChange={(e) => setEditForm({ ...editForm, price: e.target.value })}
+                <label>السعر</label>
+                <PriceCurrencyInput
+                  price={editForm.price}
+                  currency={editForm.currency}
+                  onPriceChange={(value) => setEditForm({ ...editForm, price: value })}
+                  onCurrencyChange={(value) => setEditForm({ ...editForm, currency: value })}
+                  className="price-currency-row"
                 />
                 <label>رابط الصورة</label>
                 <input
@@ -249,12 +254,20 @@ export default function MyStore() {
                 </select>
                 {(editForm.offerType === "discount" || editForm.offerType === "fixed_price") && (
                   <>
-                    <label>{editForm.offerType === "discount" ? `\u0646\u0633\u0628\u0629 \u0627\u0644\u062E\u0635\u0645 %` : "السعر (₪)"}</label>
+                    <label>{editForm.offerType === "discount" ? `\u0646\u0633\u0628\u0629 \u0627\u0644\u062E\u0635\u0645 %` : "القيمة / السعر"}</label>
                     <input
                       type="number"
                       step="any"
                       value={editForm.value}
                       onChange={(e) => setEditForm({ ...editForm, value: e.target.value })}
+                    />
+                    <label>العملة</label>
+                    <PriceCurrencyInput
+                      currency={editForm.currency}
+                      onPriceChange={() => {}}
+                      onCurrencyChange={(value) => setEditForm({ ...editForm, currency: value })}
+                      currencyOnly
+                      className="price-currency-row currency-only-row"
                     />
                   </>
                 )}
