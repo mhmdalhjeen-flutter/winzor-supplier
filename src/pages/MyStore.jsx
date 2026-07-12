@@ -207,6 +207,7 @@ export default function MyStore() {
                 <label>السعر (₪)</label>
                 <input
                   type="number"
+                  step="any"
                   value={editForm.price}
                   onChange={(e) => setEditForm({ ...editForm, price: e.target.value })}
                 />
@@ -251,6 +252,7 @@ export default function MyStore() {
                     <label>{editForm.offerType === "discount" ? `\u0646\u0633\u0628\u0629 \u0627\u0644\u062E\u0635\u0645 %` : "السعر (₪)"}</label>
                     <input
                       type="number"
+                      step="any"
                       value={editForm.value}
                       onChange={(e) => setEditForm({ ...editForm, value: e.target.value })}
                     />

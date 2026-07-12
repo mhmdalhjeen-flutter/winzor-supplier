@@ -163,6 +163,7 @@ export default function AddProductsOffers() {
             <input
               type="number"
               min="0"
+              step="any"
               placeholder="السعر الأصلي (₪) *"
               value={offer.originalPrice}
               onChange={(e) => setOffer({ ...offer, originalPrice: e.target.value })}
@@ -172,6 +173,7 @@ export default function AddProductsOffers() {
               type="number"
               min="0"
               max="100"
+              step="any"
               placeholder="نسبة الخصم % *"
               value={offer.value}
               onChange={(e) => setOffer({ ...offer, value: e.target.value })}
@@ -185,6 +187,7 @@ export default function AddProductsOffers() {
             <input
               type="number"
               min="0"
+              step="any"
               placeholder="السعر القديم (₪)"
               value={offer.originalPrice}
               onChange={(e) => setOffer({ ...offer, originalPrice: e.target.value })}
@@ -192,6 +195,7 @@ export default function AddProductsOffers() {
             <input
               type="number"
               min="0"
+              step="any"
               placeholder="السعر الجديد (₪) *"
               value={offer.value}
               onChange={(e) => setOffer({ ...offer, value: e.target.value })}
@@ -205,6 +209,7 @@ export default function AddProductsOffers() {
             <input
               type="number"
               min="0"
+              step="any"
               placeholder="السعر الأصلي (₪) *"
               value={offer.originalPrice}
               onChange={(e) => setOffer({ ...offer, originalPrice: e.target.value })}
@@ -213,6 +218,7 @@ export default function AddProductsOffers() {
             <input
               type="number"
               min="0"
+              step="any"
               placeholder="قيمة الخصم (₪) *"
               value={offer.value}
               onChange={(e) => setOffer({ ...offer, value: e.target.value })}
@@ -226,6 +232,7 @@ export default function AddProductsOffers() {
           <input
             type="number"
             min="0"
+            step="any"
             placeholder="سعر الشراء (₪) *"
             value={offer.originalPrice}
             onChange={(e) => setOffer({ ...offer, originalPrice: e.target.value })}
@@ -237,6 +244,7 @@ export default function AddProductsOffers() {
           <input
             type="number"
             min="0"
+            step="any"
             placeholder="السعر النهائي (₪) *"
             value={offer.finalPrice}
             onChange={(e) => setOffer({ ...offer, finalPrice: e.target.value })}
@@ -288,6 +296,7 @@ export default function AddProductsOffers() {
           <input
             type="number"
             min="0"
+            step="any"
             value={product.price}
             onChange={(e) => setProduct({ ...product, price: e.target.value })}
             required
