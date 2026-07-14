@@ -1,18 +1,18 @@
+/**
+ * Demo / reference widget — same Cloudinary pipeline as ImagePicker.
+ * Prefer ImagePicker in product screens.
+ */
 import { useState } from 'react';
 import { uploadImage } from '../utils/imageUpload';
 
-/**
- * مثال على رفع صورة إلى Cloudinary: اختيار ملف → رفع → حفظ URL.
- */
 export default function CloudinaryImageUpload({ label = 'رفع صورة', onChange, onError }) {
   const [imageUrl, setImageUrl] = useState('');
   const [uploading, setUploading] = useState(false);
 
-  const handleFileChange = async (event) => {
-    const file = event.target.files?.[0];
-    event.target.value = '';
+  const handleFileChange = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
     if (!file) return;
-
     setUploading(true);
     try {
       const url = await uploadImage(file);
@@ -20,7 +20,8 @@ export default function CloudinaryImageUpload({ label = 'رفع صورة', onCha
       onChange?.(url);
     } catch (err) {
       const message = err.message || 'فشل رفع الصورة';
-      onError?.(message);
+      if (onError) onError(message);
+      else alert(message);
     } finally {
       setUploading(false);
     }

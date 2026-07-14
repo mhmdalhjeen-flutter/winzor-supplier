@@ -1,19 +1,18 @@
-const readFileAsDataUrl = (file) =>
-  new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = () => reject(new Error('تعذّر قراءة الصورة'));
-    reader.readAsDataURL(file);
-  });
-
 import { API_URL } from '../lib/apiUrl';
 
 const getUploadImageUrl = () => `${API_URL}/upload/image`;
 
-/** يرفع ملف صورة إلى Cloudinary عبر الباكند ويعيد رابط URL. */
+/**
+ * Canonical upload path (React + Flutter share this contract):
+ * File → POST /api/upload/image → Cloudinary → HTTPS URL → save URL in MongoDB.
+ */
 export async function uploadImage(file) {
   if (!file) throw new Error('لم تُختر صورة');
   if (!file.type?.startsWith('image/')) throw new Error('ملف غير صالح');
+  const allowed = new Set(['image/jpeg', 'image/png', 'image/webp']);
+  if (!allowed.has(file.type)) {
+    throw new Error('نوع الملف غير مسموح — jpg, png, webp فقط');
+  }
 
   const formData = new FormData();
   formData.append('image', file);
@@ -34,46 +33,14 @@ export async function uploadImage(file) {
   return data.url;
 }
 
-export async function fileToOptimizedDataUrl(file, { maxWidth = 1600, quality = 0.8, thumbnail = false } = {}) {
-  if (!file) throw new Error('لم تُختر صورة');
-  if (!file.type?.startsWith('image/')) throw new Error('ملف غير صالح');
-
-  if (file.type === 'image/gif' || file.type === 'image/svg+xml') {
-    return readFileAsDataUrl(file);
+/** Upload multiple images; returns HTTPS URLs in order. */
+export async function uploadImages(files) {
+  const list = Array.from(files || []).filter(Boolean);
+  const urls = [];
+  for (const file of list) {
+    urls.push(await uploadImage(file));
   }
-  if (file.type === 'image/webp' && file.size < 120_000) {
-    return readFileAsDataUrl(file);
-  }
-
-  const widthLimit = thumbnail ? 320 : maxWidth;
-  let bitmap;
-  try {
-    bitmap = await createImageBitmap(file);
-  } catch {
-    return readFileAsDataUrl(file);
-  }
-
-  const scale = Math.min(1, widthLimit / bitmap.width);
-  const w = Math.max(1, Math.round(bitmap.width * scale));
-  const h = Math.max(1, Math.round(bitmap.height * scale));
-  const canvas = document.createElement('canvas');
-  canvas.width = w;
-  canvas.height = h;
-  canvas.getContext('2d').drawImage(bitmap, 0, 0, w, h);
-  bitmap.close?.();
-
-  const toBlob = (type) =>
-    new Promise((resolve, reject) => {
-      canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error('تعذّر ضغط الصورة'))), type, quality);
-    });
-
-  try {
-    const blob = await toBlob('image/webp');
-    return readFileAsDataUrl(blob);
-  } catch {
-    const blob = await toBlob('image/jpeg');
-    return readFileAsDataUrl(blob);
-  }
+  return urls;
 }
 
-export default fileToOptimizedDataUrl;
+export default uploadImage;

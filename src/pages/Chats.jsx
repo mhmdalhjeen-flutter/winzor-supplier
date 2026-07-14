@@ -7,14 +7,12 @@ import ReferencedItemsBar from '../components/ReferencedItemsBar';
 import { getChatItemPath, getReferencedItems } from '../utils/chatItemRoutes';
 import { getStoredUser } from '../utils/safeStorage';
 import { getUnreadCountForUser } from '../utils/unreadCount';
-import { fileToOptimizedDataUrl } from '../utils/imageUpload';
+import { uploadImage } from '../utils/imageUpload';
 import { API_URL } from '../lib/apiUrl';
 
 const API = API_URL;
 const POLL_MS = 3000;
 const WARN_KEY = "chatExpiryWarned";
-
-const toBase64 = (file) => fileToOptimizedDataUrl(file, { maxWidth: 800 });
 
 export default function Chats() {
     const navigate = useNavigate();
@@ -155,9 +153,13 @@ export default function Chats() {
         if (!file) return;
         if (file.size > 5 * 1024 * 1024)
             return alert("الصورة أكبر من 5MB");
-        const base64 = await toBase64(file);
-        setImageFile(base64);
-        setImagePreview(base64);
+        try {
+            const url = await uploadImage(file);
+            setImageFile(url);
+            setImagePreview(url);
+        } catch (err) {
+            alert(err.message || "فشل رفع الصورة");
+        }
     };
 
     // ===== إرسال رسالة =====
@@ -276,10 +278,10 @@ export default function Chats() {
             )}
 
             {/* inputs مخفية للصور */}
-            <input ref={fileInputRef} type="file" accept="image/*"
+            <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp"
                 style={{ display:"none" }}
                 onChange={e => handleImageSelect(e.target.files[0])} />
-            <input ref={cameraInputRef} type="file" accept="image/*" capture="environment"
+            <input ref={cameraInputRef} type="file" accept="image/jpeg,image/png,image/webp" capture="environment"
                 style={{ display:"none" }}
                 onChange={e => handleImageSelect(e.target.files[0])} />
 
