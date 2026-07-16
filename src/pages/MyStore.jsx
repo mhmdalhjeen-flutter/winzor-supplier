@@ -5,6 +5,7 @@ import "../styles/dashboard.css";
 import "../styles/MyStore.css";
 import OfferPriceDisplay from "../components/OfferPriceDisplay";
 import PriceCurrencyInput from "../components/PriceCurrencyInput";
+import ImagePicker from "../components/ImagePicker";
 import { formatPrice, DEFAULT_CURRENCY } from "../utils/currency";
 import { queryKeys } from "../lib/queryClient";
 import { unwrapList } from "../utils/unwrapList";
@@ -216,10 +217,11 @@ export default function MyStore() {
                   onCurrencyChange={(value) => setEditForm({ ...editForm, currency: value })}
                   className="price-currency-row"
                 />
-                <label>رابط الصورة</label>
-                <input
+                <ImagePicker
+                  label="صورة المنتج"
                   value={editForm.image}
-                  onChange={(e) => setEditForm({ ...editForm, image: e.target.value })}
+                  onChange={(url) => setEditForm({ ...editForm, image: url })}
+                  onError={(msg) => setEditError(msg)}
                 />
                 <label className="checkbox-label">
                   <input
@@ -271,10 +273,11 @@ export default function MyStore() {
                     />
                   </>
                 )}
-                <label>رابط الصورة</label>
-                <input
+                <ImagePicker
+                  label="صورة العرض"
                   value={editForm.image}
-                  onChange={(e) => setEditForm({ ...editForm, image: e.target.value })}
+                  onChange={(url) => setEditForm({ ...editForm, image: url })}
+                  onError={(msg) => setEditError(msg)}
                 />
               </>
             )}
