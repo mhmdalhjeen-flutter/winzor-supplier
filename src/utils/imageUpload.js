@@ -1,21 +1,39 @@
 import { API_URL } from '../lib/apiUrl';
+import { optimizeImageFile } from './optimizeImageFile';
 
 const getUploadImageUrl = () => `${API_URL}/upload/image`;
 
-/**
- * Canonical upload path (React + Flutter share this contract):
- * File → POST /api/upload/image → Cloudinary → HTTPS URL → save URL in MongoDB.
- */
-export async function uploadImage(file) {
+const MAX_BYTES = 5 * 1024 * 1024;
+const ALLOWED_MIME = new Set(['image/jpeg', 'image/png', 'image/webp']);
+const ALLOWED_EXT = new Set(['jpg', 'jpeg', 'png', 'webp']);
+
+function assertValidImageFile(file) {
   if (!file) throw new Error('لم تُختر صورة');
   if (!file.type?.startsWith('image/')) throw new Error('ملف غير صالح');
-  const allowed = new Set(['image/jpeg', 'image/png', 'image/webp']);
-  if (!allowed.has(file.type)) {
-    throw new Error('نوع الملف غير مسموح — jpg, png, webp فقط');
+  if (!ALLOWED_MIME.has(file.type)) {
+    throw new Error('نوع الملف غير مسموح — jpg, jpeg, png, webp فقط');
   }
+  const ext = file.name?.split('.').pop()?.toLowerCase();
+  if (ext && !ALLOWED_EXT.has(ext)) {
+    throw new Error('نوع الملف غير مسموح — jpg, jpeg, png, webp فقط');
+  }
+  if (file.size > MAX_BYTES) {
+    throw new Error('حجم الصورة كبير جداً — الحد الأقصى 5 ميجابايت');
+  }
+}
+
+/**
+ * Canonical upload path (React + Flutter share this contract):
+ * File → optimize → POST /api/upload/image → Cloudinary → HTTPS URL → save URL in MongoDB.
+ */
+export async function uploadImage(file) {
+  assertValidImageFile(file);
+
+  const optimized = await optimizeImageFile(file);
+  assertValidImageFile(optimized);
 
   const formData = new FormData();
-  formData.append('image', file);
+  formData.append('image', optimized);
 
   const response = await fetch(getUploadImageUrl(), {
     method: 'POST',

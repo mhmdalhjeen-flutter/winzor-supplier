@@ -2,9 +2,8 @@ import { useRef, useState } from 'react';
 import { uploadImage } from '../utils/imageUpload';
 
 /**
- * اختيار صورة: كاميرا | جهاز | رابط
- * Files upload via Cloudinary (POST /api/upload/image) → HTTPS URL.
- * Pasted https URLs pass through unchanged.
+ * اختيار صورة من الجهاز أو الكاميرا فقط.
+ * الرفع عبر Cloudinary (POST /api/upload/image) → HTTPS URL.
  */
 export default function ImagePicker({ label, value, onChange, onError, required = false }) {
   const fileRef = useRef(null);
@@ -53,18 +52,8 @@ export default function ImagePicker({ label, value, onChange, onError, required 
 
       {uploading && <p className="image-uploading">جاري رفع الصورة...</p>}
 
-      <input
-        type="url"
-        placeholder="أو الصق رابط الصورة"
-        value={value?.startsWith('http') ? value : ''}
-        onChange={(e) => onChange(e.target.value.trim())}
-        dir="ltr"
-        className="url-input"
-        disabled={uploading}
-      />
-
-      <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden-input" onChange={pickFile} />
-      <input ref={cameraRef} type="file" accept="image/jpeg,image/png,image/webp" capture="environment" className="hidden-input" onChange={pickFile} />
+      <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp" className="hidden-input" onChange={pickFile} />
+      <input ref={cameraRef} type="file" accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp" capture="environment" className="hidden-input" onChange={pickFile} />
     </div>
   );
 }
