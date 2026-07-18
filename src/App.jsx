@@ -1,5 +1,5 @@
 import { Suspense, lazy } from "react";
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 
 import DashboardLayout from "./layouts/DashboardLayout";
 import ProtectedRoute from "./routes/ProtectedRoute";
@@ -15,6 +15,8 @@ import useMaintenanceMode from "./hooks/useMaintenanceMode";
 import LightLoadingHint from "./shared/LightLoadingHint";
 import PwaHost from "./components/pwa/PwaHost";
 import PwaShortcutHandler from "./components/pwa/PwaShortcutHandler";
+import BrandSplashGate from "./components/BrandSplashGate";
+import { PwaInstallProvider } from "./context/PwaInstallContext";
 
 const DashboardHome = lazy(() => import("./pages/storeOwner/DashboardHome"));
 const MyStore = lazy(() => import("./pages/MyStore"));
@@ -39,8 +41,12 @@ const LazyPage = ({ children }) => (
 );
 
 function MerchantApp() {
+  const location = useLocation();
+  const splashActive = /^\/(store|supplier)\/?$/.test(location.pathname);
+
   return (
-    <Routes>
+    <BrandSplashGate active={splashActive}>
+      <Routes>
       {/* AUTH */}
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
@@ -107,7 +113,8 @@ function MerchantApp() {
       </Route>
 
       <Route path="*" element={<Navigate to="/login" />} />
-    </Routes>
+      </Routes>
+    </BrandSplashGate>
   );
 }
 
@@ -124,10 +131,10 @@ export default function App() {
   }
 
   return (
-    <>
+    <PwaInstallProvider>
       <PwaShortcutHandler />
       <MerchantApp />
       <PwaHost />
-    </>
+    </PwaInstallProvider>
   );
 }

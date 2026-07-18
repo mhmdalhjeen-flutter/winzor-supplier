@@ -105,3 +105,351 @@
   color: #6b7280;
   cursor: pointer;
 }
+
+/* PWA install card */
+.pwa-install-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9100;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 0.75rem;
+  padding-bottom: calc(0.85rem + env(safe-area-inset-bottom, 0px));
+}
+
+@media (min-width: 640px) {
+  .pwa-install-overlay {
+    align-items: center;
+    padding: 1.5rem;
+  }
+}
+
+.pwa-install-overlay__backdrop {
+  position: absolute;
+  inset: 0;
+  border: none;
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(4px);
+  cursor: pointer;
+}
+
+.pwa-install-card {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 24rem);
+  padding: 1.25rem 1.15rem 1.1rem;
+  border-radius: 1.35rem;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.22);
+  animation: pwa-card-in 0.32s ease;
+}
+
+@keyframes pwa-card-in {
+  from { opacity: 0; transform: translateY(16px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.pwa-install-card__close {
+  position: absolute;
+  top: 0.65rem;
+  left: 0.65rem;
+  width: 2rem;
+  height: 2rem;
+  border: none;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  color: #9ca3af;
+  background: #f3f4f6;
+  cursor: pointer;
+}
+
+.pwa-install-card__hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.65rem;
+  margin-bottom: 0.85rem;
+}
+
+.pwa-install-card__phone {
+  width: 5.5rem;
+  height: 9rem;
+  border-radius: 1.1rem;
+  border: 3px solid #111827;
+  background: #f9fafb;
+  position: relative;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.15);
+}
+
+.pwa-install-card__phone-notch {
+  width: 2rem;
+  height: 0.35rem;
+  border-radius: 999px;
+  background: #111827;
+  margin: 0.35rem auto 0;
+}
+
+.pwa-install-card__phone-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  height: calc(100% - 0.85rem);
+  padding: 0.5rem;
+}
+
+.pwa-install-card__logo {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 0.75rem;
+  object-fit: contain;
+}
+
+.pwa-install-card__phone-label {
+  font-size: 0.62rem;
+  font-weight: 900;
+  color: #374151;
+}
+
+.pwa-install-card__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 900;
+  color: #2563eb;
+  background: #eff6ff;
+}
+
+.pwa-install-card__title {
+  margin: 0 0 0.35rem;
+  text-align: center;
+  font-size: 1.12rem;
+  font-weight: 900;
+  color: #111827;
+}
+
+.pwa-install-card__desc {
+  margin: 0 0 0.85rem;
+  text-align: center;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #6b7280;
+}
+
+.pwa-install-card__benefits {
+  list-style: none;
+  margin: 0 0 1rem;
+  padding: 0;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.pwa-install-card__benefits li {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: #374151;
+}
+
+.pwa-install-card__check {
+  color: #059669;
+  font-weight: 900;
+}
+
+.pwa-install-card__benefit-icon {
+  color: #9ca3af;
+  flex-shrink: 0;
+}
+
+.pwa-install-card__actions {
+  display: grid;
+  grid-template-columns: 1fr 1.35fr;
+  gap: 0.55rem;
+}
+
+.pwa-install-card__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  border: none;
+  border-radius: 0.85rem;
+  padding: 0.7rem 0.85rem;
+  font-size: 0.82rem;
+  font-weight: 900;
+  font-family: inherit;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.pwa-install-card__btn:active {
+  transform: scale(0.98);
+}
+
+.pwa-install-card__btn--ghost {
+  color: #6b7280;
+  background: #f3f4f6;
+}
+
+.pwa-install-card__btn--primary {
+  color: #fff;
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.22);
+}
+
+.pwa-install-card__btn:disabled {
+  opacity: 0.75;
+  cursor: wait;
+}
+
+.pwa-tutorial-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.pwa-tutorial-card {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 22rem);
+  padding: 1.15rem 1rem 1rem;
+  border-radius: 1.35rem;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.22);
+  animation: pwa-card-in 0.32s ease;
+}
+
+.pwa-tutorial-illustration {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 0.85rem;
+}
+
+.pwa-tutorial-illustration__home {
+  position: relative;
+  width: 11rem;
+  height: 8.5rem;
+  border-radius: 1rem;
+  background: linear-gradient(180deg, #f8fafc 0%, #eff6ff 100%);
+  border: 1px solid #e2e8f0;
+}
+
+.pwa-tutorial-illustration__icons-row {
+  position: absolute;
+  top: 0.55rem;
+  left: 0.55rem;
+  right: 0.55rem;
+  display: flex;
+  justify-content: space-between;
+  opacity: 0.35;
+}
+
+.pwa-tutorial-illustration__mini-icon {
+  width: 1.35rem;
+  height: 1.35rem;
+  border-radius: 0.35rem;
+  background: #fff;
+  display: grid;
+  place-items: center;
+}
+
+.pwa-tutorial-illustration__app-icon {
+  position: absolute;
+  left: 50%;
+  bottom: 1.1rem;
+  transform: translateX(-50%);
+  width: 3.1rem;
+  height: 3.1rem;
+  border-radius: 0.85rem;
+  background: #fff;
+  border: 2px solid #2563eb;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.14);
+}
+
+.pwa-tutorial-illustration__app-icon img {
+  width: 2.2rem;
+  height: 2.2rem;
+  border-radius: 0.55rem;
+  object-fit: contain;
+}
+
+.pwa-tutorial-illustration__press-hint {
+  position: absolute;
+  left: 50%;
+  bottom: 4.55rem;
+  transform: translateX(-50%);
+  font-size: 0.62rem;
+  font-weight: 900;
+  color: #2563eb;
+  white-space: nowrap;
+}
+
+.pwa-tutorial-illustration__menu {
+  position: absolute;
+  left: 50%;
+  bottom: 4.7rem;
+  transform: translateX(-50%);
+  min-width: 7.5rem;
+  padding: 0.35rem;
+  border-radius: 0.65rem;
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
+}
+
+.pwa-tutorial-illustration__menu-item {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.28rem 0.4rem;
+  font-size: 0.62rem;
+  font-weight: 800;
+  color: #374151;
+}
+
+.pwa-tutorial-card__title {
+  margin: 0 0 0.35rem;
+  text-align: center;
+  font-size: 1.05rem;
+  font-weight: 900;
+  color: #111827;
+}
+
+.pwa-tutorial-card__body {
+  margin: 0 0 0.55rem;
+  text-align: center;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #4b5563;
+  line-height: 1.45;
+}
+
+.pwa-tutorial-list {
+  margin: 0 0 0.85rem;
+  padding: 0 0.75rem;
+  list-style: none;
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: #374151;
+  line-height: 1.55;
+}
+
+.pwa-tutorial-card__ok {
+  width: 100%;
+}

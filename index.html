@@ -3,12 +3,105 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="google" content="notranslate" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>لوحة المحل والمورد</title>
+    <meta name="theme-color" content="#2563eb" />
+    <meta name="color-scheme" content="light" />
+
+    <title>Win Gold | لوحة المحل والمورد</title>
+    <meta
+      name="description"
+      content="Win Gold — إدارة المنتجات والعروض والطلبيات لأصحاب المتاجر والموردين."
+    />
+    <meta name="application-name" content="Win Gold" />
+    <meta name="robots" content="noindex, nofollow" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Win Gold" />
+    <meta property="og:locale" content="ar_PS" />
+    <meta property="og:title" content="Win Gold | لوحة المحل والمورد" />
+    <meta
+      property="og:description"
+      content="إدارة المنتجات والعروض والطلبيات لأصحاب المتاجر والموردين."
+    />
+    <meta property="og:image" content="/og-image.webp?v=3" />
+    <meta property="og:image:alt" content="Win Gold — لوحة المحل والمورد" />
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Win Gold | لوحة المحل والمورد" />
+    <meta
+      name="twitter:description"
+      content="إدارة المنتجات والعروض والطلبيات لأصحاب المتاجر والموردين."
+    />
+    <meta name="twitter:image" content="/og-image.webp?v=3" />
+
+    <link rel="icon" href="/brand/favicon.ico?v=3" sizes="any" />
+    <link rel="icon" type="image/webp" href="/brand/logo-64.webp?v=3" sizes="64x64" />
+    <link rel="apple-touch-icon" href="/brand/logo-256.webp?v=3" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Win Gold" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+
+    <link
+      rel="preload"
+      as="font"
+      type="font/woff2"
+      href="/fonts/cairo/cairo-arabic-700-normal.woff2"
+      crossorigin
+    />
+
+    <style>
+      #app-splash {
+        position: fixed;
+        inset: 0;
+        z-index: 99999;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background: #f1f5f9;
+        transition: opacity 0.35s ease;
+      }
+      #app-splash.is-hidden {
+        opacity: 0;
+        pointer-events: none;
+      }
+      #app-splash img {
+        width: 88px;
+        height: 88px;
+        object-fit: contain;
+        border-radius: 20px;
+        box-shadow: 0 10px 40px rgba(37, 99, 235, 0.12);
+      }
+      #app-splash p {
+        margin: 1rem 0 0;
+        font-family: Cairo, Tajawal, sans-serif;
+        font-size: 13px;
+        font-weight: 700;
+        color: #64748b;
+      }
+    </style>
   </head>
   <body>
+    <div id="app-splash" aria-hidden="true">
+      <img src="/brand/logo-256.webp?v=3" alt="" width="88" height="88" />
+      <p>Win Gold</p>
+    </div>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
+    <script>
+      window.addEventListener('DOMContentLoaded', function () {
+        var splash = document.getElementById('app-splash');
+        if (!splash) return;
+        var hide = function () {
+          splash.classList.add('is-hidden');
+          window.setTimeout(function () { splash.remove(); }, 400);
+        };
+        window.addEventListener('load', function () { window.setTimeout(hide, 300); });
+        window.setTimeout(hide, 4000);
+      });
+    </script>
   </body>
 </html>

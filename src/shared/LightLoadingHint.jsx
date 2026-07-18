@@ -1,19 +1,32 @@
-import React from "react";
 import { Loader2 } from "lucide-react";
+import { BRAND_LOGO_64, BRAND_NAME } from "../utils/brandAssets";
+import "../styles/brand-loading.css";
 
 /** علامة تحميل خفيفة — للتحميل الأول فقط (isLoading)، لا تظهر عند العودة من cache */
 const LightLoadingHint = ({
   label = "جاري التحميل...",
   variant = "light",
   className = "",
+  showLogo = true,
 }) => {
-  const textClass = variant === "dark" ? "text-white/45" : "text-gray-400";
-  const iconClass = variant === "dark" ? "text-white/35" : "text-primary/55";
+  const textClass = variant === "dark" ? "brand-loading__text--dark" : "brand-loading__text";
+  const iconClass = variant === "dark" ? "brand-loading__icon--dark" : "brand-loading__icon";
 
   return (
-    <div className={`flex items-center justify-center gap-2 py-10 ${className}`} aria-live="polite">
-      <Loader2 size={16} className={`animate-spin shrink-0 ${iconClass}`} />
-      <span className={`text-[11px] font-bold tracking-wide ${textClass}`}>{label}</span>
+    <div className={`brand-loading ${className}`} aria-live="polite">
+      {showLogo && (
+        <img
+          src={BRAND_LOGO_64}
+          alt={BRAND_NAME}
+          className="brand-loading__logo"
+          width={48}
+          height={48}
+        />
+      )}
+      <div className="brand-loading__row">
+        <Loader2 size={16} className={`brand-loading__spinner ${iconClass}`} />
+        <span className={textClass}>{label}</span>
+      </div>
     </div>
   );
 };

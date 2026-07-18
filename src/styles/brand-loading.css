@@ -1,0 +1,127 @@
+.brand-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 2.5rem 1rem;
+}
+
+.brand-loading__logo {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(37, 99, 235, 0.12);
+}
+
+.brand-loading__row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.brand-loading__spinner {
+  animation: brand-loading-spin 0.9s linear infinite;
+  flex-shrink: 0;
+}
+
+.brand-loading__icon {
+  color: rgba(37, 99, 235, 0.55);
+}
+
+.brand-loading__icon--dark {
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.brand-loading__text {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #94a3b8;
+}
+
+.brand-loading__text--dark {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+@keyframes brand-loading-spin {
+  to { transform: rotate(360deg); }
+}
+
+.brand-splash {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #f1f5f9;
+  transition: opacity 0.42s ease;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.brand-splash--fading {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.brand-splash__logo-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 7rem;
+  height: 7rem;
+  margin-bottom: 1.25rem;
+  border-radius: 1.5rem;
+  background: #fff;
+  padding: 0.75rem;
+  box-shadow: 0 10px 40px rgba(37, 99, 235, 0.1);
+}
+
+.brand-splash__logo {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.brand-splash__title {
+  margin: 0;
+  font-size: 1.65rem;
+  font-weight: 900;
+  color: #0f172a;
+}
+
+.brand-splash__tagline {
+  margin: 0.35rem 0 0;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #64748b;
+}
+
+.brand-splash__slogan {
+  margin: 1rem 0 0;
+  min-height: 1.5rem;
+  max-width: 16rem;
+  text-align: center;
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: #475569;
+  animation: brand-splash-fade 0.38s ease;
+}
+
+@keyframes brand-splash-fade {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

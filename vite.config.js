@@ -5,23 +5,26 @@ import { VitePWA } from 'vite-plugin-pwa'
 const pwaIcons = [
   { src: '/brand/logo-64.webp', sizes: '64x64', type: 'image/webp', purpose: 'any' },
   { src: '/brand/logo-128.webp', sizes: '128x128', type: 'image/webp', purpose: 'any' },
+  { src: '/brand/logo-192.webp', sizes: '192x192', type: 'image/webp', purpose: 'any' },
   { src: '/brand/logo-256.webp', sizes: '256x256', type: 'image/webp', purpose: 'any' },
-  { src: '/brand/logo-256.webp', sizes: '256x256', type: 'image/webp', purpose: 'maskable' },
+  { src: '/brand/logo-384.webp', sizes: '384x384', type: 'image/webp', purpose: 'any' },
+  { src: '/brand/logo-512.webp', sizes: '512x512', type: 'image/webp', purpose: 'any' },
+  { src: '/brand/logo-192-maskable.webp', sizes: '192x192', type: 'image/webp', purpose: 'maskable' },
+  { src: '/brand/logo-512-maskable.webp', sizes: '512x512', type: 'image/webp', purpose: 'maskable' },
   { src: '/brand/logo-64.png', sizes: '64x64', type: 'image/png', purpose: 'any' },
 ]
 
-// https://vite.dev/config/
 export default defineConfig({
   plugins: [
     react(),
     VitePWA({
       registerType: 'prompt',
       injectRegister: false,
-      includeAssets: ['brand/**/*', 'fonts/**/*', 'favicon.svg'],
+      includeAssets: ['brand/**/*', 'fonts/**/*', 'og-image.webp'],
       manifest: {
         id: '/',
-        name: 'عروض تك | لوحة المحل والمورد',
-        short_name: 'لوحة المحل',
+        name: 'Win Gold | لوحة المحل والمورد',
+        short_name: 'Win Gold',
         description: 'إدارة المنتجات والعروض والطلبيات لأصحاب المتاجر والموردين.',
         theme_color: '#2563eb',
         background_color: '#f1f5f9',
