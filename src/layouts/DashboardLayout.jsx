@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import { Outlet, NavLink, useNavigate, useLocation } from "react-router-dom";
-import { Menu, X } from "lucide-react";
+import { Menu, User } from "lucide-react";
 import "../styles/dashboard.css";
 import useDashboardBadges from "../hooks/useDashboardBadges";
 import useStoreOwnerPermissions from "../hooks/useStoreOwnerPermissions";
-import DashboardHeaderActions, { SidebarBadge, BottomNavBadge } from "../components/DashboardHeaderActions";
+import DashboardHeaderActions, { BottomNavBadge } from "../components/DashboardHeaderActions";
 import { BRAND_LOGO_64, BRAND_NAME, BRAND_TAGLINE } from "../utils/brandAssets";
 import StoreWelcomeModal from "../components/StoreWelcomeModal";
 import { usePwaInstall } from "../context/PwaInstallContext";
@@ -28,6 +28,8 @@ export default function DashboardLayout() {
 
   const isSupplier = user?.role === "supplier";
   const baseRoute = isSupplier ? "/supplier" : "/store";
+  const isHome =
+    location.pathname === baseRoute || location.pathname === `${baseRoute}/`;
 
   useEffect(() => {
     let mounted = true;
@@ -80,21 +82,6 @@ export default function DashboardLayout() {
       </NavLink>
       <NavLink to={`${baseRoute}/add-product-offer`} onClick={() => setMenuOpen(false)}>📋 <span>اضافة منتج/عرض</span></NavLink>
       <NavLink to={`${baseRoute}/offers`} onClick={() => setMenuOpen(false)}>🏷️ <span>إدارة العروض</span></NavLink>
-
-      <NavLink to={`${baseRoute}/notifications`} onClick={() => setMenuOpen(false)}>
-        🔔 <span>الإشعارات</span>
-        <SidebarBadge count={badges.notifications} />
-      </NavLink>
-
-      <NavLink to={`${baseRoute}/orders`} onClick={() => setMenuOpen(false)}>
-        📋 <span>الطلبيات</span>
-        <SidebarBadge count={badges.orders} />
-      </NavLink>
-
-      <NavLink to={`${baseRoute}/chats`} onClick={() => setMenuOpen(false)}>
-        💬 <span>الدردشات</span>
-        <SidebarBadge count={badges.chats} />
-      </NavLink>
 
       {!isSupplier && isStoreOwner && (
         <>
@@ -170,7 +157,7 @@ export default function DashboardLayout() {
 
       <div className="main">
         <header className="topbar">
-          <div className="welcome-msg">
+          <div className="topbar-start">
             <button
               type="button"
               className="menu-toggle"
@@ -178,15 +165,25 @@ export default function DashboardLayout() {
               aria-expanded={menuOpen}
               onClick={toggleMenu}
             >
-              {menuOpen ? <X size={22} strokeWidth={2} /> : <Menu size={22} strokeWidth={2} />}
+              <Menu size={22} strokeWidth={2} />
             </button>
             <img src={BRAND_LOGO_64} alt={BRAND_NAME} className="topbar-brand-logo" width={36} height={36} />
-            <span>مرحباً {user?.name} 👋</span>
+            {isHome && !isSupplier && storeData?.name ? (
+              <span className="topbar-store-name">{storeData.name}</span>
+            ) : null}
           </div>
 
           <div className="topbar-end">
             <DashboardHeaderActions badges={badges} baseRoute={baseRoute} navigate={navigate} />
-            <div className="user-badge">{isSupplier ? "تاجر" : "صاحب محل"}</div>
+            <button
+              type="button"
+              className="header-icon-btn header-profile-btn"
+              title="الملف الشخصي"
+              aria-label="الملف الشخصي"
+              onClick={() => navigate(`${baseRoute}/profile`)}
+            >
+              <User size={22} strokeWidth={2} />
+            </button>
           </div>
         </header>
 
@@ -215,7 +212,7 @@ export default function DashboardLayout() {
           <BottomNavBadge count={badges.chats} />
         </NavLink>
         <button type="button" className={menuOpen ? "is-active" : ""} onClick={toggleMenu}>
-          <span className="nav-icon">{menuOpen ? <X size={18} /> : <Menu size={18} />}</span>
+          <span className="nav-icon"><Menu size={18} /></span>
           <span className="nav-label">المزيد</span>
         </button>
       </nav>

@@ -5,6 +5,8 @@ import axios from '../../services/api';
 import { getDashboardOffers } from '../../services/offers.service';
 import { formatOfferBadge } from '../../utils/offerPricing';
 import { getStoredUser } from '../../utils/safeStorage';
+import { getMyStore } from '../../services/store.service';
+import { BRAND_LOGO_64 } from '../../utils/brandAssets';
 import OfferPriceDisplay from '../../components/OfferPriceDisplay';
 import useStoreOwnerPermissions from '../../hooks/useStoreOwnerPermissions';
 import '../../styles/dashboard.css';
@@ -28,12 +30,18 @@ export default function DashboardHome() {
     const [networkOffers, setNetworkOffers] = useState([]);
     const [activities, setActivities] = useState([]);
     const [offersLoading, setOffersLoading] = useState(true);
+    const [store, setStore] = useState(null);
 
     useEffect(() => {
         fetchStats();
         fetchActivities();
         fetchDashboardOffers();
-    }, []);
+        if (!isSupplier) {
+            getMyStore()
+                .then(({ data }) => setStore(data.store))
+                .catch(() => {});
+        }
+    }, [isSupplier]);
 
     const fetchStats = async () => {
         try {
@@ -209,7 +217,23 @@ export default function DashboardHome() {
 
     return (
         <div className="dashboard-home">
-            <h2 className="title">الرئيسية - نظرة عامة</h2>
+            {!isSupplier && store?.name ? (
+                <div className="dashboard-home-store">
+                    <img
+                        src={BRAND_LOGO_64}
+                        alt=""
+                        className="dashboard-home-store__logo"
+                        width={44}
+                        height={44}
+                    />
+                    <div className="dashboard-home-store__text">
+                        <h2 className="title dashboard-home-store__name">{store.name}</h2>
+                        <p className="dashboard-home-store__subtitle">الرئيسية — نظرة عامة</p>
+                    </div>
+                </div>
+            ) : (
+                <h2 className="title">الرئيسية - نظرة عامة</h2>
+            )}
 
             <div className="stats-grid">
                 {statsCards.map(stat => (
