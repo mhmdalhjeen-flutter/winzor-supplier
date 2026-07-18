@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import api from '../../services/api';
 import ImagePicker from '../../components/ImagePicker';
 import { FormNoticeToast, FormRulesPopup, useFormNotice } from '../../components/FormNotice';
 import { OFFER_TYPE_OPTIONS } from '../../utils/offerPricing';
 import PriceCurrencyInput from '../../components/PriceCurrencyInput';
 import { DEFAULT_CURRENCY } from '../../utils/currency';
+import { PWA_TAB_PARAM } from '../../pwa/pwaShortcutActions';
 import '../../styles/AddProductsOffers.css';
 
 const PRODUCT_RULES = [
@@ -49,6 +51,7 @@ const EMPTY_OFFER = {
 
 export default function AddProductsOffers() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [tab, setTab] = useState('product');
   const [loading, setLoading] = useState(false);
   const [rulesOpen, setRulesOpen] = useState(false);
@@ -56,6 +59,16 @@ export default function AddProductsOffers() {
   const [product, setProduct] = useState(EMPTY_PRODUCT);
   const [offer, setOffer] = useState(EMPTY_OFFER);
   const [pricingPreview, setPricingPreview] = useState(null);
+
+  useEffect(() => {
+    const pwaTab = searchParams.get(PWA_TAB_PARAM);
+    if (pwaTab !== 'product' && pwaTab !== 'offer') return;
+
+    setTab(pwaTab);
+    const next = new URLSearchParams(searchParams);
+    next.delete(PWA_TAB_PARAM);
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams]);
 
   useEffect(() => {
     if (tab !== 'offer') return undefined;

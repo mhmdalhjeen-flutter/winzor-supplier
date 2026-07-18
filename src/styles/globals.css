@@ -1,3 +1,6 @@
+@import './fonts.css';
+@import './pwa.css';
+
 * {
   margin: 0;
   padding: 0;

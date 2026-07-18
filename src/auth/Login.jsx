@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { useNavigate, Link } from "react-router-dom";
 
@@ -7,7 +7,7 @@ import "../styles/auth.css";
 
 import { login } from "../services/auth.service";
 import { setAuth } from "../utils/auth";
-import { useEffect } from "react";
+import { completePendingPwaAction } from "../pwa/pwaShortcutActions";
 
 export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
@@ -20,16 +20,18 @@ export default function Login() {
     password: "",
   });
   useEffect(() => {
-  const user = JSON.parse(localStorage.getItem("user"));
+    const user = JSON.parse(localStorage.getItem("user"));
 
     if (!user) return;
+
+    if (completePendingPwaAction(navigate, user.role)) return;
 
     if (user.role === "supplier") {
       navigate("/supplier", { replace: true });
     } else if (user.role === "store") {
       navigate("/store", { replace: true });
     }
-}, [navigate]);
+  }, [navigate]);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -58,6 +60,8 @@ export default function Login() {
       setAuth(data);
 
       const role = data.user.role;
+
+      if (completePendingPwaAction(navigate, role)) return;
 
       if (role === "supplier") {
           navigate("/supplier", { replace: true });

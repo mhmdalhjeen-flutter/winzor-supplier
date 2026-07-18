@@ -13,6 +13,8 @@ import StoreOnlyRoute from "./routes/StoreOnlyRoute";
 import Maintenance from "./pages/Maintenance";
 import useMaintenanceMode from "./hooks/useMaintenanceMode";
 import LightLoadingHint from "./shared/LightLoadingHint";
+import PwaHost from "./components/pwa/PwaHost";
+import PwaShortcutHandler from "./components/pwa/PwaShortcutHandler";
 
 const DashboardHome = lazy(() => import("./pages/storeOwner/DashboardHome"));
 const MyStore = lazy(() => import("./pages/MyStore"));
@@ -121,5 +123,11 @@ export default function App() {
     );
   }
 
-  return <MerchantApp />;
+  return (
+    <>
+      <PwaShortcutHandler />
+      <MerchantApp />
+      <PwaHost />
+    </>
+  );
 }

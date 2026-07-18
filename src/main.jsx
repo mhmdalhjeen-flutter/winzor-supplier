@@ -7,6 +7,9 @@ import ErrorBoundary from "./shared/ErrorBoundary";
 import "./styles/globals.css";
 import { StoreProvider } from "./context/StoreContext";
 import { queryClient } from "./lib/queryClient";
+import { initPwaServiceWorker } from "./pwa/registerServiceWorker";
+
+initPwaServiceWorker();
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
