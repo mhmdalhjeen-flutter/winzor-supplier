@@ -7,6 +7,7 @@ import useStoreOwnerPermissions from "../hooks/useStoreOwnerPermissions";
 import DashboardHeaderActions, { BottomNavBadge } from "../components/DashboardHeaderActions";
 import { BRAND_LOGO_64, BRAND_NAME, BRAND_TAGLINE } from "../utils/brandAssets";
 import StoreWelcomeModal from "../components/StoreWelcomeModal";
+import SubscriptionExpiredGate from "../components/SubscriptionExpiredGate";
 import { usePwaInstall } from "../context/PwaInstallContext";
 import { getMyStore } from "../services/store.service";
 import { getStoredUser } from "../utils/safeStorage";
@@ -28,6 +29,9 @@ export default function DashboardLayout() {
 
   const isSupplier = user?.role === "supplier";
   const baseRoute = isSupplier ? "/supplier" : "/store";
+  const isSupportPage = location.pathname === `${baseRoute}/support`;
+  const subscriptionExpired =
+    !isSupplier && isStoreOwner && storeData && storeData.subscriptionActive === false && !isSupportPage;
   const isHome =
     location.pathname === baseRoute || location.pathname === `${baseRoute}/`;
 
@@ -125,9 +129,9 @@ export default function DashboardLayout() {
   );
 
   return (
-    <div className="dashboard">
+    <div className={`dashboard${subscriptionExpired ? " dashboard--subscription-expired" : ""}`}>
       <StoreWelcomeModal
-        open={welcomeOpen}
+        open={welcomeOpen && !subscriptionExpired}
         store={storeData}
         suggestedDefaults={suggestedDefaults}
         baseRoute={baseRoute}
@@ -135,7 +139,7 @@ export default function DashboardLayout() {
         onDone={refreshStoreAfterWelcome}
       />
 
-      {menuOpen && (
+      {!subscriptionExpired && menuOpen && (
         <button
           type="button"
           className="sidebar-backdrop"
@@ -144,78 +148,88 @@ export default function DashboardLayout() {
         />
       )}
 
-      <aside className={`sidebar${menuOpen ? " open" : ""}`}>
-        <div className="sidebar-brand">
-          <img src={BRAND_LOGO_64} alt={BRAND_NAME} width={48} height={48} className="sidebar-brand__logo" />
-          <div>
-            <h2 className="logo">{BRAND_NAME}</h2>
-            <p className="sidebar-brand__tagline">{isSupplier ? "لوحة التاجر" : BRAND_TAGLINE}</p>
+      {!subscriptionExpired && (
+        <aside className={`sidebar${menuOpen ? " open" : ""}`}>
+          <div className="sidebar-brand">
+            <img src={BRAND_LOGO_64} alt={BRAND_NAME} width={48} height={48} className="sidebar-brand__logo" />
+            <div>
+              <h2 className="logo">{BRAND_NAME}</h2>
+              <p className="sidebar-brand__tagline">{isSupplier ? "لوحة التاجر" : BRAND_TAGLINE}</p>
+            </div>
           </div>
-        </div>
-        <nav>{renderNavLinks()}</nav>
-      </aside>
+          <nav>{renderNavLinks()}</nav>
+        </aside>
+      )}
 
       <div className="main">
-        <header className="topbar">
-          <div className="topbar-start">
-            <button
-              type="button"
-              className="menu-toggle"
-              aria-label={menuOpen ? "إغلاق القائمة" : "فتح القائمة"}
-              aria-expanded={menuOpen}
-              onClick={toggleMenu}
-            >
-              <Menu size={22} strokeWidth={2} />
-            </button>
-            <img src={BRAND_LOGO_64} alt={BRAND_NAME} className="topbar-brand-logo" width={36} height={36} />
-            {isHome && !isSupplier && storeData?.name ? (
-              <span className="topbar-store-name">{storeData.name}</span>
-            ) : null}
-          </div>
+        {!subscriptionExpired && (
+          <header className="topbar">
+            <div className="topbar-start">
+              <button
+                type="button"
+                className="menu-toggle"
+                aria-label={menuOpen ? "إغلاق القائمة" : "فتح القائمة"}
+                aria-expanded={menuOpen}
+                onClick={toggleMenu}
+              >
+                <Menu size={22} strokeWidth={2} />
+              </button>
+              <img src={BRAND_LOGO_64} alt={BRAND_NAME} className="topbar-brand-logo" width={36} height={36} />
+              {isHome && !isSupplier && storeData?.name ? (
+                <span className="topbar-store-name">{storeData.name}</span>
+              ) : null}
+            </div>
 
-          <div className="topbar-end">
-            <DashboardHeaderActions badges={badges} baseRoute={baseRoute} navigate={navigate} />
-            <button
-              type="button"
-              className="header-icon-btn header-profile-btn"
-              title="الملف الشخصي"
-              aria-label="الملف الشخصي"
-              onClick={() => navigate(`${baseRoute}/profile`)}
-            >
-              <User size={22} strokeWidth={2} />
-            </button>
-          </div>
-        </header>
+            <div className="topbar-end">
+              <DashboardHeaderActions badges={badges} baseRoute={baseRoute} navigate={navigate} />
+              <button
+                type="button"
+                className="header-icon-btn header-profile-btn"
+                title="الملف الشخصي"
+                aria-label="الملف الشخصي"
+                onClick={() => navigate(`${baseRoute}/profile`)}
+              >
+                <User size={22} strokeWidth={2} />
+              </button>
+            </div>
+          </header>
+        )}
 
         <div className="content">
-          <Outlet />
+          {subscriptionExpired ? (
+            <SubscriptionExpiredGate navigate={navigate} baseRoute={baseRoute} />
+          ) : (
+            <Outlet />
+          )}
         </div>
       </div>
 
-      <nav className="bottom-nav" aria-label="التنقل السريع">
-        <NavLink to={baseRoute} end>
-          <span className="nav-icon">🏠</span>
-          <span className="nav-label">الرئيسية</span>
-        </NavLink>
-        <NavLink to={`${baseRoute}/offers`}>
-          <span className="nav-icon">🏷️</span>
-          <span className="nav-label">العروض</span>
-        </NavLink>
-        <NavLink to={`${baseRoute}/orders`}>
-          <span className="nav-icon">📋</span>
-          <span className="nav-label">الطلبيات</span>
-          <BottomNavBadge count={badges.orders} />
-        </NavLink>
-        <NavLink to={`${baseRoute}/chats`}>
-          <span className="nav-icon">💬</span>
-          <span className="nav-label">الدردشات</span>
-          <BottomNavBadge count={badges.chats} />
-        </NavLink>
-        <button type="button" className={menuOpen ? "is-active" : ""} onClick={toggleMenu}>
-          <span className="nav-icon"><Menu size={18} /></span>
-          <span className="nav-label">المزيد</span>
-        </button>
-      </nav>
+      {!subscriptionExpired && (
+        <nav className="bottom-nav" aria-label="التنقل السريع">
+          <NavLink to={baseRoute} end>
+            <span className="nav-icon">🏠</span>
+            <span className="nav-label">الرئيسية</span>
+          </NavLink>
+          <NavLink to={`${baseRoute}/offers`}>
+            <span className="nav-icon">🏷️</span>
+            <span className="nav-label">العروض</span>
+          </NavLink>
+          <NavLink to={`${baseRoute}/orders`}>
+            <span className="nav-icon">📋</span>
+            <span className="nav-label">الطلبيات</span>
+            <BottomNavBadge count={badges.orders} />
+          </NavLink>
+          <NavLink to={`${baseRoute}/chats`}>
+            <span className="nav-icon">💬</span>
+            <span className="nav-label">الدردشات</span>
+            <BottomNavBadge count={badges.chats} />
+          </NavLink>
+          <button type="button" className={menuOpen ? "is-active" : ""} onClick={toggleMenu}>
+            <span className="nav-icon"><Menu size={18} /></span>
+            <span className="nav-label">المزيد</span>
+          </button>
+        </nav>
+      )}
     </div>
   );
 }
