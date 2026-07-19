@@ -17,9 +17,10 @@ body { font-family: 'Cairo', sans-serif; background-color: var(--bg-body); color
 
 .dashboard { display: flex; min-height: 100vh; }
 
-/* SIDEBAR FIX */
+/* SIDEBAR — drawer overlay on all breakpoints (opens via hamburger) */
 .sidebar {
-  width: 260px;
+  width: min(280px, 85vw);
+  max-width: 280px;
   background: var(--bg-sidebar);
   color: white;
   padding: 24px;
@@ -28,8 +29,16 @@ body { font-family: 'Cairo', sans-serif; background-color: var(--bg-body); color
   top: 0;
   bottom: 0;
   z-index: 1000;
-  transition: all 0.3s ease;
+  transform: translateX(100%);
+  visibility: hidden;
+  box-shadow: -8px 0 24px rgba(0, 0, 0, 0.25);
+  transition: transform 0.3s ease, visibility 0.3s ease;
   overflow-y: auto;
+}
+
+.sidebar.open {
+  transform: translateX(0);
+  visibility: visible;
 }
 
 .logo { font-size: 22px; font-weight: 700; color: #38bdf8; margin-bottom: 30px; text-align: center; }
@@ -43,10 +52,12 @@ body { font-family: 'Cairo', sans-serif; background-color: var(--bg-body); color
 .sidebar a:hover, .logout-link:hover { background: #1e293b; color: white; }
 .sidebar a.active { background: var(--primary); color: white; }
 
-/* MAIN CONTENT FIX */
+/* MAIN CONTENT — full width; sidebar overlays, never reserves space */
 .main {
   flex: 1;
-  margin-right: 260px; 
+  margin-right: 0;
+  width: 100%;
+  max-width: 100vw;
   display: flex;
   flex-direction: column;
   min-width: 0;
@@ -143,34 +154,13 @@ body { font-family: 'Cairo', sans-serif; background-color: var(--bg-body); color
 
 /* RESPONSIVE BREAKPOINTS */
 @media (max-width: 992px) and (min-width: 769px) {
-  .sidebar { width: 200px; padding: 18px 12px; }
+  .sidebar { padding: 18px 12px; }
   .sidebar a, .logout-link { padding: 10px 12px; font-size: 13px; gap: 8px; }
   .logo { font-size: 18px; margin-bottom: 20px; }
-  .main { margin-right: 200px; }
 }
 
 @media (max-width: 768px) {
-  .sidebar {
-    width: min(280px, 85vw);
-    transform: translateX(100%);
-    box-shadow: -8px 0 24px rgba(0, 0, 0, 0.25);
-    visibility: hidden;
-  }
-
-  .sidebar.open {
-    transform: translateX(0);
-    visibility: visible;
-  }
-
-  .sidebar .logo,
-  .sidebar a span {
-    display: inline;
-  }
-
   .main {
-    margin-right: 0;
-    width: 100%;
-    max-width: 100vw;
     overflow-x: hidden;
   }
 
@@ -192,14 +182,6 @@ body { font-family: 'Cairo', sans-serif; background-color: var(--bg-body); color
     width: 38px;
     height: 38px;
     border-radius: 10px;
-  }
-
-  .menu-toggle {
-    display: inline-flex;
-  }
-
-  .sidebar-backdrop {
-    display: block;
   }
 
   .bottom-nav {
@@ -247,9 +229,9 @@ body { font-family: 'Cairo', sans-serif; background-color: var(--bg-body); color
   .topbar-store-name { font-size: 13px; max-width: 34vw; }
 }
 
-/* MOBILE NAV */
+/* HAMBURGER + DRAWER BACKDROP (all breakpoints) */
 .menu-toggle {
-  display: none;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 40px;
@@ -264,11 +246,14 @@ body { font-family: 'Cairo', sans-serif; background-color: var(--bg-body); color
 }
 
 .sidebar-backdrop {
-  display: none;
+  display: block;
   position: fixed;
   inset: 0;
   background: rgba(15, 23, 42, 0.45);
   z-index: 999;
+  border: none;
+  padding: 0;
+  cursor: pointer;
 }
 
 .bottom-nav {
@@ -501,6 +486,11 @@ body { font-family: 'Cairo', sans-serif; background-color: var(--bg-body); color
 
 body.sidebar-open {
   overflow: hidden;
+}
+
+/* Keep hamburger + header icons clickable above the drawer backdrop */
+body.sidebar-open .topbar {
+  z-index: 1001;
 }
 
 /* WELCOME MODAL */
