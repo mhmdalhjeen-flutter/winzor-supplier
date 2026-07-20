@@ -1,4 +1,5 @@
-import { formatPrice } from '../utils/currency';
+import { formatPriceWithUnit } from '../utils/currency';
+import { resolvePriceUnit } from '../utils/priceUnit';
 
 function formatExpiryDisplay(dateStr) {
   if (!dateStr) return '';
@@ -20,14 +21,16 @@ export default function QuickPreviewModal({ open, kind, data, pricing, onClose }
   const tags = data?.tags || [];
   const freeDelivery = data?.freeDelivery === 'yes';
 
+  const priceUnit = resolvePriceUnit(data?.priceUnitType, data?.priceUnitCustom);
+
   let priceLabel = '';
   if (isOffer) {
-    if (pricing?.displayNew) priceLabel = pricing.displayNew;
-    else if (pricing?.finalPrice != null) priceLabel = formatPrice(pricing.finalPrice, data?.currency);
-    else priceLabel = 'السعر يظهر بعد إكمال الحقول';
+    if (pricing?.finalPrice != null) {
+      priceLabel = formatPriceWithUnit(pricing.finalPrice, data?.currency, priceUnit);
+    } else priceLabel = 'السعر يظهر بعد إكمال الحقول';
   } else {
     priceLabel = data?.price !== '' && data?.price != null
-      ? formatPrice(data.price, data.currency)
+      ? formatPriceWithUnit(data.price, data.currency, priceUnit)
       : '—';
   }
 

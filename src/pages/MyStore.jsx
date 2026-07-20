@@ -6,7 +6,7 @@ import api from "../services/api";
 import "../styles/dashboard.css";
 import "../styles/MyStore.css";
 import OfferPriceDisplay from "../components/OfferPriceDisplay";
-import { formatPrice } from "../utils/currency";
+import { formatPriceWithUnit } from "../utils/currency";
 import { queryKeys } from "../lib/queryClient";
 import { unwrapList } from "../utils/unwrapList";
 import LightLoadingHint from "../shared/LightLoadingHint";
@@ -118,7 +118,7 @@ export default function MyStore() {
                   <h3>{item.name || item.title}</h3>
 
                   {view === "products" ? (
-                    <p className="price-tag">{formatPrice(item.price, item.currency)}</p>
+                    <p className="price-tag">{formatPriceWithUnit(item.price, item.currency, item.priceUnit)}</p>
                   ) : (
                     <OfferPriceDisplay offer={item} />
                   )}

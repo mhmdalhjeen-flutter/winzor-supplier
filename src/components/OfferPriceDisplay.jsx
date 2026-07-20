@@ -1,5 +1,5 @@
 import { formatOfferBadge } from '../utils/offerPricing';
-import { formatPrice } from '../utils/currency';
+import { formatPriceWithUnit } from '../utils/currency';
 import '../styles/OfferPriceDisplay.css';
 
 /** Reads pricing from API SSOT — no local price calculation. */
@@ -9,6 +9,8 @@ export default function OfferPriceDisplay({ offer, className = '' }) {
   const newPrice = pricing?.finalPrice;
   const showCompare = pricing?.showCompare ?? false;
   const badge = pricing?.badge || formatOfferBadge(offer);
+  const priceUnit = pricing?.priceUnit || offer?.priceUnit;
+  const currency = pricing?.currency || offer?.currency;
 
   if (newPrice == null && !badge) return null;
 
@@ -18,11 +20,11 @@ export default function OfferPriceDisplay({ offer, className = '' }) {
     <div className={`offer-price-display ${className}`.trim()}>
       {showCompare && oldPrice != null && (
         <span className="offer-price-old" aria-label="السعر القديم">
-          {pricing?.displayOld || formatPrice(oldPrice, pricing?.currency || offer?.currency)}
+          {pricing?.displayOld || formatPriceWithUnit(oldPrice, currency, priceUnit)}
         </span>
       )}
       {newPrice != null ? (
-        <span className="offer-price-new">{pricing?.displayNew || formatPrice(newPrice, pricing?.currency || offer?.currency)}</span>
+        <span className="offer-price-new">{pricing?.displayNew || formatPriceWithUnit(newPrice, currency, priceUnit)}</span>
       ) : (
         <span className="offer-price-new">{badge}</span>
       )}

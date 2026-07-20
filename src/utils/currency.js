@@ -25,7 +25,13 @@ export function formatPrice(amount, currency = DEFAULT_CURRENCY) {
   return `${symbol} ${value}`;
 }
 
+export function formatPriceWithUnit(amount, currency, priceUnit) {
+  const base = formatPrice(amount, currency);
+  const unit = String(priceUnit || '').trim();
+  return unit ? `${base} / ${unit}` : base;
+}
+
 export function formatListingPrice(listing) {
   if (!listing) return formatPrice(0);
-  return formatPrice(listing.price, listing.currency);
+  return formatPriceWithUnit(listing.price, listing.currency, listing.priceUnit);
 }

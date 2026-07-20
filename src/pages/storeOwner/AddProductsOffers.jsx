@@ -8,7 +8,9 @@ import CollapsibleSection from '../../components/CollapsibleSection';
 import { FormNoticeToast, FormRulesPopup, useFormNotice } from '../../components/FormNotice';
 import { OFFER_TYPE_OPTIONS } from '../../utils/offerPricing';
 import PriceCurrencyInput from '../../components/PriceCurrencyInput';
-import { DEFAULT_CURRENCY, formatPrice } from '../../utils/currency';
+import PriceUnitInput from '../../components/PriceUnitInput';
+import { DEFAULT_CURRENCY, formatPriceWithUnit } from '../../utils/currency';
+import { parsePriceUnit, resolvePriceUnit } from '../../utils/priceUnit';
 import { PWA_TAB_PARAM } from '../../pwa/pwaShortcutActions';
 import { invalidateCatalog } from '../../utils/catalogRefresh';
 import '../../styles/AddProductsOffers.css';
@@ -37,6 +39,8 @@ const EMPTY_PRODUCT = {
   name: '',
   price: '',
   currency: DEFAULT_CURRENCY,
+  priceUnitType: '',
+  priceUnitCustom: '',
   image: '',
   description: '',
   freeDelivery: 'no',
@@ -51,6 +55,8 @@ const EMPTY_OFFER = {
   title: '',
   offerType: 'discount',
   currency: DEFAULT_CURRENCY,
+  priceUnitType: '',
+  priceUnitCustom: '',
   originalPrice: '',
   value: '',
   finalPrice: '',
@@ -161,6 +167,7 @@ export default function AddProductsOffers() {
             name: item.name || '',
             price: item.price ?? '',
             currency: item.currency || DEFAULT_CURRENCY,
+            ...parsePriceUnit(item.priceUnit),
             image: item.image || '',
             description: item.description || '',
             freeDelivery: item.freeDelivery ? 'yes' : 'no',
@@ -188,6 +195,7 @@ export default function AddProductsOffers() {
             title: item.title || '',
             offerType: item.offerType || 'discount',
             currency: item.currency || DEFAULT_CURRENCY,
+            ...parsePriceUnit(item.priceUnit),
             originalPrice: item.originalPrice ?? '',
             value: item.value ?? '',
             finalPrice: item.finalPrice ?? '',
@@ -294,10 +302,12 @@ export default function AddProductsOffers() {
 
     setLoading(true);
     try {
+      const priceUnit = resolvePriceUnit(product.priceUnitType, product.priceUnitCustom);
       const payload = {
         name: product.name.trim(),
         price: Number(product.price),
         currency: product.currency || DEFAULT_CURRENCY,
+        priceUnit,
         image: product.image,
         description: product.description.trim(),
         isWholesale: product.isWholesale || false,
@@ -351,6 +361,7 @@ export default function AddProductsOffers() {
 
     setLoading(true);
     try {
+      const priceUnit = resolvePriceUnit(offer.priceUnitType, offer.priceUnitCustom);
       const payload = {
         title: offer.title.trim(),
         offerType: offer.offerType,
@@ -358,6 +369,7 @@ export default function AddProductsOffers() {
         value: offer.value !== '' ? Number(offer.value) : undefined,
         finalPrice: offer.offerType === 'custom' ? Number(offer.finalPrice) : previewPricing.finalPrice,
         currency: offer.currency || DEFAULT_CURRENCY,
+        priceUnit,
         image: offer.image,
         description: offer.description.trim(),
         freeDelivery: offer.freeDelivery === 'yes',
@@ -494,12 +506,15 @@ export default function AddProductsOffers() {
   const previewDesc = activeData.description;
   const previewImage = activeData.image;
   const previewPriceLabel = (() => {
+    const productUnit = resolvePriceUnit(product.priceUnitType, product.priceUnitCustom);
+    const offerUnit = resolvePriceUnit(offer.priceUnitType, offer.priceUnitCustom);
     if (tab === 'product') {
-      return product.price !== '' ? formatPrice(product.price, product.currency) : '—';
+      return product.price !== ''
+        ? formatPriceWithUnit(product.price, product.currency, productUnit)
+        : '—';
     }
-    if (previewValid && previewPricing?.displayNew) return previewPricing.displayNew;
     if (previewValid && previewPricing?.finalPrice != null) {
-      return formatPrice(previewPricing.finalPrice, offer.currency);
+      return formatPriceWithUnit(previewPricing.finalPrice, offer.currency, offerUnit);
     }
     return '—';
   })();
@@ -683,15 +698,24 @@ export default function AddProductsOffers() {
           <section className="create-section">
             <h3 className="create-section__title">4. السعر والتفاصيل الأساسية</h3>
             <label className="field-label">السعر *</label>
-            <PriceCurrencyInput
-              price={product.price}
-              currency={product.currency}
-              onPriceChange={(value) => setProduct({ ...product, price: value })}
-              onCurrencyChange={(value) => setProduct({ ...product, currency: value })}
-              pricePlaceholder="السعر"
-              required
-              className="price-currency-row"
-            />
+            <div className="price-with-unit-row">
+              <PriceCurrencyInput
+                price={product.price}
+                currency={product.currency}
+                onPriceChange={(value) => setProduct({ ...product, price: value })}
+                onCurrencyChange={(value) => setProduct({ ...product, currency: value })}
+                pricePlaceholder="السعر"
+                required
+                className="price-currency-row"
+              />
+              <PriceUnitInput
+                idPrefix="product-price-unit"
+                unitType={product.priceUnitType}
+                customUnit={product.priceUnitCustom}
+                onUnitTypeChange={(value) => setProduct({ ...product, priceUnitType: value, priceUnitCustom: value === 'other' ? product.priceUnitCustom : '' })}
+                onCustomUnitChange={(value) => setProduct({ ...product, priceUnitCustom: value })}
+              />
+            </div>
 
             <label className="field-label">هل يدعم التوصيل المجاني؟</label>
             <div className="radio-row">
@@ -794,6 +818,14 @@ export default function AddProductsOffers() {
               {renderOfferFields()}
             </div>
 
+            <PriceUnitInput
+              idPrefix="offer-price-unit"
+              unitType={offer.priceUnitType}
+              customUnit={offer.priceUnitCustom}
+              onUnitTypeChange={(value) => setOffer({ ...offer, priceUnitType: value, priceUnitCustom: value === 'other' ? offer.priceUnitCustom : '' })}
+              onCustomUnitChange={(value) => setOffer({ ...offer, priceUnitCustom: value })}
+            />
+
             {previewValid && previewPricing?.finalPrice != null && offer.offerType !== 'custom' && (
               <div className="final-price-box">
                 {previewPricing.showCompare && previewPricing.displayOld && (
@@ -801,7 +833,7 @@ export default function AddProductsOffers() {
                     {previewPricing.displayOld}
                   </span>
                 )}
-                السعر النهائي: <strong>{previewPricing.displayNew || `${previewPricing.finalPrice}`}</strong>
+                السعر النهائي: <strong>{previewPriceLabel}</strong>
               </div>
             )}
 

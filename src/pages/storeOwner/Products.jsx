@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { formatPrice } from "../../utils/currency";
+import { formatPriceWithUnit } from "../../utils/currency";
 
 export default function Products() {
   const [products] = useState([
@@ -44,7 +44,7 @@ export default function Products() {
               <p>{p.description}</p>
 
               <div className="bottom">
-                <span className="price">{formatPrice(p.price, p.currency)}</span>
+                <span className="price">{formatPriceWithUnit(p.price, p.currency, p.priceUnit)}</span>
 
                 <button onClick={() => handleAddToCart(p)}>
                   إضافة للسلة
