@@ -9,6 +9,7 @@ import { getMyStore } from '../../services/store.service';
 import { BRAND_LOGO_64 } from '../../utils/brandAssets';
 import OfferPriceDisplay from '../../components/OfferPriceDisplay';
 import useStoreOwnerPermissions from '../../hooks/useStoreOwnerPermissions';
+import StoreQuickActions from '../../components/StoreQuickActions';
 import '../../styles/dashboard.css';
 
 const STATUS_MAP = {
@@ -250,6 +251,15 @@ export default function DashboardHome() {
                     </div>
                 ))}
             </div>
+
+            <StoreQuickActions
+                isSupplier={isSupplier}
+                showBuyCodes={!isSupplier && isStoreOwner}
+                onAddProduct={() => navigate(`${baseRoute}/add-product-offer?pwaTab=product`)}
+                onAddOffer={() => navigate(`${baseRoute}/add-product-offer?pwaTab=offer`)}
+                onMyStore={() => navigate(`${baseRoute}/my-store`)}
+                onBuyCodes={() => navigate(`${baseRoute}/buy-codes`)}
+            />
 
             <div className="home-content-grid">
                 <div className="activity-section">

@@ -102,6 +102,91 @@ body { font-family: 'Cairo', sans-serif; background-color: var(--bg-body); color
 
 .home-content-grid { display: grid; grid-template-columns: 1fr 350px; gap: 25px; }
 .activity-section, .quick-actions { background: white; padding: 25px; border-radius: 20px; box-shadow: var(--shadow); }
+
+.quick-actions { margin-bottom: 30px; }
+
+.quick-actions__head { margin-bottom: 18px; }
+
+.quick-actions__title { margin-bottom: 6px; }
+
+.quick-actions__subtitle {
+  font-size: 13px;
+  color: var(--secondary);
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.quick-actions__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+.quick-action-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  width: 100%;
+  padding: 16px;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+  text-align: right;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  font-family: inherit;
+}
+
+.quick-action-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+.quick-action-card__icon {
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.quick-action-card__text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.quick-action-card__title {
+  font-size: 15px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.quick-action-card__desc {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--secondary);
+  line-height: 1.45;
+}
+
+.quick-action-card--blue { border-color: #bfdbfe; }
+.quick-action-card--blue .quick-action-card__icon { background: #eff6ff; color: #2563eb; }
+.quick-action-card--blue:hover { border-color: #93c5fd; }
+
+.quick-action-card--green { border-color: #bbf7d0; }
+.quick-action-card--green .quick-action-card__icon { background: #ecfdf5; color: #059669; }
+.quick-action-card--green:hover { border-color: #86efac; }
+
+.quick-action-card--slate { border-color: #e2e8f0; }
+.quick-action-card--slate .quick-action-card__icon { background: #f8fafc; color: #475569; }
+.quick-action-card--slate:hover { border-color: #cbd5e1; }
+
+.quick-action-card--violet { border-color: #ddd6fe; }
+.quick-action-card--violet .quick-action-card__icon { background: #f5f3ff; color: #7c3aed; }
+.quick-action-card--violet:hover { border-color: #c4b5fd; }
 @media (max-width: 1100px) { .home-content-grid { grid-template-columns: 1fr; } }
 
 /* SHARED UI */

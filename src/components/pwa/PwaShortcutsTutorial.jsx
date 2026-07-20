@@ -1,9 +1,11 @@
-import { X, Package, Tag } from 'lucide-react';
+import { X, PackagePlus, Tag, Store, Ticket } from 'lucide-react';
 import { BRAND_LOGO_64, BRAND_NAME } from '../../utils/brandAssets';
 
 const SHORTCUTS = [
-  { icon: Package, label: 'إضافة منتج', color: '#2563eb' },
-  { icon: Tag, label: 'إضافة عرض', color: '#059669' },
+  { icon: PackagePlus, label: 'إضافة منتج', description: 'أنشئ منتجاً جديداً', color: '#2563eb' },
+  { icon: Tag, label: 'إضافة عرض', description: 'انشر عرضاً جديداً', color: '#059669' },
+  { icon: Store, label: 'متجري', description: 'إدارة ملف المتجر', color: '#475569' },
+  { icon: Ticket, label: 'شراء أكواد', description: 'اطلب بطاقات الهدايا', color: '#7c3aed' },
 ];
 
 export default function PwaShortcutsTutorial({ onClose }) {
@@ -44,8 +46,16 @@ export default function PwaShortcutsTutorial({ onClose }) {
           يمكنك الضغط مطولًا على أيقونة {BRAND_NAME} للوصول السريع إلى:
         </p>
         <ul className="pwa-tutorial-list">
-          {SHORTCUTS.map(({ label }) => (
-            <li key={label}>• {label}</li>
+          {SHORTCUTS.map(({ icon: Icon, label, description, color }) => (
+            <li key={label} className="pwa-tutorial-list__item">
+              <span className="pwa-tutorial-list__icon" style={{ color }}>
+                <Icon size={16} strokeWidth={2.2} />
+              </span>
+              <span>
+                <strong>{label}</strong>
+                <span className="pwa-tutorial-list__desc">{description}</span>
+              </span>
+            </li>
           ))}
         </ul>
         <button type="button" className="pwa-install-card__btn pwa-install-card__btn--primary pwa-tutorial-card__ok" onClick={onClose}>
