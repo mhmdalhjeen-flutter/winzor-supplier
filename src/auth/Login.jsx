@@ -1,37 +1,58 @@
 import { useState, useEffect } from "react";
 import { Eye, EyeOff } from "lucide-react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useSearchParams } from "react-router-dom";
 
 import AuthLayout from "../layouts/AuthLayout";
 import "../styles/auth.css";
 
 import { login } from "../services/auth.service";
 import { setAuth } from "../utils/auth";
-import { completePendingPwaAction } from "../pwa/pwaShortcutActions";
+import {
+  completePendingPwaAction,
+  openAddShortcut,
+  PWA_ACTION_OFFER,
+  PWA_ACTION_PRODUCT,
+} from "../pwa/pwaShortcutActions";
+
+function resolvePostLoginRoute(role) {
+  return role === "supplier" ? "/supplier" : "/store";
+}
 
 export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const [form, setForm] = useState({
     identifier: "",
     password: "",
   });
+
+  const finishLoginNavigation = (role) => {
+    const pwaAction = searchParams.get("pwaAction");
+    if (pwaAction === PWA_ACTION_PRODUCT || pwaAction === PWA_ACTION_OFFER) {
+      openAddShortcut(navigate, true, role, pwaAction);
+      return true;
+    }
+    if (completePendingPwaAction(navigate, role)) return true;
+
+    const returnTo = searchParams.get("returnTo");
+    if (returnTo && returnTo.startsWith("/")) {
+      navigate(returnTo, { replace: true });
+      return true;
+    }
+
+    navigate(resolvePostLoginRoute(role), { replace: true });
+    return true;
+  };
+
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem("user"));
-
     if (!user) return;
-
-    if (completePendingPwaAction(navigate, user.role)) return;
-
-    if (user.role === "supplier") {
-      navigate("/supplier", { replace: true });
-    } else if (user.role === "store") {
-      navigate("/store", { replace: true });
-    }
-  }, [navigate]);
+    finishLoginNavigation(user.role);
+  }, [navigate, searchParams]);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -61,13 +82,7 @@ export default function Login() {
 
       const role = data.user.role;
 
-      if (completePendingPwaAction(navigate, role)) return;
-
-      if (role === "supplier") {
-          navigate("/supplier", { replace: true });
-        } else if (role === "store") {
-          navigate("/store", { replace: true });
-        } 
+      finishLoginNavigation(role);
 
     } catch (err) {
       const message = err.response?.data?.message

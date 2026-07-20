@@ -1,26 +1,26 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Pencil, Trash2 } from "lucide-react";
 import api from "../services/api";
 import "../styles/dashboard.css";
 import "../styles/MyStore.css";
 import OfferPriceDisplay from "../components/OfferPriceDisplay";
-import PriceCurrencyInput from "../components/PriceCurrencyInput";
-import ImagePicker from "../components/ImagePicker";
-import { formatPrice, DEFAULT_CURRENCY } from "../utils/currency";
+import { formatPrice } from "../utils/currency";
 import { queryKeys } from "../lib/queryClient";
 import { unwrapList } from "../utils/unwrapList";
 import LightLoadingHint from "../shared/LightLoadingHint";
+import { invalidateCatalog } from "../utils/catalogRefresh";
+import { getStoredUser } from "../utils/safeStorage";
 
 export default function MyStore() {
-  const user = JSON.parse(localStorage.getItem("user"));
+  const user = getStoredUser({});
   const isSupplier = user?.role === "supplier";
+  const baseRoute = isSupplier ? "/supplier" : "/store";
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
 
   const [view, setView] = useState("products");
-  const [editingItem, setEditingItem] = useState(null);
-  const [editForm, setEditForm] = useState({});
-  const [editLoading, setEditLoading] = useState(false);
-  const [editError, setEditError] = useState(null);
 
   const {
     data: products = [],
@@ -55,7 +55,6 @@ export default function MyStore() {
     ? productsError?.response?.data?.message || (productsError ? "تعذّر تحميل المنتجات" : null)
     : offersError?.response?.data?.message || (offersError ? "تعذّر تحميل العروض" : null);
 
-
   const handleDeleteProduct = async (id) => {
     if (!window.confirm("هل أنت متأكد من حذف هذا المنتج؟")) return;
     try {
@@ -63,6 +62,7 @@ export default function MyStore() {
       queryClient.setQueryData(queryKeys.myProducts, (prev = []) =>
         prev.filter((p) => p._id !== id)
       );
+      invalidateCatalog(queryClient);
     } catch (err) {
       alert("خطأ: " + (err.response?.data?.message || err.message));
     }
@@ -75,62 +75,17 @@ export default function MyStore() {
       queryClient.setQueryData(queryKeys.myOffersAll, (prev = []) =>
         prev.filter((o) => o._id !== id)
       );
+      invalidateCatalog(queryClient);
     } catch (err) {
       alert("خطأ: " + (err.response?.data?.message || err.message));
     }
   };
 
   const openEdit = (item) => {
-    setEditingItem(item);
-    setEditError(null);
-
     if (view === "products") {
-      setEditForm({
-        name: item.name || "",
-        description: item.description || "",
-        price: item.price || "",
-        currency: item.currency || DEFAULT_CURRENCY,
-        image: item.image || "",
-        isWholesale: item.isWholesale || false,
-      });
+      navigate(`${baseRoute}/add-product-offer?editProduct=${item._id}`);
     } else {
-      setEditForm({
-        title: item.title || "",
-        description: item.description || "",
-        offerType: item.offerType || "discount",
-        value: item.value || "",
-        currency: item.currency || DEFAULT_CURRENCY,
-        image: item.image || "",
-      });
-    }
-  };
-
-  const handleSaveEdit = async () => {
-    setEditLoading(true);
-    setEditError(null);
-    try {
-      const url = view === "products"
-        ? `/products/${editingItem._id}`
-        : `/offers/${editingItem._id}`;
-
-      const { data } = await api.put(url, editForm);
-      const updated = data.product || data.offer || { ...editingItem, ...editForm };
-
-      if (view === "products") {
-        queryClient.setQueryData(queryKeys.myProducts, (prev = []) =>
-          prev.map((p) => (p._id === editingItem._id ? { ...p, ...updated } : p))
-        );
-      } else {
-        queryClient.setQueryData(queryKeys.myOffersAll, (prev = []) =>
-          prev.map((o) => (o._id === editingItem._id ? { ...o, ...updated } : o))
-        );
-      }
-
-      setEditingItem(null);
-    } catch (err) {
-      setEditError(err.response?.data?.message || err.message);
-    } finally {
-      setEditLoading(false);
+      navigate(`${baseRoute}/add-product-offer?editOffer=${item._id}`);
     }
   };
 
@@ -174,121 +129,24 @@ export default function MyStore() {
                     <p className="expire-text">⏳ ينتهي: {new Date(item.expiresAt).toLocaleDateString("ar-EG")}</p>
                   )}
 
-                  <div className="card-actions">
-                    <button className="edit-btn" onClick={() => openEdit(item)}>تعديل</button>
+                  <div className="store-card-actions">
+                    <button type="button" className="store-action-btn store-action-btn--edit" onClick={() => openEdit(item)}>
+                      <Pencil size={16} strokeWidth={2.2} />
+                      تعديل
+                    </button>
                     <button
-                      className="delete-btn"
+                      type="button"
+                      className="store-action-btn store-action-btn--delete"
                       onClick={() => view === "products" ? handleDeleteProduct(item._id) : handleDeleteOffer(item._id)}
-                    >حذف</button>
+                    >
+                      <Trash2 size={16} strokeWidth={2.2} />
+                      حذف
+                    </button>
                   </div>
                 </div>
               </div>
             ))
           )}
-        </div>
-      )}
-
-      {editingItem && (
-        <div className="modal-overlay" onClick={() => setEditingItem(null)}>
-          <div className="modal-box" onClick={(e) => e.stopPropagation()}>
-            <h3 className="modal-title">
-              {view === "products" ? "✏️ تعديل المنتج" : "✏️ تعديل العرض"}
-            </h3>
-
-            {editError && <p className="error-text">❌ {editError}</p>}
-
-            {view === "products" ? (
-              <>
-                <label>اسم المنتج</label>
-                <input
-                  value={editForm.name}
-                  onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                />
-                <label>الوصف</label>
-                <textarea
-                  value={editForm.description}
-                  onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
-                />
-                <label>السعر</label>
-                <PriceCurrencyInput
-                  price={editForm.price}
-                  currency={editForm.currency}
-                  onPriceChange={(value) => setEditForm({ ...editForm, price: value })}
-                  onCurrencyChange={(value) => setEditForm({ ...editForm, currency: value })}
-                  className="price-currency-row"
-                />
-                <ImagePicker
-                  label="صورة المنتج"
-                  value={editForm.image}
-                  onChange={(url) => setEditForm({ ...editForm, image: url })}
-                  onError={(msg) => setEditError(msg)}
-                />
-                <label className="checkbox-label">
-                  <input
-                    type="checkbox"
-                    checked={editForm.isWholesale}
-                    onChange={(e) => setEditForm({ ...editForm, isWholesale: e.target.checked })}
-                  />
-                  متاح للجملة
-                </label>
-              </>
-            ) : (
-              <>
-                <label>عنوان العرض</label>
-                <input
-                  value={editForm.title}
-                  onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
-                />
-                <label>الوصف</label>
-                <textarea
-                  value={editForm.description}
-                  onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
-                />
-                <label>نوع العرض</label>
-                <select
-                  value={editForm.offerType}
-                  onChange={(e) => setEditForm({ ...editForm, offerType: e.target.value })}
-                >
-                  <option value="discount">{'\u062E\u0635\u0645'} %</option>
-                  <option value="fixed_price">سعر ثابت</option>
-                  <option value="bogo">اشترِ واحد واحصل على آخر</option>
-                  <option value="free_item">منتج مجاني</option>
-                </select>
-                {(editForm.offerType === "discount" || editForm.offerType === "fixed_price") && (
-                  <>
-                    <label>{editForm.offerType === "discount" ? `\u0646\u0633\u0628\u0629 \u0627\u0644\u062E\u0635\u0645 %` : "القيمة / السعر"}</label>
-                    <input
-                      type="number"
-                      step="any"
-                      value={editForm.value}
-                      onChange={(e) => setEditForm({ ...editForm, value: e.target.value })}
-                    />
-                    <label>العملة</label>
-                    <PriceCurrencyInput
-                      currency={editForm.currency}
-                      onPriceChange={() => {}}
-                      onCurrencyChange={(value) => setEditForm({ ...editForm, currency: value })}
-                      currencyOnly
-                      className="price-currency-row currency-only-row"
-                    />
-                  </>
-                )}
-                <ImagePicker
-                  label="صورة العرض"
-                  value={editForm.image}
-                  onChange={(url) => setEditForm({ ...editForm, image: url })}
-                  onError={(msg) => setEditError(msg)}
-                />
-              </>
-            )}
-
-            <div className="modal-actions">
-              <button className="save-btn" onClick={handleSaveEdit} disabled={editLoading}>
-                {editLoading ? "⏳ جاري الحفظ..." : "💾 حفظ التعديلات"}
-              </button>
-              <button className="cancel-btn" onClick={() => setEditingItem(null)}>إلغاء</button>
-            </div>
-          </div>
         </div>
       )}
     </div>

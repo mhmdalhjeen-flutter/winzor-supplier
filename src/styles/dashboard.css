@@ -859,3 +859,129 @@ body.sidebar-open .topbar {
   background: #f1f5f9;
   color: var(--text-main);
 }
+
+/* Latest Notifications (Dashboard) */
+.latest-notifications {
+  background: #fff;
+  border-radius: 20px;
+  padding: 22px;
+  box-shadow: var(--shadow);
+}
+
+.latest-notifications__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.latest-notifications__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.latest-notifications__subtitle {
+  margin: 0;
+  font-size: 13px;
+  color: #64748b;
+}
+
+.latest-notifications__view-all {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border: none;
+  background: #f1f5f9;
+  color: #2563eb;
+  font-weight: 700;
+  font-size: 13px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.latest-notifications__empty {
+  text-align: center;
+  padding: 32px 16px;
+  color: #94a3b8;
+}
+
+.latest-notifications__list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.notif-card {
+  display: flex;
+  gap: 14px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid #f1f5f9;
+  background: #fafafa;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.notif-card:hover {
+  background: #f8fafc;
+  border-color: #e2e8f0;
+}
+
+.notif-card--unread {
+  background: #f0f7ff;
+  border-color: #bfdbfe;
+}
+
+.notif-card__icon {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.notif-card__icon--default { background: #eef2ff; color: #4f46e5; }
+.notif-card__icon--warning { background: #fef3c7; color: #d97706; }
+.notif-card__icon--danger { background: #fee2e2; color: #dc2626; }
+.notif-card__icon--info { background: #dbeafe; color: #2563eb; }
+
+.notif-card__content { flex: 1; min-width: 0; }
+.notif-card__row { display: flex; align-items: center; gap: 8px; }
+.notif-card__row strong { font-size: 14px; color: #0f172a; }
+.notif-card__content p { margin: 4px 0 0; font-size: 13px; color: #64748b; line-height: 1.4; }
+.notif-card__content time { font-size: 11px; color: #94a3b8; }
+.notif-card__dot { width: 8px; height: 8px; border-radius: 50%; background: #3b82f6; flex-shrink: 0; }
+
+/* Notifications full page */
+.notifications-page { max-width: 720px; margin: 0 auto; }
+.notifications-page__head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 20px; }
+.notifications-page__title { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+.notifications-page__sub { margin: 0; color: #64748b; font-size: 14px; }
+.notifications-mark-all { border: none; background: #0f172a; color: #fff; padding: 10px 16px; border-radius: 12px; cursor: pointer; font-weight: 700; font-family: inherit; }
+.notifications-list { display: flex; flex-direction: column; gap: 10px; }
+.notif-full-card { display: flex; gap: 14px; padding: 16px 18px; border-radius: 16px; border: 1px solid #e5e7eb; background: #fff; cursor: pointer; transition: 0.15s; }
+.notif-full-card--unread { background: #f0f7ff; border-color: #bfdbfe; }
+.notif-full-card__body { flex: 1; }
+.notif-full-card__row { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.notif-full-card__body p { margin: 0 0 6px; color: #475569; font-size: 14px; }
+.notif-full-card__body time { font-size: 12px; color: #94a3b8; }
+.notifications-empty, .notifications-error { text-align: center; padding: 40px 20px; color: #94a3b8; }
+.notifications-error { color: #ef4444; }
+
+/* Profile enhancements */
+.profile-summary-grid { display: flex; flex-wrap: wrap; gap: 10px 16px; margin: 12px 0; font-size: 14px; color: #475569; }
+.profile-summary-block { margin: 0 0 8px; color: #334155; line-height: 1.6; }
+.input-readonly { background: #f1f5f9 !important; color: #64748b; cursor: not-allowed; }
+
+@media (max-width: 1100px) {
+  .home-content-grid {
+    grid-template-columns: 1fr;
+  }
+}

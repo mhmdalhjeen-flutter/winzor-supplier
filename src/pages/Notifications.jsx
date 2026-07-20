@@ -1,16 +1,19 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Bell, Clock, AlertCircle, RefreshCw, Tag } from "lucide-react";
 import { getNotifications, markRead, markAllRead } from "../services/notifications.service";
 import { queryKeys } from "../lib/queryClient";
 import LightLoadingHint from "../shared/LightLoadingHint";
+import "../styles/dashboard.css";
 
-const typeIcon = (type) => {
+function typeMeta(type) {
   switch (type) {
-    case "offer_expiring": return "⏳";
-    case "offer_expired": return "❌";
-    case "offer_renewed": return "🔄";
-    default: return "🔔";
+    case "offer_expiring": return { Icon: Clock, tone: "warning" };
+    case "offer_expired": return { Icon: AlertCircle, tone: "danger" };
+    case "offer_renewed": return { Icon: RefreshCw, tone: "info" };
+    case "order_rejected": return { Icon: AlertCircle, tone: "danger" };
+    default: return { Icon: Tag, tone: "default" };
   }
-};
+}
 
 export default function Notifications() {
   const qc = useQueryClient();
@@ -50,49 +53,60 @@ export default function Notifications() {
   };
 
   return (
-    <div style={{ maxWidth: 720, margin: "0 auto" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-        <h2 style={{ fontWeight: 800 }}>الإشعارات</h2>
-        <button
-          onClick={handleMarkAll}
-          style={{ background: "#0f172a", color: "#fff", border: "none", padding: "8px 14px", borderRadius: 10, cursor: "pointer", fontWeight: 700 }}
-        >
-          تعليم الكل كمقروء
-        </button>
+    <div className="notifications-page">
+      <div className="notifications-page__head">
+        <div>
+          <h2 className="title notifications-page__title">
+            <Bell size={24} strokeWidth={2.2} />
+            الإشعارات
+          </h2>
+          <p className="notifications-page__sub">كل التنبيهات والتحديثات في مكان واحد</p>
+        </div>
+        {items.some((n) => !n.read) && (
+          <button type="button" className="notifications-mark-all" onClick={handleMarkAll}>
+            تعليم الكل كمقروء
+          </button>
+        )}
       </div>
 
       {isLoading && items.length === 0 && (
         <LightLoadingHint label="جاري تحميل الإشعارات..." />
       )}
 
-      {error && <p style={{ textAlign: "center", color: "#ef4444" }}>{error}</p>}
+      {error && <p className="notifications-error">{error}</p>}
       {!isLoading && !error && items.length === 0 && (
-        <p style={{ textAlign: "center", color: "#94a3b8", padding: "40px 0" }}>لا توجد إشعارات</p>
+        <div className="notifications-empty">
+          <Bell size={40} strokeWidth={1.5} />
+          <p>لا توجد إشعارات</p>
+        </div>
       )}
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-        {items.map((n) => (
-          <div
-            key={n._id}
-            onClick={() => handleClick(n)}
-            style={{
-              display: "flex", gap: 12, alignItems: "flex-start",
-              background: n.read ? "#fff" : "#eff6ff",
-              border: "1px solid " + (n.read ? "#e5e7eb" : "#bfdbfe"),
-              borderRadius: 14, padding: 14, cursor: "pointer",
-            }}
-          >
-            <span style={{ fontSize: 22 }}>{typeIcon(n.type)}</span>
-            <div style={{ flex: 1 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <strong>{n.title}</strong>
-                {!n.read && <span style={{ width: 9, height: 9, borderRadius: "50%", background: "#3b82f6" }} />}
+      <div className="notifications-list">
+        {items.map((n) => {
+          const { Icon, tone } = typeMeta(n.type);
+          return (
+            <article
+              key={n._id}
+              className={`notif-full-card${n.read ? "" : " notif-full-card--unread"}`}
+              onClick={() => handleClick(n)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => e.key === "Enter" && handleClick(n)}
+            >
+              <span className={`notif-card__icon notif-card__icon--${tone}`}>
+                <Icon size={22} strokeWidth={2} />
+              </span>
+              <div className="notif-full-card__body">
+                <div className="notif-full-card__row">
+                  <strong>{n.title}</strong>
+                  {!n.read && <span className="notif-card__dot" />}
+                </div>
+                {n.body && <p>{n.body}</p>}
+                <time>{new Date(n.createdAt).toLocaleString("ar-EG")}</time>
               </div>
-              <p style={{ color: "#475569", fontSize: 14, margin: "4px 0 0" }}>{n.body}</p>
-              <small style={{ color: "#94a3b8" }}>{new Date(n.createdAt).toLocaleString("ar")}</small>
-            </div>
-          </div>
-        ))}
+            </article>
+          );
+        })}
       </div>
     </div>
   );

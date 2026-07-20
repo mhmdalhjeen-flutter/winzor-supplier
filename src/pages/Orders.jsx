@@ -17,13 +17,17 @@ const STATUS_MAP = {
     delivered: { label: 'تم التسليم',      color: '#6366f1' },
 };
 
+const ACTIVE_STATUSES = new Set(['pending', 'confirmed']);
+
 export default function Orders() {
     const navigate  = useNavigate();
     const user      = getStoredUser({});
     const baseRoute = user?.role === 'supplier' ? '/supplier' : '/store';
 
-    const [updating, setUpdating] = useState(null); // orderId الذي يُحدَّث
+    const [updating, setUpdating] = useState(null);
     const [toast,    setToast]    = useState('');
+    const [rejectTarget, setRejectTarget] = useState(null);
+    const [rejectReason, setRejectReason] = useState('');
 
     const queryClient = useQueryClient();
 
@@ -36,7 +40,9 @@ export default function Orders() {
         staleTime: 30 * 1000,
     });
 
-    const orders = ordersData;
+    const orders = (Array.isArray(ordersData) ? ordersData : []).filter(
+        (o) => ACTIVE_STATUSES.has(o.status)
+    );
     const loadError = queryError?.response?.data?.message || (queryError ? 'تعذّر تحميل الطلبات' : '');
 
     const showToast = (msg) => {
@@ -44,14 +50,16 @@ export default function Orders() {
         setTimeout(() => setToast(''), 3000);
     };
 
-    // ── تغيير الحالة ───────────────────────────────────────────────────────
-    const changeStatus = async (orderId, newStatus) => {
+    const changeStatus = async (orderId, newStatus, extra = {}) => {
         setUpdating(orderId);
         try {
-            const res = await axios.patch(`/orders/${orderId}/status`, { status: newStatus });
+            const res = await axios.patch(`/orders/${orderId}/status`, {
+                status: newStatus,
+                ...extra,
+            });
             queryClient.setQueryData(queryKeys.storeOrders, (prev) => {
                 const list = Array.isArray(prev) ? prev : [];
-                if (res.data?.deleted) {
+                if (res.data?.deleted || newStatus === 'rejected') {
                     return list.filter(o => o._id !== orderId);
                 }
                 return list.map(o => o._id === orderId ? { ...o, status: newStatus } : o);
@@ -64,7 +72,24 @@ export default function Orders() {
         }
     };
 
-    // ── تنسيق التاريخ ──────────────────────────────────────────────────────
+    const openRejectDialog = (order) => {
+        setRejectTarget(order);
+        setRejectReason('');
+    };
+
+    const confirmReject = async () => {
+        if (!rejectTarget) return;
+        const reason = rejectReason.trim();
+        if (!reason) {
+            showToast('يرجى كتابة سبب الرفض');
+            return;
+        }
+        const orderId = rejectTarget._id;
+        setRejectTarget(null);
+        await changeStatus(orderId, 'rejected', { rejectionReason: reason });
+        setRejectReason('');
+    };
+
     const formatDate = (iso) =>
         new Date(iso).toLocaleDateString('ar-EG', {
             year: 'numeric', month: 'long', day: 'numeric',
@@ -88,16 +113,13 @@ export default function Orders() {
 const openChatWithOrder = (order) => {
     const itemsList = (order.items || []).map(i => `${i.name} ×${i.quantity}`).join('، ');
     const context = {
-        // ✅ نفس المفتاح الذي يقرأه Chats.jsx
         storeOwnerId: order.customer?._id,
-        // context اختياري — بدونه لن يظهر شريط المنتج وهذا مقبول
         productName:  `طلب رقم ${order._id.slice(-6).toUpperCase()}`,
         productPrice: order.total,
         productId:    null,
         productImg:   null,
         productUrl:   null,
         itemType:     'Product',
-        // ✅ الرسالة الجاهزة تُحقن في input بعد فتح المحادثة
         prefillText:
             `📋 بخصوص طلبك رقم: ${order._id.slice(-6).toUpperCase()}\n` +
             `📦 ${itemsList}\n` +
@@ -112,17 +134,33 @@ const openChatWithOrder = (order) => {
         <div className="orders-page">
             <h2 className="title">📋 طلبات الزبائن الواردة</h2>
 
-            {/* Toast */}
             {toast && (
-                <div style={{
-                    position: 'fixed', top: '20px', left: '50%',
-                    transform: 'translateX(-50%)',
-                    background: '#1e293b', color: '#fff',
-                    padding: '12px 28px', borderRadius: '10px',
-                    zIndex: 9999, fontWeight: 'bold',
-                    boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
-                }}>
-                    {toast}
+                <div className="orders-toast">{toast}</div>
+            )}
+
+            {rejectTarget && (
+                <div className="reject-dialog-overlay" onClick={() => setRejectTarget(null)}>
+                    <div className="reject-dialog" onClick={(e) => e.stopPropagation()}>
+                        <h3>سبب رفض الطلب</h3>
+                        <p className="reject-dialog__hint">
+                            سيصل هذا السبب للزبون كإشعار. الطلب سيُزال من قائمة الطلبات النشطة.
+                        </p>
+                        <textarea
+                            rows={4}
+                            value={rejectReason}
+                            onChange={(e) => setRejectReason(e.target.value)}
+                            placeholder="مثال: المنتج غير متوفر حالياً..."
+                            autoFocus
+                        />
+                        <div className="reject-dialog__actions">
+                            <button type="button" className="reject-dialog__cancel" onClick={() => setRejectTarget(null)}>
+                                إلغاء
+                            </button>
+                            <button type="button" className="reject-dialog__confirm" onClick={confirmReject}>
+                                تأكيد الرفض
+                            </button>
+                        </div>
+                    </div>
                 </div>
             )}
 
@@ -146,7 +184,7 @@ const openChatWithOrder = (order) => {
                 </div>
             ) : (
                 <div className="orders-list">
-                    {(Array.isArray(orders) ? orders : []).map(order => {
+                    {orders.map(order => {
                         const statusMeta = STATUS_MAP[order.status] || STATUS_MAP.pending;
                         const isUpdating = updating === order._id;
                         const whatsapp  = order.customer?.phone?.replace(/\D/g, '');
@@ -157,7 +195,6 @@ const openChatWithOrder = (order) => {
                                 className="order-card"
                                 style={{ opacity: isUpdating ? 0.7 : 1, transition: 'opacity 0.2s' }}
                             >
-                                {/* ─ Header ─ */}
                                 <div className="order-header">
                                     <h3>العميل: {order.customer?.name || '—'}</h3>
                                     <span
@@ -168,7 +205,6 @@ const openChatWithOrder = (order) => {
                                     </span>
                                 </div>
 
-                                {/* ─ Body ─ */}
                                 <div className="order-body">
                                     <p>
                                         <strong>📦 البضاعة: </strong>
@@ -184,7 +220,6 @@ const openChatWithOrder = (order) => {
                                     </p>
                                 </div>
 
-                                {/* ─ Actions ─ */}
                                 <div className="order-actions">
     <div className="reply-actions">
         {order.status === 'pending' && (
@@ -199,8 +234,7 @@ const openChatWithOrder = (order) => {
                 <button
                     className="reject-btn"
                     disabled={isUpdating}
-                    onClick={() => changeStatus(order._id, 'rejected')}
-                    style={{ background: '#ef4444', color: '#fff', border: 'none', borderRadius: '8px', padding: '8px 16px', cursor: 'pointer' }}
+                    onClick={() => openRejectDialog(order)}
                 >
                     ❌ رفض
                 </button>
@@ -216,7 +250,6 @@ const openChatWithOrder = (order) => {
             </button>
         )}
 
-        {/* ✅ واتساب مع تفاصيل الطلب */}
         {whatsapp && (
             <button
                 className="wa-btn"
@@ -227,7 +260,6 @@ const openChatWithOrder = (order) => {
         )}
     </div>
 
-    {/* ✅ دردشة مع تفاصيل الطلب */}
     <button
         className="chat-app-btn"
         onClick={() => openChatWithOrder(order)}

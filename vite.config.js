@@ -40,14 +40,14 @@ export default defineConfig({
             name: 'إضافة منتج',
             short_name: 'منتج',
             description: 'افتح نموذج إضافة منتج جديد',
-            url: '/login?pwaAction=add-product',
+            url: '/store/add-product-offer?pwaTab=product',
             icons: [{ src: '/brand/logo-64.webp', sizes: '64x64', type: 'image/webp' }],
           },
           {
             name: 'إضافة عرض',
             short_name: 'عرض',
             description: 'افتح نموذج إضافة عرض جديد',
-            url: '/login?pwaAction=add-offer',
+            url: '/store/add-product-offer?pwaTab=offer',
             icons: [{ src: '/brand/logo-64.webp', sizes: '64x64', type: 'image/webp' }],
           },
           {

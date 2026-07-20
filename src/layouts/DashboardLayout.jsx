@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Outlet, NavLink, useNavigate, useLocation } from "react-router-dom";
-import { Menu, User } from "lucide-react";
+import { Menu, User, Home } from "lucide-react";
 import "../styles/dashboard.css";
 import useDashboardBadges from "../hooks/useDashboardBadges";
 import useStoreOwnerPermissions from "../hooks/useStoreOwnerPermissions";
@@ -96,7 +96,6 @@ export default function DashboardLayout() {
             <NavLink to={`${baseRoute}/competitions`} onClick={() => setMenuOpen(false)}>🏆 <span>إضافة مسابقة</span></NavLink>
           )}
           <NavLink to={`${baseRoute}/buy-codes`} onClick={() => setMenuOpen(false)}>🎟️ <span>شراء أكواد</span></NavLink>
-          <NavLink to={`${baseRoute}/code-stats`} onClick={() => setMenuOpen(false)}>🔑 <span>بصمة الأكواد</span></NavLink>
           {storePages.memberPrizes && (
             <NavLink to={`${baseRoute}/member-prizes`} onClick={() => setMenuOpen(false)}>🎁 <span>جوائز الأعضاء</span></NavLink>
           )}
@@ -207,7 +206,7 @@ export default function DashboardLayout() {
       {!subscriptionExpired && (
         <nav className="bottom-nav" aria-label="التنقل السريع">
           <NavLink to={baseRoute} end>
-            <span className="nav-icon">🏠</span>
+            <span className="nav-icon"><Home size={20} strokeWidth={2.2} /></span>
             <span className="nav-label">الرئيسية</span>
           </NavLink>
           <NavLink to={`${baseRoute}/offers`}>

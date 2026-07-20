@@ -429,16 +429,20 @@ export default function Chats() {
                                             <p style={{ margin:0, whiteSpace:"pre-wrap" }}>{msg.text}</p>
                                         )}
 
-                                        <span style={{
-                                            fontSize:"0.65rem", opacity:0.6, display:"block",
-                                            marginTop:"3px", textAlign: isMine ? "left" : "right",
-                                        }}>
+                                        <span className="msg-meta">
                                             {formatTime(msg.createdAt)}
-                                            {isMine && (msg.read ? " ✓✓" : " ✓")}
+                                            {isMine && (
+                                                <span className="read-status">{msg.read ? "✓✓" : "✓"}</span>
+                                            )}
                                         </span>
                                     </div>
                                 );
                             })}
+                            {sending && (
+                                <div className="typing-indicator" aria-label="جاري الكتابة">
+                                    <span /><span /><span />
+                                </div>
+                            )}
                             <div ref={messagesEndRef} />
                         </div>
 

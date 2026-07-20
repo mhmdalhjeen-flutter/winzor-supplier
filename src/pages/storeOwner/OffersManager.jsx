@@ -7,6 +7,7 @@ import { formatOfferBadge } from "../../utils/offerPricing";
 import OfferPriceDisplay from "../../components/OfferPriceDisplay";
 import { unwrapList } from "../../utils/unwrapList";
 import { queryKeys } from "../../lib/queryClient";
+import { invalidateCatalog } from "../../utils/catalogRefresh";
 import LightLoadingHint from "../../shared/LightLoadingHint";
 
 const lifecycleStatus = (o) => {
@@ -42,8 +43,7 @@ export default function OffersManager() {
   const error = queryError?.response?.data?.message || (queryError ? "تعذّر تحميل العروض" : "");
 
   const refreshOffers = () => {
-    queryClient.invalidateQueries({ queryKey: queryKeys.myOffersAll });
-    queryClient.invalidateQueries({ queryKey: queryKeys.myOffers });
+    invalidateCatalog(queryClient);
   };
 
   const handleDelete = async (id) => {

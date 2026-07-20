@@ -1,5 +1,6 @@
-import { useMemo } from "react";
-import { Package, Bell, MessageCircle } from "lucide-react";
+import { useMemo, useState, useEffect } from "react";
+import { Package, MessageCircle } from "lucide-react";
+import NotificationDropdown from "./NotificationDropdown";
 
 function BadgeCount({ count }) {
   if (!count || count <= 0) return null;
@@ -11,6 +12,12 @@ function BadgeCount({ count }) {
 }
 
 export default function DashboardHeaderActions({ badges, baseRoute, navigate }) {
+  const [notifCount, setNotifCount] = useState(badges.notifications);
+
+  useEffect(() => {
+    setNotifCount(badges.notifications);
+  }, [badges.notifications]);
+
   const items = useMemo(
     () => [
       {
@@ -21,13 +28,6 @@ export default function DashboardHeaderActions({ badges, baseRoute, navigate }) 
         count: badges.orders,
       },
       {
-        key: "notifications",
-        icon: Bell,
-        label: "الإشعارات",
-        path: `${baseRoute}/notifications`,
-        count: badges.notifications,
-      },
-      {
         key: "chats",
         icon: MessageCircle,
         label: "الدردشة",
@@ -35,7 +35,7 @@ export default function DashboardHeaderActions({ badges, baseRoute, navigate }) 
         count: badges.chats,
       },
     ],
-    [badges.chats, badges.notifications, badges.orders, baseRoute]
+    [badges.chats, badges.orders, baseRoute]
   );
 
   return (
@@ -53,6 +53,11 @@ export default function DashboardHeaderActions({ badges, baseRoute, navigate }) 
           <BadgeCount count={count} />
         </button>
       ))}
+      <NotificationDropdown
+        count={notifCount}
+        baseRoute={baseRoute}
+        onCountChange={setNotifCount}
+      />
     </div>
   );
 }

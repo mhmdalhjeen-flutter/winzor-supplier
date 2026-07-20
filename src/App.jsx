@@ -31,7 +31,6 @@ const ItemDetails = lazy(() => import("./pages/ItemDetails"));
 const Support = lazy(() => import("./pages/Support"));
 const Profile = lazy(() => import("./pages/Profile"));
 const AddProductOffer = lazy(() => import("./pages/storeOwner/AddProductsOffers"));
-const CodeStats = lazy(() => import("./pages/storeOwner/CodeStats"));
 const MemberPrizes = lazy(() => import("./pages/storeOwner/MemberPrizes"));
 const OffersManager = lazy(() => import("./pages/storeOwner/OffersManager"));
 const Notifications = lazy(() => import("./pages/Notifications"));
@@ -70,7 +69,7 @@ function MerchantApp() {
         <Route path="cart" element={<StoreOnlyRoute><StoreFeatureRoute feature="cart"><LazyPage><Cart /></LazyPage></StoreFeatureRoute></StoreOnlyRoute>} />
         <Route path="competitions" element={<StoreOnlyRoute><StoreFeatureRoute feature="competitions"><LazyPage><Competitions /></LazyPage></StoreFeatureRoute></StoreOnlyRoute>} />
         <Route path="buy-codes" element={<StoreOnlyRoute><LazyPage><BuyCodes /></LazyPage></StoreOnlyRoute>} />
-        <Route path="code-stats" element={<StoreOnlyRoute><LazyPage><CodeStats /></LazyPage></StoreOnlyRoute>} />
+        <Route path="code-stats" element={<Navigate to="/store" replace />} />
         <Route path="member-prizes" element={<StoreOnlyRoute><StoreFeatureRoute feature="memberPrizes"><LazyPage><MemberPrizes /></LazyPage></StoreFeatureRoute></StoreOnlyRoute>} />
         <Route path="warehouses" element={<StoreOnlyRoute><StoreFeatureRoute feature="warehouses"><LazyPage><Warehouses /></LazyPage></StoreFeatureRoute></StoreOnlyRoute>} />
         <Route path="warehouses/:id" element={<StoreOnlyRoute><StoreFeatureRoute feature="warehouses"><LazyPage><WarehouseDetail /></LazyPage></StoreFeatureRoute></StoreOnlyRoute>} />
@@ -99,7 +98,6 @@ function MerchantApp() {
         <Route path="cart" element={<Navigate to="/supplier" replace />} />
         <Route path="competitions" element={<Navigate to="/supplier" replace />} />
         <Route path="buy-codes" element={<Navigate to="/supplier" replace />} />
-        <Route path="code-stats" element={<Navigate to="/supplier" replace />} />
         <Route path="member-prizes" element={<Navigate to="/supplier" replace />} />
         <Route path="warehouses" element={<Navigate to="/supplier" replace />} />
         <Route path="warehouses/:id" element={<Navigate to="/supplier" replace />} />

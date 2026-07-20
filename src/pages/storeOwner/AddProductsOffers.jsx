@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import api from '../../services/api';
 import MediaUploader from '../../components/MediaUploader';
 import TagsInput from '../../components/TagsInput';
@@ -9,12 +10,12 @@ import { OFFER_TYPE_OPTIONS } from '../../utils/offerPricing';
 import PriceCurrencyInput from '../../components/PriceCurrencyInput';
 import { DEFAULT_CURRENCY, formatPrice } from '../../utils/currency';
 import { PWA_TAB_PARAM } from '../../pwa/pwaShortcutActions';
+import { invalidateCatalog } from '../../utils/catalogRefresh';
 import '../../styles/AddProductsOffers.css';
 
 const PRODUCT_RULES = [
   'اسم المنتج والسعر إلزاميان.',
   'صورة المنتج مطلوبة (كاميرا، جهاز، أو سحب وإفلات).',
-  'يتم ضغط الصورة وقصّها تلقائياً قبل الرفع.',
   'يجب أن يكون لديك متجر/مستودع نشط قبل الإضافة.',
 ];
 
@@ -25,7 +26,6 @@ const OFFER_RULES = [
   'يُخفى العرض تلقائياً عند انتهاء التاريخ.',
   'يُرسل تنبيه قبل 24 ساعة من انتهاء العرض.',
   'أكمل حقول نوع العرض لحساب السعر النهائي.',
-  'يتم ضغط الصورة وقصّها تلقائياً قبل الرفع.',
 ];
 
 const VARIANT_PRESETS = ['اللون', 'المقاس', 'السعة', 'النوع'];
@@ -106,9 +106,23 @@ function minExpiryDate() {
   return `${yyyy}-${mm}-${dd}`;
 }
 
+function isoToDateInput(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+
 export default function AddProductsOffers() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
+  const editProductId = searchParams.get('editProduct');
+  const editOfferId = searchParams.get('editOffer');
+  const isEditMode = Boolean(editProductId || editOfferId);
   const [tab, setTab] = useState('product');
   const [loading, setLoading] = useState(false);
   const [rulesOpen, setRulesOpen] = useState(false);
@@ -129,6 +143,65 @@ export default function AddProductsOffers() {
     next.delete(PWA_TAB_PARAM);
     setSearchParams(next, { replace: true });
   }, [searchParams, setSearchParams]);
+
+  useEffect(() => {
+    if (editProductId) {
+      setTab('product');
+      (async () => {
+        try {
+          const { data } = await api.get('/products/my');
+          const list = data.products || data || [];
+          const item = list.find((p) => p._id === editProductId);
+          if (!item) {
+            showNotice('المنتج غير موجود', 'error');
+            return;
+          }
+          setProduct({
+            ...EMPTY_PRODUCT,
+            name: item.name || '',
+            price: item.price ?? '',
+            currency: item.currency || DEFAULT_CURRENCY,
+            image: item.image || '',
+            description: item.description || '',
+            freeDelivery: item.freeDelivery ? 'yes' : 'no',
+            isWholesale: item.isWholesale || false,
+          });
+        } catch {
+          showNotice('تعذّر تحميل المنتج', 'error');
+        }
+      })();
+      return;
+    }
+    if (editOfferId) {
+      setTab('offer');
+      (async () => {
+        try {
+          const { data } = await api.get('/offers/my?all=true');
+          const list = data.offers || data || [];
+          const item = list.find((o) => o._id === editOfferId);
+          if (!item) {
+            showNotice('العرض غير موجود', 'error');
+            return;
+          }
+          setOffer({
+            ...EMPTY_OFFER,
+            title: item.title || '',
+            offerType: item.offerType || 'discount',
+            currency: item.currency || DEFAULT_CURRENCY,
+            originalPrice: item.originalPrice ?? '',
+            value: item.value ?? '',
+            finalPrice: item.finalPrice ?? '',
+            image: item.image || '',
+            description: item.description || '',
+            freeDelivery: item.freeDelivery ? 'yes' : 'no',
+            expiresAt: isoToDateInput(item.expiresAt),
+          });
+        } catch {
+          showNotice('تعذّر تحميل العرض', 'error');
+        }
+      })();
+    }
+  }, [editProductId, editOfferId]);
 
   useEffect(() => {
     if (tab !== 'offer') return undefined;
@@ -221,15 +294,27 @@ export default function AddProductsOffers() {
 
     setLoading(true);
     try {
-      await api.post('/products', {
+      const payload = {
         name: product.name.trim(),
         price: Number(product.price),
         currency: product.currency || DEFAULT_CURRENCY,
         image: product.image,
         description: product.description.trim(),
+        isWholesale: product.isWholesale || false,
+      };
+      if (editProductId) {
+        await api.put(`/products/${editProductId}`, payload);
+        showNotice('تم تحديث المنتج بنجاح', 'success');
+        invalidateCatalog(queryClient);
+        navigate(`${baseRoute}/my-store`);
+        return;
+      }
+      await api.post('/products', {
+        ...payload,
         freeDelivery: product.freeDelivery === 'yes',
       });
       showNotice('تم نشر المنتج بنجاح', 'success');
+      invalidateCatalog(queryClient);
       clearDraft(DRAFT_PRODUCT_KEY);
       setProduct(EMPTY_PRODUCT);
       setMediaResetKey((k) => k + 1);
@@ -266,7 +351,7 @@ export default function AddProductsOffers() {
 
     setLoading(true);
     try {
-      await api.post('/offers', {
+      const payload = {
         title: offer.title.trim(),
         offerType: offer.offerType,
         originalPrice: offer.originalPrice !== '' ? Number(offer.originalPrice) : undefined,
@@ -277,8 +362,17 @@ export default function AddProductsOffers() {
         description: offer.description.trim(),
         freeDelivery: offer.freeDelivery === 'yes',
         expiresAt: expiresIso,
-      });
+      };
+      if (editOfferId) {
+        await api.put(`/offers/${editOfferId}`, payload);
+        showNotice('تم تحديث العرض بنجاح', 'success');
+        invalidateCatalog(queryClient);
+        navigate(`${baseRoute}/my-store`);
+        return;
+      }
+      await api.post('/offers', payload);
       showNotice('تم نشر العرض بنجاح', 'success');
+      invalidateCatalog(queryClient);
       clearDraft(DRAFT_OFFER_KEY);
       setOffer(EMPTY_OFFER);
       setMediaResetKey((k) => k + 1);
@@ -497,22 +591,26 @@ export default function AddProductsOffers() {
 
   const renderPublishSection = () => (
     <section className="create-section create-section--publish">
-      <h3 className="create-section__title">7. الحفظ والنشر</h3>
-      <p className="create-section__subtitle">عاين النتيجة، احفظ مسودة، أو انشر فوراً</p>
+      <h3 className="create-section__title">{isEditMode ? '7. حفظ التعديلات' : '7. الحفظ والنشر'}</h3>
+      <p className="create-section__subtitle">{isEditMode ? 'راجع التغييرات ثم احفظ' : 'عاين النتيجة، احفظ مسودة، أو انشر فوراً'}</p>
 
       <div className="publish-actions">
-        <button type="button" className="publish-btn publish-btn--preview" onClick={handleQuickPreview}>
-          معاينة سريعة
-        </button>
-        <button type="button" className="publish-btn publish-btn--draft" onClick={handleSaveDraft} disabled={loading}>
-          حفظ كمسودة
-        </button>
+        {!isEditMode && (
+          <>
+            <button type="button" className="publish-btn publish-btn--preview" onClick={handleQuickPreview}>
+              معاينة سريعة
+            </button>
+            <button type="button" className="publish-btn publish-btn--draft" onClick={handleSaveDraft} disabled={loading}>
+              حفظ كمسودة
+            </button>
+          </>
+        )}
         <button
           type="submit"
           className="publish-btn publish-btn--now"
           disabled={loading || !activeData.image?.trim()}
         >
-          {loading ? 'جارٍ النشر...' : 'نشر الآن'}
+          {loading ? 'جارٍ الحفظ...' : isEditMode ? 'حفظ التعديلات' : 'نشر الآن'}
         </button>
       </div>
     </section>
@@ -530,14 +628,15 @@ export default function AddProductsOffers() {
 
       <div className="form-page-head">
         <div>
-          <h2 className="title">إنشاء منشور للمتجر</h2>
-          <p className="page-lead">أضف منتجاً أو عرضاً بنفس سهولة نشر قصة</p>
+          <h2 className="title">{isEditMode ? (tab === 'product' ? 'تعديل المنتج' : 'تعديل العرض') : 'إنشاء منشور للمتجر'}</h2>
+          <p className="page-lead">{isEditMode ? 'حدّث التفاصيل واحفظ التغييرات' : 'أضف منتجاً أو عرضاً بنفس سهولة نشر قصة'}</p>
         </div>
         <button type="button" className="rules-info-btn" onClick={() => setRulesOpen(true)}>
           ℹ️ القواعد
         </button>
       </div>
 
+      {!isEditMode && (
       <div className="tabs">
         <button type="button" className={tab === 'product' ? 'active' : ''} onClick={() => setTab('product')}>
           إضافة منتج
@@ -546,6 +645,7 @@ export default function AddProductsOffers() {
           إضافة عرض
         </button>
       </div>
+      )}
 
       {tab === 'product' && (
         <form onSubmit={onFormSubmit} className="create-flow">

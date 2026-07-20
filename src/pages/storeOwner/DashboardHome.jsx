@@ -10,6 +10,7 @@ import { BRAND_LOGO_64 } from '../../utils/brandAssets';
 import OfferPriceDisplay from '../../components/OfferPriceDisplay';
 import useStoreOwnerPermissions from '../../hooks/useStoreOwnerPermissions';
 import StoreQuickActions from '../../components/StoreQuickActions';
+import LatestNotifications from '../../components/dashboard/LatestNotifications';
 import '../../styles/dashboard.css';
 
 const STATUS_MAP = {
@@ -262,6 +263,7 @@ export default function DashboardHome() {
             />
 
             <div className="home-content-grid">
+                <LatestNotifications baseRoute={baseRoute} />
                 <div className="activity-section">
                     <h3 className="sub-title">آخر النشاطات</h3>
                     <div className="activity-list">

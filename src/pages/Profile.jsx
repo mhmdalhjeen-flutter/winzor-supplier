@@ -25,6 +25,8 @@ export default function Profile() {
     address: "",
     logo: "",
     coverImage: "",
+    region: "",
+    subRegion: "",
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -48,6 +50,8 @@ export default function Profile() {
           address: data.store.address || "",
           logo: data.store.logo || "",
           coverImage: data.store.coverImage || "",
+          region: data.store.region || "",
+          subRegion: data.store.subRegion || "",
         });
       } catch {
         showMsg("تعذّر تحميل بيانات المتجر", true);
@@ -111,6 +115,8 @@ export default function Profile() {
         address: data.store.address || "",
         logo: data.store.logo || "",
         coverImage: data.store.coverImage || "",
+        region: data.store.region || "",
+        subRegion: data.store.subRegion || "",
       });
       setIsEditingStore(false);
       showMsg("تم تحديث بيانات المتجر");
@@ -207,18 +213,31 @@ export default function Profile() {
 
                 <div className="form-row">
                   <div className="form-group">
+                    <label>المنطقة</label>
+                    <input value={storeForm.region} disabled className="input-readonly" />
+                  </div>
+                  <div className="form-group">
+                    <label>المنطقة الفرعية</label>
+                    <input value={storeForm.subRegion} disabled className="input-readonly" />
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label>العنوان التفصيلي</label>
+                  <input
+                    value={storeForm.address}
+                    onChange={(e) => setStoreForm({ ...storeForm, address: e.target.value })}
+                    placeholder="شارع، مبنى، مدينة..."
+                  />
+                </div>
+
+                <div className="form-row">
+                  <div className="form-group">
                     <label>واتساب (اختياري)</label>
                     <input
                       dir="ltr"
                       value={storeForm.whatsapp}
                       onChange={(e) => setStoreForm({ ...storeForm, whatsapp: e.target.value })}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>العنوان</label>
-                    <input
-                      value={storeForm.address}
-                      onChange={(e) => setStoreForm({ ...storeForm, address: e.target.value })}
                     />
                   </div>
                 </div>
@@ -233,7 +252,18 @@ export default function Profile() {
                 </div>
               </form>
             ) : (
-              <p className="muted-text">يمكنك تعديل صورة المتجر والغلاف وبيانات العرض في أي وقت.</p>
+              <div className="profile-store-summary">
+                {storeForm.description && (
+                  <p className="profile-summary-block"><strong>الوصف:</strong> {storeForm.description}</p>
+                )}
+                <div className="profile-summary-grid">
+                  {storeForm.phone && <span>📞 {storeForm.phone}</span>}
+                  {storeForm.whatsapp && <span>💬 {storeForm.whatsapp}</span>}
+                  {storeForm.address && <span>📍 {storeForm.address}</span>}
+                  {storeForm.region && <span>🗺️ {storeForm.region} — {storeForm.subRegion}</span>}
+                </div>
+                <p className="muted-text">يمكنك تعديل صورة المتجر والغلاف وبيانات العرض في أي وقت.</p>
+              </div>
             )}
           </div>
         </section>
