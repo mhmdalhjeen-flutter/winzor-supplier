@@ -10,15 +10,7 @@ import { BRAND_LOGO_64 } from '../../utils/brandAssets';
 import OfferPriceDisplay from '../../components/OfferPriceDisplay';
 import useStoreOwnerPermissions from '../../hooks/useStoreOwnerPermissions';
 import StoreQuickActions from '../../components/StoreQuickActions';
-import LatestNotifications from '../../components/dashboard/LatestNotifications';
 import '../../styles/dashboard.css';
-
-const STATUS_MAP = {
-    pending:   { label: 'بانتظار التأكيد', color: '#f59e0b' },
-    confirmed: { label: 'قيد الإرسال',     color: '#3b82f6' },
-    rejected:  { label: 'مرفوض',           color: '#ef4444' },
-    delivered: { label: 'تم التسليم',      color: '#10b981' },
-};
 
 export default function DashboardHome() {
     const navigate   = useNavigate();
@@ -30,13 +22,11 @@ export default function DashboardHome() {
     const [stats, setStats] = useState({ products: 0, pendingOrders: 0, messages: 0, total: 0, cards: 0, bypassCards: false });
     const [ownOffers, setOwnOffers] = useState([]);
     const [networkOffers, setNetworkOffers] = useState([]);
-    const [activities, setActivities] = useState([]);
     const [offersLoading, setOffersLoading] = useState(true);
     const [store, setStore] = useState(null);
 
     useEffect(() => {
         fetchStats();
-        fetchActivities();
         fetchDashboardOffers();
         if (!isSupplier) {
             getMyStore()
@@ -130,61 +120,6 @@ export default function DashboardHome() {
         </div>
     );
 
-    const fetchActivities = async () => {
-        try {
-            const [ordersRes, chatsRes] = await Promise.allSettled([
-                axios.get('/orders/store'),
-                axios.get('/chats'),
-            ]);
-
-            const recentActivities = [];
-
-            if (ordersRes.status === 'fulfilled') {
-                const orders = (ordersRes.value.data.orders || []).slice(0, 3);
-                orders.forEach(order => {
-                    const statusMeta = STATUS_MAP[order.status] || STATUS_MAP.pending;
-                    recentActivities.push({
-                        id:   order._id,
-                        icon: '📦',
-                        text: `طلب من ${order.customer?.name || 'زبون'} — ${order.total} ₪ (${statusMeta.label})`,
-                        time: order.createdAt,
-                        color: statusMeta.color,
-                    });
-                });
-            }
-
-            if (chatsRes.status === 'fulfilled') {
-                const conversations = (chatsRes.value.data.conversations || []).slice(0, 2);
-                conversations.forEach(conversation => {
-                    const other = conversation.participants?.find(p =>
-                        (p._id || p)?.toString() !== (user._id || user.id)?.toString()
-                    );
-                    if (conversation.lastMessage?.text) {
-                        recentActivities.push({
-                            id:   conversation._id,
-                            icon: '💬',
-                            text: `رسالة من ${other?.name || 'مستخدم'}: ${conversation.lastMessage.text.slice(0, 40)}...`,
-                            time: conversation.updatedAt,
-                            color: '#10b981',
-                        });
-                    }
-                });
-            }
-
-            recentActivities.sort((a, b) => new Date(b.time) - new Date(a.time));
-            setActivities(recentActivities.slice(0, 5));
-        } catch {
-        }
-    };
-
-    const formatTime = (iso) => {
-        if (!iso) return '';
-        const diff = Date.now() - new Date(iso);
-        if (diff < 3600000)  return `منذ ${Math.floor(diff / 60000)} دقيقة`;
-        if (diff < 86400000) return `منذ ${Math.floor(diff / 3600000)} ساعة`;
-        return new Date(iso).toLocaleDateString('ar-EG');
-    };
-
     const statsCards = [
         {
             id: 1,
@@ -261,27 +196,6 @@ export default function DashboardHome() {
                 onMyStore={() => navigate(`${baseRoute}/my-store`)}
                 onBuyCodes={() => navigate(`${baseRoute}/buy-codes`)}
             />
-
-            <div className="home-content-grid">
-                <LatestNotifications baseRoute={baseRoute} />
-                <div className="activity-section">
-                    <h3 className="sub-title">آخر النشاطات</h3>
-                    <div className="activity-list">
-                        {activities.length === 0 ? (
-                            <p className="no-data">لا توجد نشاطات بعد</p>
-                        ) : activities.map(act => (
-                            <div key={act.id} className="activity-item">
-                                <div className="activity-dot"
-                                    style={{ background: act.color }} />
-                                <div className="activity-text">
-                                    <p>{act.icon} {act.text}</p>
-                                    <span>{formatTime(act.time)}</span>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </div>
 
             <div className="latest-offers-home">
                 <h3 className="sub-title">🎯 {isSupplier ? 'عروض مستودعي' : 'عروض متجري'}</h3>
