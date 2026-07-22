@@ -43,10 +43,11 @@ export default function MyStore() {
     isLoading: offersLoading,
     error: offersError,
   } = useQuery({
-    queryKey: queryKeys.myOffersAll,
+    // Active offers only — delete soft-sets isActive:false; ?all=true would bring them back.
+    queryKey: queryKeys.myOffers,
     queryFn: async () => {
-      const { data } = await api.get("/offers/my?all=true");
-      return unwrapList(data, ["offers"]);
+      const { data } = await api.get("/offers/my");
+      return unwrapList(data, ["offers"]).filter((o) => o.isActive !== false);
     },
     staleTime: 60 * 1000,
   });
@@ -74,8 +75,14 @@ export default function MyStore() {
         );
       } else {
         await api.delete(`/offers/${confirmDelete.id}`);
-        queryClient.setQueryData(queryKeys.myOffersAll, (prev = []) =>
+        // Soft delete sets isActive:false — keep My Store / Offer Management caches in sync.
+        queryClient.setQueryData(queryKeys.myOffers, (prev = []) =>
           prev.filter((o) => o._id !== confirmDelete.id)
+        );
+        queryClient.setQueryData(queryKeys.myOffersAll, (prev = []) =>
+          (prev || []).map((o) =>
+            o._id === confirmDelete.id ? { ...o, isActive: false } : o
+          )
         );
       }
       refreshAll();
