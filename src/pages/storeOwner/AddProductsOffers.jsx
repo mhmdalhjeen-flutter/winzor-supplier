@@ -13,6 +13,8 @@ import { DEFAULT_CURRENCY, formatPriceWithUnit } from '../../utils/currency';
 import { parsePriceUnit, resolvePriceUnit } from '../../utils/priceUnit';
 import { PWA_TAB_PARAM } from '../../pwa/pwaShortcutActions';
 import { invalidateCatalog } from '../../utils/catalogRefresh';
+import { queryKeys } from '../../lib/queryClient';
+import { enqueuePublishItem } from '../../lib/offlinePublishQueue';
 import '../../styles/AddProductsOffers.css';
 
 const PRODUCT_RULES = [
@@ -44,8 +46,6 @@ const EMPTY_PRODUCT = {
   image: '',
   description: '',
   freeDelivery: 'no',
-  sku: '',
-  quantity: '',
   variantsEnabled: false,
   variants: [],
   tags: [],
@@ -64,8 +64,6 @@ const EMPTY_OFFER = {
   description: '',
   freeDelivery: 'no',
   expiresAt: '',
-  sku: '',
-  quantity: '',
   variantsEnabled: false,
   variants: [],
   tags: [],
@@ -138,6 +136,8 @@ export default function AddProductsOffers() {
   const { notice, showNotice, clearNotice } = useFormNotice();
   const [product, setProduct] = useState(() => loadDraft(DRAFT_PRODUCT_KEY, EMPTY_PRODUCT));
   const [offer, setOffer] = useState(() => loadDraft(DRAFT_OFFER_KEY, EMPTY_OFFER));
+  const [localImageFile, setLocalImageFile] = useState(null);
+  const [expandedVariants, setExpandedVariants] = useState({});
   const [pricingPreview, setPricingPreview] = useState(null);
 
   useEffect(() => {
@@ -172,8 +172,6 @@ export default function AddProductsOffers() {
             description: item.description || '',
             freeDelivery: item.freeDelivery ? 'yes' : 'no',
             isWholesale: item.isWholesale || false,
-            sku: item.sku || '',
-            quantity: item.stock ?? item.quantity ?? '',
             tags: item.tags || [],
           });
         } catch {
@@ -206,8 +204,6 @@ export default function AddProductsOffers() {
             description: item.description || '',
             freeDelivery: item.freeDelivery ? 'yes' : 'no',
             expiresAt: isoToDateInput(item.expiresAt),
-            sku: item.sku || '',
-            quantity: item.stock ?? item.quantity ?? '',
             tags: item.tags || [],
           });
         } catch {
@@ -301,39 +297,63 @@ export default function AddProductsOffers() {
       showNotice('اسم المنتج والسعر مطلوبان', 'error');
       return;
     }
-    if (!product.image) {
+    if (!product.image && !localImageFile) {
       showNotice('صورة المنتج مطلوبة', 'error');
       return;
     }
 
-    setLoading(true);
-    try {
-      const priceUnit = resolvePriceUnit(product.priceUnitType, product.priceUnitCustom);
-      const payload = {
-        name: product.name.trim(),
-        price: Number(product.price),
-        currency: product.currency || DEFAULT_CURRENCY,
-        priceUnit,
-        image: product.image,
-        description: product.description.trim(),
-        isWholesale: product.isWholesale || false,
-      };
-      if (editProductId) {
+    const priceUnit = resolvePriceUnit(product.priceUnitType, product.priceUnitCustom);
+    const payload = {
+      name: product.name.trim(),
+      price: Number(product.price),
+      currency: product.currency || DEFAULT_CURRENCY,
+      priceUnit,
+      image: product.image,
+      description: product.description.trim(),
+      isWholesale: product.isWholesale || false,
+      freeDelivery: product.freeDelivery === 'yes',
+    };
+
+    if (editProductId) {
+      setLoading(true);
+      try {
         await api.put(`/products/${editProductId}`, payload);
         showNotice('تم تحديث المنتج بنجاح', 'success');
         invalidateCatalog(queryClient);
         queryClient.invalidateQueries({ queryKey: queryKeys.myProducts });
         navigate(`${baseRoute}/my-store`);
-        return;
+      } catch (err) {
+        showNotice(err.response?.data?.message || 'تعذّر تحديث المنتج', 'error');
+      } finally {
+        setLoading(false);
       }
-      await api.post('/products', {
-        ...payload,
-        freeDelivery: product.freeDelivery === 'yes',
+      return;
+    }
+
+    if (!navigator.onLine || (localImageFile && !product.image)) {
+      await enqueuePublishItem({
+        type: 'product',
+        payload,
+        imageBlob: localImageFile,
+        imagePreviewUrl: localImageFile ? URL.createObjectURL(localImageFile) : '',
+        remoteImageUrl: product.image || '',
       });
+      showNotice('تم حفظ المنتج محلياً — سيُرفع تلقائياً عند توفر الإنترنت', 'success');
+      clearDraft(DRAFT_PRODUCT_KEY);
+      setProduct(EMPTY_PRODUCT);
+      setLocalImageFile(null);
+      setMediaResetKey((k) => k + 1);
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await api.post('/products', payload);
       showNotice('تم نشر المنتج بنجاح', 'success');
       invalidateCatalog(queryClient);
       clearDraft(DRAFT_PRODUCT_KEY);
       setProduct(EMPTY_PRODUCT);
+      setLocalImageFile(null);
       setMediaResetKey((k) => k + 1);
     } catch (err) {
       showNotice(err.response?.data?.message || 'تعذّر إضافة المنتج', 'error');
@@ -347,7 +367,7 @@ export default function AddProductsOffers() {
       showNotice('اسم العرض مطلوب', 'error');
       return;
     }
-    if (!offer.image) {
+    if (!offer.image && !localImageFile) {
       showNotice('صورة العرض مطلوبة', 'error');
       return;
     }
@@ -366,35 +386,61 @@ export default function AddProductsOffers() {
       return;
     }
 
-    setLoading(true);
-    try {
-      const priceUnit = resolvePriceUnit(offer.priceUnitType, offer.priceUnitCustom);
-      const payload = {
-        title: offer.title.trim(),
-        offerType: offer.offerType,
-        originalPrice: offer.originalPrice !== '' ? Number(offer.originalPrice) : undefined,
-        value: offer.value !== '' ? Number(offer.value) : undefined,
-        finalPrice: offer.offerType === 'custom' ? Number(offer.finalPrice) : previewPricing.finalPrice,
-        currency: offer.currency || DEFAULT_CURRENCY,
-        priceUnit,
-        image: offer.image,
-        description: offer.description.trim(),
-        freeDelivery: offer.freeDelivery === 'yes',
-        expiresAt: expiresIso,
-      };
-      if (editOfferId) {
+    const priceUnit = resolvePriceUnit(offer.priceUnitType, offer.priceUnitCustom);
+    const payload = {
+      title: offer.title.trim(),
+      offerType: offer.offerType,
+      originalPrice: offer.originalPrice !== '' ? Number(offer.originalPrice) : undefined,
+      value: offer.value !== '' ? Number(offer.value) : undefined,
+      finalPrice: offer.offerType === 'custom' ? Number(offer.finalPrice) : previewPricing.finalPrice,
+      currency: offer.currency || DEFAULT_CURRENCY,
+      priceUnit,
+      image: offer.image,
+      description: offer.description.trim(),
+      freeDelivery: offer.freeDelivery === 'yes',
+      expiresAt: expiresIso,
+    };
+
+    if (editOfferId) {
+      setLoading(true);
+      try {
         await api.put(`/offers/${editOfferId}`, payload);
         showNotice('تم تحديث العرض بنجاح', 'success');
         invalidateCatalog(queryClient);
         queryClient.invalidateQueries({ queryKey: queryKeys.myOffersAll });
         navigate(`${baseRoute}/my-store`);
-        return;
+      } catch (err) {
+        showNotice(err.response?.data?.message || 'تعذّر تحديث العرض', 'error');
+      } finally {
+        setLoading(false);
       }
+      return;
+    }
+
+    if (!navigator.onLine || (localImageFile && !offer.image)) {
+      await enqueuePublishItem({
+        type: 'offer',
+        payload,
+        imageBlob: localImageFile,
+        imagePreviewUrl: localImageFile ? URL.createObjectURL(localImageFile) : '',
+        remoteImageUrl: offer.image || '',
+      });
+      showNotice('تم حفظ العرض محلياً — سيُرفع تلقائياً عند توفر الإنترنت', 'success');
+      clearDraft(DRAFT_OFFER_KEY);
+      setOffer(EMPTY_OFFER);
+      setLocalImageFile(null);
+      setMediaResetKey((k) => k + 1);
+      return;
+    }
+
+    setLoading(true);
+    try {
       await api.post('/offers', payload);
       showNotice('تم نشر العرض بنجاح', 'success');
       invalidateCatalog(queryClient);
       clearDraft(DRAFT_OFFER_KEY);
       setOffer(EMPTY_OFFER);
+      setLocalImageFile(null);
       setMediaResetKey((k) => k + 1);
     } catch (err) {
       showNotice(err.response?.data?.message || 'تعذّر إضافة العرض', 'error');
@@ -527,88 +573,116 @@ export default function AddProductsOffers() {
     return '—';
   })();
 
+  const toggleVariantExpanded = (index) => {
+    setExpandedVariants((prev) => ({ ...prev, [index]: !prev[index] }));
+  };
+
   const renderInventorySection = () => (
     <CollapsibleSection
-      title="5. المخزون والخيارات"
-      subtitle="اختياري — لمعظم المتاجر يمكن تخطي هذا القسم"
+      title="5. متغيرات المنتج"
+      subtitle="اختياري — أضف خيارات مثل اللون أو المقاس"
       badge="اختياري"
       open={inventoryOpen}
       onToggle={() => setInventoryOpen((v) => !v)}
     >
-      <label className="field-label">رمز المنتج (SKU)</label>
-      <input
-        value={activeData.sku}
-        onChange={(e) => updateInventory({ sku: e.target.value })}
-        placeholder="للتتبع الداخلي في المتجر"
-      />
-
-      <label className="field-label">الكمية المتاحة</label>
-      <input
-        type="number"
-        min="0"
-        step="1"
-        value={activeData.quantity}
-        onChange={(e) => updateInventory({ quantity: e.target.value })}
-        placeholder="عدد القطع المتوفرة"
-      />
-
-      <div className="variant-toggle-row">
-        <label className="field-label" htmlFor="variants-toggle">خيارات المنتج (متغيرات)</label>
-        <label className="switch">
-          <input
-            id="variants-toggle"
-            type="checkbox"
-            checked={activeData.variantsEnabled}
-            onChange={(e) => updateInventory({ variantsEnabled: e.target.checked })}
-          />
-          <span className="switch__slider" />
-        </label>
-      </div>
-
-      {activeData.variantsEnabled && (
-        <div className="variants-panel">
-          <p className="field-hint">أمثلة شائعة:</p>
-          <div className="variant-presets">
-            {VARIANT_PRESETS.map((name) => (
-              <button
-                key={name}
-                type="button"
-                className="variant-preset"
-                onClick={() => addVariant(name)}
-                disabled={activeData.variants.some((v) => v.name === name)}
-              >
-                {name}
-              </button>
-            ))}
+      <div className="variants-section">
+        <div className="variants-section__header">
+          <div>
+            <p className="variants-section__title">متغيرات المنتج</p>
+            <p className="variants-section__desc">فعّل المتغيرات لإضافة خيارات متعددة (لون، مقاس، سعة...)</p>
           </div>
-
-          {activeData.variants.map((variant, index) => (
-            <div key={variant.name} className="variant-row">
-              <input
-                value={variant.name}
-                onChange={(e) => updateVariant(index, { name: e.target.value })}
-                placeholder="اسم الخيار"
-              />
-              <input
-                value={variant.values}
-                onChange={(e) => updateVariant(index, { values: e.target.value })}
-                placeholder="القيم مفصولة بفاصلة (أحمر، أزرق)"
-              />
-              <button type="button" className="variant-remove" onClick={() => removeVariant(index)}>
-                حذف
-              </button>
-            </div>
-          ))}
-
-          <button
-            type="button"
-            className="ghost-btn"
-            onClick={() => addVariant(`خيار ${activeData.variants.length + 1}`)}
-          >
-            + إضافة خيار
-          </button>
+          <label className="switch">
+            <input
+              id="variants-toggle"
+              type="checkbox"
+              checked={activeData.variantsEnabled}
+              onChange={(e) => updateInventory({ variantsEnabled: e.target.checked })}
+            />
+            <span className="switch__slider" />
+          </label>
         </div>
-      )}
+
+        {activeData.variantsEnabled && (
+          <div className="variants-section__body">
+            <div className="variant-presets-card">
+              <p className="variant-presets-card__label">إضافة سريعة</p>
+              <div className="variant-presets">
+                {VARIANT_PRESETS.map((name) => (
+                  <button
+                    key={name}
+                    type="button"
+                    className="variant-preset"
+                    onClick={() => addVariant(name)}
+                    disabled={activeData.variants.some((v) => v.name === name)}
+                  >
+                    + {name}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {activeData.variants.length === 0 ? (
+              <div className="variants-empty-card">
+                <p>لا توجد متغيرات بعد</p>
+                <button
+                  type="button"
+                  className="ghost-btn"
+                  onClick={() => addVariant(`متغير ${activeData.variants.length + 1}`)}
+                >
+                  + إضافة متغير
+                </button>
+              </div>
+            ) : (
+              <div className="variants-list">
+                {activeData.variants.map((variant, index) => {
+                  const isOpen = expandedVariants[index] !== false;
+                  return (
+                    <div key={`${variant.name}-${index}`} className="variant-card">
+                      <button
+                        type="button"
+                        className="variant-card__head"
+                        onClick={() => toggleVariantExpanded(index)}
+                      >
+                        <span className="variant-card__name">{variant.name || `متغير ${index + 1}`}</span>
+                        <span className="variant-card__chevron">{isOpen ? '▾' : '◂'}</span>
+                      </button>
+                      {isOpen && (
+                        <div className="variant-card__body">
+                          <label className="field-label">اسم المتغير</label>
+                          <input
+                            value={variant.name}
+                            onChange={(e) => updateVariant(index, { name: e.target.value })}
+                            placeholder="مثال: اللون"
+                          />
+                          <label className="field-label">القيم</label>
+                          <input
+                            value={variant.values}
+                            onChange={(e) => updateVariant(index, { values: e.target.value })}
+                            placeholder="أحمر، أزرق، أخضر (مفصولة بفاصلة)"
+                          />
+                          <button type="button" className="variant-remove" onClick={() => removeVariant(index)}>
+                            حذف المتغير
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {activeData.variants.length > 0 && (
+              <button
+                type="button"
+                className="ghost-btn"
+                onClick={() => addVariant(`متغير ${activeData.variants.length + 1}`)}
+              >
+                + إضافة متغير آخر
+              </button>
+            )}
+          </div>
+        )}
+      </div>
     </CollapsibleSection>
   );
 
@@ -631,7 +705,7 @@ export default function AddProductsOffers() {
         <button
           type="submit"
           className="publish-btn publish-btn--now"
-          disabled={loading || !activeData.image?.trim()}
+          disabled={loading || (!activeData.image?.trim() && !localImageFile)}
         >
           {loading ? 'جارٍ الحفظ...' : isEditMode ? 'حفظ التعديلات' : 'نشر الآن'}
         </button>
@@ -661,10 +735,10 @@ export default function AddProductsOffers() {
 
       {!isEditMode && (
       <div className="tabs">
-        <button type="button" className={tab === 'product' ? 'active' : ''} onClick={() => setTab('product')}>
+        <button type="button" className={tab === 'product' ? 'active' : ''} onClick={() => { setTab('product'); setLocalImageFile(null); }}>
           إضافة منتج
         </button>
-        <button type="button" className={tab === 'offer' ? 'active' : ''} onClick={() => setTab('offer')}>
+        <button type="button" className={tab === 'offer' ? 'active' : ''} onClick={() => { setTab('offer'); setLocalImageFile(null); }}>
           إضافة عرض
         </button>
       </div>
@@ -675,12 +749,13 @@ export default function AddProductsOffers() {
           <section className="create-section">
             <MediaUploader
               key={`product-media-${mediaResetKey}`}
-              label="1. الصور والوسائط"
+              label="1. الصورة"
               value={product.image}
               onChange={(image) => setProduct((prev) => ({ ...prev, image }))}
+              onLocalFileChange={(file) => setLocalImageFile(file)}
               onError={(msg) => showNotice(msg, 'error')}
               required
-              emptyHint="أضف صور المنتج أو العرض"
+              emptyHint="أضف صورة المنتج"
             />
           </section>
 
@@ -767,12 +842,13 @@ export default function AddProductsOffers() {
           <section className="create-section">
             <MediaUploader
               key={`offer-media-${mediaResetKey}`}
-              label="1. الصور والوسائط"
+              label="1. الصورة"
               value={offer.image}
               onChange={(image) => setOffer((prev) => ({ ...prev, image }))}
+              onLocalFileChange={(file) => setLocalImageFile(file)}
               onError={(msg) => showNotice(msg, 'error')}
               required
-              emptyHint="أضف صور المنتج أو العرض"
+              emptyHint="أضف صورة العرض"
             />
           </section>
 

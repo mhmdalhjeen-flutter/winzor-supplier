@@ -14,7 +14,7 @@ function assertValidImageFile(file) {
     throw new Error('نوع الملف غير مسموح — jpg, jpeg, png, webp فقط');
   }
   const ext = file.name?.split('.').pop()?.toLowerCase();
-  if (ext && !ALLOWED_EXT.has(ext)) {
+  if (ext && file.name.includes('.') && !ALLOWED_EXT.has(ext)) {
     throw new Error('نوع الملف غير مسموح — jpg, jpeg, png, webp فقط');
   }
   if (file.size > MAX_BYTES) {

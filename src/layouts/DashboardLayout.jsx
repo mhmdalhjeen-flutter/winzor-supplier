@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Outlet, NavLink, useNavigate, useLocation } from "react-router-dom";
-import { Menu, User, Home } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { Menu, Home } from "lucide-react";
 import "../styles/dashboard.css";
 import useDashboardBadges from "../hooks/useDashboardBadges";
 import useStoreOwnerPermissions from "../hooks/useStoreOwnerPermissions";
@@ -12,6 +13,7 @@ import { usePwaInstall } from "../context/PwaInstallContext";
 import { getMyStore } from "../services/store.service";
 import { getStoredUser } from "../utils/safeStorage";
 import { logout as authLogout } from "../utils/auth";
+import { queryKeys } from "../lib/queryClient";
 
 export default function DashboardLayout() {
   const user = getStoredUser({});
@@ -21,9 +23,19 @@ export default function DashboardLayout() {
   const { permissions: storePages, isStoreOwner } = useStoreOwnerPermissions();
 
   const [welcomeOpen, setWelcomeOpen] = useState(false);
-  const [storeData, setStoreData] = useState(null);
   const [suggestedDefaults, setSuggestedDefaults] = useState(null);
   const [menuOpen, setMenuOpen] = useState(false);
+
+  const { data: storeQueryData } = useQuery({
+    queryKey: queryKeys.myStore,
+    queryFn: async () => {
+      const { data } = await getMyStore();
+      return data;
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const storeData = storeQueryData?.store ?? null;
 
   const location = useLocation();
 
@@ -36,20 +48,10 @@ export default function DashboardLayout() {
     location.pathname === baseRoute || location.pathname === `${baseRoute}/`;
 
   useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try {
-        const { data } = await getMyStore();
-        if (!mounted) return;
-        setStoreData(data.store);
-        setSuggestedDefaults(data.suggestedDefaults);
-        if (data.needsWelcome) setWelcomeOpen(true);
-      } catch {
-        /* لا متجر — تجاهل */
-      }
-    })();
-    return () => { mounted = false; };
-  }, []);
+    if (!storeQueryData) return;
+    setSuggestedDefaults(storeQueryData.suggestedDefaults);
+    if (storeQueryData.needsWelcome) setWelcomeOpen(true);
+  }, [storeQueryData]);
 
   useEffect(() => {
     setMenuOpen(false);
@@ -69,13 +71,6 @@ export default function DashboardLayout() {
 
   const refreshStoreAfterWelcome = async () => {
     setWelcomeOpen(false);
-    try {
-      const { data } = await getMyStore();
-      setStoreData(data.store);
-      setSuggestedDefaults(data.suggestedDefaults);
-    } catch {
-      /* ignore */
-    }
   };
 
   const renderNavLinks = () => (
@@ -181,15 +176,6 @@ export default function DashboardLayout() {
 
             <div className="topbar-end">
               <DashboardHeaderActions badges={badges} baseRoute={baseRoute} navigate={navigate} />
-              <button
-                type="button"
-                className="header-icon-btn header-profile-btn"
-                title="الملف الشخصي"
-                aria-label="الملف الشخصي"
-                onClick={() => navigate(`${baseRoute}/profile`)}
-              >
-                <User size={22} strokeWidth={2} />
-              </button>
             </div>
           </header>
         )}

@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import "../styles/dashboard.css";
 import ImagePicker from "../components/ImagePicker";
 import api from "../services/api";
 import { getMyStore, updateMyStore } from "../services/store.service";
+import { queryKeys } from "../lib/queryClient";
 import {
   LOCAL_PHONE_PLACEHOLDER,
   sanitizeLocalPhoneInput,
@@ -12,8 +14,8 @@ import {
 } from "../utils/phoneValidation";
 
 export default function Profile() {
+  const queryClient = useQueryClient();
   const [user, setUser] = useState(JSON.parse(localStorage.getItem("user") || "{}"));
-  const [store, setStore] = useState(null);
   const [isEditingUser, setIsEditingUser] = useState(false);
   const [isEditingStore, setIsEditingStore] = useState(false);
   const [userForm, setUserForm] = useState({ name: user.name || "", phone: user.phone || "" });
@@ -28,9 +30,17 @@ export default function Profile() {
     region: "",
     subRegion: "",
   });
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState({ text: "", isError: false });
+
+  const { data: store, isLoading: loading } = useQuery({
+    queryKey: queryKeys.myStore,
+    queryFn: async () => {
+      const { data } = await getMyStore();
+      return data.store;
+    },
+    staleTime: 5 * 60 * 1000,
+  });
 
   const showMsg = (text, isError = false) => {
     setMessage({ text, isError });
@@ -38,28 +48,19 @@ export default function Profile() {
   };
 
   useEffect(() => {
-    (async () => {
-      try {
-        const { data } = await getMyStore();
-        setStore(data.store);
-        setStoreForm({
-          name: data.store.name || "",
-          description: data.store.description || "",
-          phone: data.store.phone || "",
-          whatsapp: data.store.whatsapp || "",
-          address: data.store.address || "",
-          logo: data.store.logo || "",
-          coverImage: data.store.coverImage || "",
-          region: data.store.region || "",
-          subRegion: data.store.subRegion || "",
-        });
-      } catch {
-        showMsg("تعذّر تحميل بيانات المتجر", true);
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, []);
+    if (!store) return;
+    setStoreForm({
+      name: store.name || "",
+      description: store.description || "",
+      phone: store.phone || "",
+      whatsapp: store.whatsapp || "",
+      address: store.address || "",
+      logo: store.logo || "",
+      coverImage: store.coverImage || "",
+      region: store.region || "",
+      subRegion: store.subRegion || "",
+    });
+  }, [store]);
 
   useEffect(() => {
     if (window.location.hash === "#branding") {
@@ -106,7 +107,7 @@ export default function Profile() {
         logo: storeForm.logo,
         coverImage: storeForm.coverImage,
       });
-      setStore(data.store);
+      queryClient.setQueryData(queryKeys.myStore, data.store);
       setStoreForm({
         name: data.store.name || "",
         description: data.store.description || "",

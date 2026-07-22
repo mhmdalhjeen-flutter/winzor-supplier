@@ -1,318 +1,222 @@
 import { useEffect, useId, useRef, useState } from 'react';
+import { Camera, ImageIcon, RefreshCw, Trash2 } from 'lucide-react';
 import { uploadImage } from '../utils/imageUpload';
 import ImageCropModal from './ImageCropModal';
 
 const IMAGE_ACCEPT = 'image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp';
-const MEDIA_ACCEPT = `${IMAGE_ACCEPT},video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov`;
 
-function isImageFile(file) {
-  return file?.type?.startsWith('image/');
-}
-
-function isVideoFile(file) {
-  return file?.type?.startsWith('video/');
-}
-
-function newLocalId() {
-  return `media-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-}
-
-function getMainImageUrl(list) {
-  const main = list.find((item) => item.isMain && item.url && item.kind === 'image')
-    || list.find((item) => item.url && item.kind === 'image');
-  return main?.url || '';
+function normalizeImageFile(file) {
+  if (!file) return null;
+  const type = file.type || 'image/jpeg';
+  const ext = type.includes('png') ? 'png' : type.includes('webp') ? 'webp' : 'jpg';
+  const name = file.name && file.name.includes('.') ? file.name : `photo-${Date.now()}.${ext}`;
+  if (file.name === name && file.type === type) return file;
+  return new File([file], name, { type, lastModified: file.lastModified || Date.now() });
 }
 
 /**
- * Social-style media uploader for product/offer creation.
- * Uploads images via existing /upload/image API; videos are local preview only.
- * Parent receives the main cover image URL via onChange (API contract unchanged).
+ * Single-image uploader with separate camera / gallery inputs.
+ * Supports offline local preview via onLocalFileChange.
  */
 export default function MediaUploader({
-  label = 'الصور والوسائط',
+  label = 'الصورة',
   value = '',
   onChange,
+  onLocalFileChange,
   onError,
   required = false,
-  emptyHint = 'أضف صور المنتج أو العرض',
+  emptyHint = 'أضف صورة المنتج أو العرض',
 }) {
   const inputId = useId();
-  const fileRef = useRef(null);
-  const [items, setItems] = useState([]);
-  const [dragging, setDragging] = useState(false);
+  const galleryRef = useRef(null);
+  const cameraRef = useRef(null);
+  const [previewUrl, setPreviewUrl] = useState(value || '');
+  const [uploading, setUploading] = useState(false);
+  const [localFile, setLocalFile] = useState(null);
   const [cropFile, setCropFile] = useState(null);
   const [cropOpen, setCropOpen] = useState(false);
-  const pendingQueue = useRef([]);
+  const blobRef = useRef(null);
 
   useEffect(() => {
-    const nextUrl = getMainImageUrl(items);
-    if (nextUrl !== value) onChange?.(nextUrl);
-  }, [items, onChange, value]);
+    if (value && value !== previewUrl && !localFile) {
+      setPreviewUrl(value);
+    }
+  }, [value, localFile, previewUrl]);
 
-  // Hydrate from parent URL (draft restore / remount) when gallery is empty
-  useEffect(() => {
-    if (!value || items.length > 0) return;
-    setItems([{
-      id: newLocalId(),
-      kind: 'image',
-      name: 'cover',
-      previewUrl: value,
-      url: value,
-      status: 'done',
-      progress: 100,
-      isMain: true,
-    }]);
-  }, [value, items.length]);
-
-  const markMain = (id) => {
-    setItems((prev) => prev.map((item) => ({
-      ...item,
-      isMain: item.id === id && item.kind === 'image' && Boolean(item.url),
-    })));
-  };
-
-  const removeItem = (id) => {
-    setItems((prev) => {
-      const removed = prev.find((item) => item.id === id);
-      if (removed?.previewUrl?.startsWith('blob:') && removed.previewUrl !== removed.url) {
-        URL.revokeObjectURL(removed.previewUrl);
-      }
-      let next = prev.filter((item) => item.id !== id);
-      if (removed?.isMain) {
-        const firstImage = next.find((item) => item.kind === 'image' && item.url);
-        next = next.map((item) => ({
-          ...item,
-          isMain: firstImage ? item.id === firstImage.id : false,
-        }));
-      }
-      return next;
-    });
-  };
-
-  const uploadOneImage = async (file, id) => {
-    setItems((prev) => prev.map((item) => (
-      item.id === id ? { ...item, status: 'uploading', progress: 35 } : item
-    )));
-
-    try {
-      const url = await uploadImage(file);
-      setItems((prev) => {
-        const hasMain = prev.some((item) => item.isMain && item.url);
-        return prev.map((item) => {
-          if (item.id !== id) return item;
-          return {
-            ...item,
-            url,
-            previewUrl: url,
-            status: 'done',
-            progress: 100,
-            isMain: !hasMain,
-          };
-        });
-      });
-    } catch (err) {
-      setItems((prev) => prev.filter((item) => item.id !== id));
-      onError?.(err.message || 'فشل رفع الصورة');
+  const revokeBlob = () => {
+    if (blobRef.current) {
+      URL.revokeObjectURL(blobRef.current);
+      blobRef.current = null;
     }
   };
 
-  const enqueueFiles = (fileList) => {
-    const files = Array.from(fileList || []).filter((f) => isImageFile(f) || isVideoFile(f));
-    if (!files.length) {
-      onError?.('اختر صورة أو فيديو صالح');
+  const setLocalPreview = (file) => {
+    revokeBlob();
+    const url = URL.createObjectURL(file);
+    blobRef.current = url;
+    setLocalFile(file);
+    setPreviewUrl(url);
+    onLocalFileChange?.(file, url);
+    onChange?.('');
+  };
+
+  const clearImage = () => {
+    revokeBlob();
+    setLocalFile(null);
+    setPreviewUrl('');
+    onLocalFileChange?.(null, '');
+    onChange?.('');
+  };
+
+  const startCrop = (file) => {
+    const normalized = normalizeImageFile(file);
+    if (!normalized) {
+      onError?.('ملف غير صالح');
       return;
     }
-
-    const images = files.filter(isImageFile);
-    const videos = files.filter(isVideoFile);
-
-    videos.forEach((file) => {
-      const id = newLocalId();
-      const previewUrl = URL.createObjectURL(file);
-      setItems((prev) => [
-        ...prev,
-        {
-          id,
-          kind: 'video',
-          name: file.name,
-          previewUrl,
-          url: '',
-          status: 'local',
-          progress: 100,
-          isMain: false,
-        },
-      ]);
-    });
-
-    if (images.length) {
-      pendingQueue.current = [...pendingQueue.current, ...images];
-      if (!cropOpen) openNextCrop();
-    }
-  };
-
-  const openNextCrop = () => {
-    const next = pendingQueue.current.shift();
-    if (!next) {
-      setCropFile(null);
-      setCropOpen(false);
-      return;
-    }
-    setCropFile(next);
+    setCropFile(normalized);
     setCropOpen(true);
   };
 
-  const handleCropConfirm = (croppedFile) => {
+  const handleCropConfirm = async (croppedFile) => {
     setCropOpen(false);
     setCropFile(null);
-    const id = newLocalId();
-    const previewUrl = URL.createObjectURL(croppedFile);
-    setItems((prev) => [
-      ...prev,
-      {
-        id,
-        kind: 'image',
-        name: croppedFile.name,
-        previewUrl,
-        url: '',
-        status: 'uploading',
-        progress: 15,
-        isMain: false,
-      },
-    ]);
-    uploadOneImage(croppedFile, id).finally(() => {
-      if (previewUrl.startsWith('blob:')) URL.revokeObjectURL(previewUrl);
-      openNextCrop();
-    });
+    await processSelectedFile(croppedFile);
   };
 
-  const handleCropCancel = () => {
-    // Skip crop → upload original
+  const handleCropCancel = async () => {
     const original = cropFile;
     setCropOpen(false);
     setCropFile(null);
-    if (original) {
-      const id = newLocalId();
-      const previewUrl = URL.createObjectURL(original);
-      setItems((prev) => [
-        ...prev,
-        {
-          id,
-          kind: 'image',
-          name: original.name,
-          previewUrl,
-          url: '',
-          status: 'uploading',
-          progress: 15,
-          isMain: false,
-        },
-      ]);
-      uploadOneImage(original, id).finally(() => {
-        if (previewUrl.startsWith('blob:')) URL.revokeObjectURL(previewUrl);
-        openNextCrop();
-      });
-    } else {
-      openNextCrop();
+    if (original) await processSelectedFile(original);
+  };
+
+  const processSelectedFile = async (rawFile) => {
+    const file = normalizeImageFile(rawFile);
+    if (!file) return;
+
+    setLocalPreview(file);
+
+    if (!navigator.onLine) {
+      onError?.('لا يوجد اتصال — تم حفظ الصورة محلياً وسيتم رفعها عند توفر الإنترنت');
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const url = await uploadImage(file);
+      onChange?.(url);
+      revokeBlob();
+      setLocalFile(null);
+      setPreviewUrl(url);
+      onLocalFileChange?.(null, '');
+    } catch (err) {
+      onError?.(err.message || 'فشل رفع الصورة — ستُرفع عند توفر الإنترنت');
+    } finally {
+      setUploading(false);
     }
   };
 
-  const onDrop = (e) => {
-    e.preventDefault();
-    setDragging(false);
-    enqueueFiles(e.dataTransfer.files);
+  const onFileInput = (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (file) startCrop(file);
   };
 
-  const hasMedia = items.length > 0;
-  const uploading = items.some((item) => item.status === 'uploading');
+  const hasImage = Boolean(previewUrl);
+  const isLocalOnly = Boolean(localFile && !value);
 
   return (
-    <div className="media-uploader">
+    <div className="media-uploader media-uploader--single">
       <div className="media-uploader__head">
         <label className="field-label" htmlFor={inputId}>
           {label}
           {required && <span className="req"> *</span>}
         </label>
-        <span className="media-uploader__hint">الصورة الأولى هي الغلاف — يمكنك تغييرها</span>
+        <span className="media-uploader__hint">صورة واحدة فقط — JPG أو PNG أو WebP</span>
       </div>
 
-      <div
-        className={`media-dropzone ${dragging ? 'is-dragging' : ''} ${hasMedia ? 'has-media' : ''}`}
-        onDragEnter={(e) => { e.preventDefault(); setDragging(true); }}
-        onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
-        onDragLeave={(e) => { e.preventDefault(); setDragging(false); }}
-        onDrop={onDrop}
-        onClick={() => !uploading && fileRef.current?.click()}
-        role="button"
-        tabIndex={0}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            fileRef.current?.click();
-          }
-        }}
-      >
-        {!hasMedia ? (
-          <div className="media-empty">
-            <div className="media-empty__icon" aria-hidden>🖼️</div>
-            <p className="media-empty__title">{emptyHint}</p>
-            <p className="media-empty__sub">اسحب الملفات هنا أو اضغط للاختيار · صور وفيديو</p>
-            <span className="media-empty__cta">رفع الوسائط</span>
+      <div className={`media-upload-area ${hasImage ? 'has-image' : ''}`}>
+        {!hasImage ? (
+          <div className="media-upload-empty">
+            <div className="media-upload-empty__icon" aria-hidden>
+              <ImageIcon size={36} strokeWidth={1.6} />
+            </div>
+            <p className="media-upload-empty__title">{emptyHint}</p>
+            <p className="media-upload-empty__sub">التقط صورة أو اختر من المعرض</p>
+            <div className="media-source-buttons">
+              <button
+                type="button"
+                className="media-source-btn media-source-btn--camera"
+                onClick={() => cameraRef.current?.click()}
+                disabled={uploading}
+              >
+                <Camera size={20} strokeWidth={2} />
+                التقاط صورة
+              </button>
+              <button
+                type="button"
+                className="media-source-btn media-source-btn--gallery"
+                onClick={() => galleryRef.current?.click()}
+                disabled={uploading}
+              >
+                <ImageIcon size={20} strokeWidth={2} />
+                اختيار من المعرض
+              </button>
+            </div>
           </div>
         ) : (
-          <div className="media-grid" onClick={(e) => e.stopPropagation()}>
-            {items.map((item) => (
-              <div
-                key={item.id}
-                className={`media-thumb ${item.isMain ? 'is-main' : ''} ${item.status === 'uploading' ? 'is-uploading' : ''}`}
-              >
-                {item.kind === 'video' ? (
-                  <video src={item.previewUrl} muted playsInline className="media-thumb__media" />
-                ) : (
-                  <img src={item.previewUrl || item.url} alt="" className="media-thumb__media" />
-                )}
-
-                {item.isMain && <span className="media-thumb__badge">الغلاف</span>}
-                {item.kind === 'video' && <span className="media-thumb__badge media-thumb__badge--video">فيديو</span>}
-
-                {item.status === 'uploading' && (
-                  <div className="media-thumb__progress" aria-label="جاري الرفع">
-                    <div className="media-thumb__bar" style={{ width: `${item.progress || 30}%` }} />
-                    <span>جاري الرفع...</span>
-                  </div>
-                )}
-
-                <div className="media-thumb__actions">
-                  {item.kind === 'image' && item.url && !item.isMain && (
-                    <button type="button" onClick={() => markMain(item.id)}>تعيين غلاف</button>
-                  )}
-                  <button type="button" className="danger" onClick={() => removeItem(item.id)}>إزالة</button>
+          <div className="media-preview-panel">
+            <div className="media-preview-wrap">
+              <img src={previewUrl} alt="" className="media-preview-img" />
+              {uploading && (
+                <div className="media-preview-overlay">
+                  <span>جاري الرفع...</span>
                 </div>
-              </div>
-            ))}
-
-            <button
-              type="button"
-              className="media-add-tile"
-              onClick={() => fileRef.current?.click()}
-              disabled={uploading}
-            >
-              <span>+</span>
-              إضافة
-            </button>
+              )}
+              {isLocalOnly && !uploading && (
+                <span className="media-preview-badge">محفوظة محلياً</span>
+              )}
+            </div>
+            <div className="media-preview-actions">
+              <button
+                type="button"
+                className="media-action-btn"
+                onClick={() => galleryRef.current?.click()}
+                disabled={uploading}
+              >
+                <RefreshCw size={16} strokeWidth={2.2} />
+                استبدال الصورة
+              </button>
+              <button
+                type="button"
+                className="media-action-btn media-action-btn--danger"
+                onClick={clearImage}
+                disabled={uploading}
+              >
+                <Trash2 size={16} strokeWidth={2.2} />
+                إزالة
+              </button>
+            </div>
           </div>
         )}
       </div>
 
       <input
         id={inputId}
-        ref={fileRef}
+        ref={galleryRef}
         type="file"
-        accept={MEDIA_ACCEPT}
-        multiple
+        accept={IMAGE_ACCEPT}
         className="hidden-input"
-        onChange={(e) => {
-          enqueueFiles(e.target.files);
-          e.target.value = '';
-        }}
+        onChange={onFileInput}
+      />
+      <input
+        ref={cameraRef}
+        type="file"
+        accept={IMAGE_ACCEPT}
+        capture="environment"
+        className="hidden-input"
+        onChange={onFileInput}
       />
 
       <ImageCropModal

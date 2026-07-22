@@ -1,12 +1,15 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
-import { QueryClientProvider, onlineManager } from "@tanstack/react-query";
+import { onlineManager } from "@tanstack/react-query";
+import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import App from "./App";
 import ErrorBoundary from "./shared/ErrorBoundary";
 import "./styles/globals.css";
 import { StoreProvider } from "./context/StoreContext";
 import { queryClient } from "./lib/queryClient";
+import { persistOptions } from "./lib/queryPersister";
+import OfflinePublishHost from "./components/OfflinePublishHost";
 import { initPwaServiceWorker } from "./pwa/registerServiceWorker";
 
 initPwaServiceWorker();
@@ -26,13 +29,20 @@ onlineManager.setEventListener((setOnline) => {
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <ErrorBoundary>
-      <QueryClientProvider client={queryClient}>
+      <PersistQueryClientProvider
+        client={queryClient}
+        persistOptions={persistOptions}
+        onSuccess={() => {
+          queryClient.resumePausedMutations().catch(() => {});
+        }}
+      >
         <BrowserRouter>
           <StoreProvider>
+            <OfflinePublishHost />
             <App />
           </StoreProvider>
         </BrowserRouter>
-      </QueryClientProvider>
+      </PersistQueryClientProvider>
     </ErrorBoundary>
   </React.StrictMode>
 )

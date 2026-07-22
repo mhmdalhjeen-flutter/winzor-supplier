@@ -1,15 +1,16 @@
 // src/pages/DashboardHome.jsx
-import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Home } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import {
+  Users, Eye, Clock, MessageCircle, Ticket, Package,
+} from 'lucide-react';
 import axios from '../../services/api';
 import { getDashboardOffers } from '../../services/offers.service';
 import { getStoredUser } from '../../utils/safeStorage';
 import { getMyStore } from '../../services/store.service';
 import OfferPriceDisplay from '../../components/OfferPriceDisplay';
 import useStoreOwnerPermissions from '../../hooks/useStoreOwnerPermissions';
-import StoreQuickActions from '../../components/StoreQuickActions';
-import LatestNotifications from '../../components/dashboard/LatestNotifications';
+import { queryKeys } from '../../lib/queryClient';
 import '../../styles/dashboard.css';
 
 export default function DashboardHome() {
@@ -19,24 +20,19 @@ export default function DashboardHome() {
     const baseRoute  = isSupplier ? '/supplier' : '/store';
     const { permissions: storePages, isStoreOwner } = useStoreOwnerPermissions();
 
-    const [stats, setStats] = useState({ products: 0, pendingOrders: 0, messages: 0, total: 0, cards: 0, bypassCards: false });
-    const [ownOffers, setOwnOffers] = useState([]);
-    const [networkOffers, setNetworkOffers] = useState([]);
-    const [offersLoading, setOffersLoading] = useState(true);
-    const [store, setStore] = useState(null);
+    const { data: store } = useQuery({
+        queryKey: queryKeys.myStore,
+        queryFn: async () => {
+            const { data } = await getMyStore();
+            return data.store;
+        },
+        enabled: !isSupplier,
+        staleTime: 5 * 60 * 1000,
+    });
 
-    useEffect(() => {
-        fetchStats();
-        fetchDashboardOffers();
-        if (!isSupplier) {
-            getMyStore()
-                .then(({ data }) => setStore(data.store))
-                .catch(() => {});
-        }
-    }, [isSupplier]);
-
-    const fetchStats = async () => {
-        try {
+    const { data: stats = { products: 0, pendingOrders: 0, messages: 0, cards: 0, bypassCards: false } } = useQuery({
+        queryKey: queryKeys.dashboardStats,
+        queryFn: async () => {
             const [productsRes, ordersRes, chatsRes] = await Promise.allSettled([
                 axios.get('/products/my'),
                 axios.get('/orders/store'),
@@ -64,29 +60,25 @@ export default function DashboardHome() {
                 ? (ordersRes.value.data.bypassCards ?? false)
                 : false;
 
-            setStats({
-                products,
-                pendingOrders,
-                messages: unreadMsgs,
-                total:    orders.reduce((s, o) => s + (o.total || 0), 0),
-                cards:    cardsCount,
-                bypassCards,
-            });
-        } catch {
-        }
-    };
+            return { products, pendingOrders, messages: unreadMsgs, cards: cardsCount, bypassCards };
+        },
+        staleTime: 60 * 1000,
+    });
 
-    const fetchDashboardOffers = async () => {
-        setOffersLoading(true);
-        try {
+    const { data: offersData, isLoading: offersLoading } = useQuery({
+        queryKey: queryKeys.dashboardOffers,
+        queryFn: async () => {
             const res = await getDashboardOffers(3, 3);
-            setOwnOffers(res.data.ownOffers || []);
-            setNetworkOffers(res.data.networkOffers || []);
-        } catch {
-        } finally {
-            setOffersLoading(false);
-        }
-    };
+            return {
+                ownOffers: res.data.ownOffers || [],
+                networkOffers: res.data.networkOffers || [],
+            };
+        },
+        staleTime: 60 * 1000,
+    });
+
+    const ownOffers = offersData?.ownOffers || [];
+    const networkOffers = offersData?.networkOffers || [];
 
     const renderOfferCard = (offer, showStore = false) => (
         <div key={offer._id} className="card offer-card-mini">
@@ -120,45 +112,99 @@ export default function DashboardHome() {
         </div>
     );
 
-    const statsCards = [
-        {
-            id: 1,
-            label: isSupplier ? 'إجمالي منتجات المستودع' : 'إجمالي منتجات المتجر',
-            value: stats.products,
-            icon: '📦', color: '#3b82f6',
-        },
-        {
-            id: 2,
-            label: 'طلبات بانتظار الرد',
-            value: stats.pendingOrders,
-            icon: '⏳', color: '#f59e0b',
-        },
-        {
-            id: 3,
-            label: 'رسائل غير مقروءة',
-            value: stats.messages,
-            icon: '💬', color: '#10b981',
-        },
-        {
-            id: 4,
-            label: 'الكروت المتبقية',
-            value: stats.bypassCards
-                ? '∞ مسموح'
-                : `${stats.cards ?? 0} كرت`,
-            icon: '🎟️',
-            color: stats.bypassCards
-                ? '#10b981'
-                : (stats.cards ?? 0) > 0 ? '#8b5cf6' : '#ef4444',
-        },
-    ];
+    const statsCards = isSupplier
+        ? [
+            {
+                id: 1,
+                label: 'إجمالي منتجات المستودع',
+                value: stats.products,
+                Icon: Package,
+                color: '#3b82f6',
+                bg: '#eff6ff',
+            },
+            {
+                id: 2,
+                label: 'طلبات بانتظار الرد',
+                value: stats.pendingOrders,
+                Icon: Clock,
+                color: '#f59e0b',
+                bg: '#fffbeb',
+            },
+            {
+                id: 3,
+                label: 'رسائل غير مقروءة',
+                value: stats.messages,
+                Icon: MessageCircle,
+                color: '#10b981',
+                bg: '#ecfdf5',
+            },
+            {
+                id: 4,
+                label: 'الكروت المتبقية',
+                value: stats.bypassCards ? '∞' : stats.cards ?? 0,
+                Icon: Ticket,
+                color: stats.bypassCards ? '#10b981' : (stats.cards ?? 0) > 0 ? '#8b5cf6' : '#ef4444',
+                bg: stats.bypassCards ? '#ecfdf5' : '#f5f3ff',
+            },
+        ]
+        : [
+            {
+                id: 1,
+                label: 'عدد زبائن المتجر',
+                value: store?.customersCount ?? 0,
+                Icon: Users,
+                color: '#3b82f6',
+                bg: '#eff6ff',
+            },
+            {
+                id: 2,
+                label: 'عدد زيارات المتجر',
+                value: store?.totalVisits ?? 0,
+                Icon: Eye,
+                color: '#6366f1',
+                bg: '#eef2ff',
+            },
+            {
+                id: 3,
+                label: 'طلبات بانتظار الرد',
+                value: stats.pendingOrders,
+                Icon: Clock,
+                color: '#f59e0b',
+                bg: '#fffbeb',
+            },
+            {
+                id: 4,
+                label: 'رسائل غير مقروءة',
+                value: stats.messages,
+                Icon: MessageCircle,
+                color: '#10b981',
+                bg: '#ecfdf5',
+            },
+            {
+                id: 5,
+                label: 'الكروت المتبقية',
+                value: stats.bypassCards ? '∞' : stats.cards ?? 0,
+                Icon: Ticket,
+                color: stats.bypassCards ? '#10b981' : (stats.cards ?? 0) > 0 ? '#8b5cf6' : '#ef4444',
+                bg: stats.bypassCards ? '#ecfdf5' : '#f5f3ff',
+            },
+        ];
 
     return (
         <div className="dashboard-home">
             {!isSupplier && store?.name ? (
                 <div className="dashboard-home-store">
-                    <div className="dashboard-home-store__icon-wrap">
-                        <Home size={24} strokeWidth={2.2} />
-                    </div>
+                    {store.logo ? (
+                        <img
+                            src={store.logo}
+                            alt={store.name}
+                            className="dashboard-home-store__logo"
+                        />
+                    ) : (
+                        <div className="dashboard-home-store__logo dashboard-home-store__logo--fallback">
+                            {store.name.charAt(0)}
+                        </div>
+                    )}
                     <div className="dashboard-home-store__text">
                         <h2 className="title dashboard-home-store__name">{store.name}</h2>
                         <p className="dashboard-home-store__subtitle">الرئيسية — نظرة عامة</p>
@@ -168,32 +214,22 @@ export default function DashboardHome() {
                 <h2 className="title">الرئيسية - نظرة عامة</h2>
             )}
 
-            <div className="stats-grid">
-                {statsCards.map(stat => (
-                    <div key={stat.id} className="stat-card"
-                        style={{ borderRight: `5px solid ${stat.color}` }}>
-                        <div className="stat-icon"
-                            style={{ background: `${stat.color}15`, color: stat.color }}>
-                            {stat.icon}
+            <div className="stats-grid stats-grid--modern">
+                {statsCards.map((stat) => {
+                    const Icon = stat.Icon;
+                    return (
+                        <div key={stat.id} className="stat-card stat-card--modern">
+                            <div className="stat-card__icon" style={{ background: stat.bg, color: stat.color }}>
+                                <Icon size={22} strokeWidth={2.2} />
+                            </div>
+                            <div className="stat-card__body">
+                                <span className="stat-card__label">{stat.label}</span>
+                                <span className="stat-card__value">{stat.value}</span>
+                            </div>
                         </div>
-                        <div className="stat-info">
-                            <span className="stat-label">{stat.label}</span>
-                            <span className="stat-value">{stat.value}</span>
-                        </div>
-                    </div>
-                ))}
+                    );
+                })}
             </div>
-
-            <StoreQuickActions
-                isSupplier={isSupplier}
-                showBuyCodes={!isSupplier && isStoreOwner}
-                onAddProduct={() => navigate(`${baseRoute}/add-product-offer?pwaTab=product`)}
-                onAddOffer={() => navigate(`${baseRoute}/add-product-offer?pwaTab=offer`)}
-                onMyStore={() => navigate(`${baseRoute}/my-store`)}
-                onBuyCodes={() => navigate(`${baseRoute}/buy-codes`)}
-            />
-
-            <LatestNotifications baseRoute={baseRoute} />
 
             <div className="latest-offers-home">
                 <h3 className="sub-title">🎯 {isSupplier ? 'عروض مستودعي' : 'عروض متجري'}</h3>
