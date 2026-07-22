@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { getMyOffers, deleteOffer, renewOffer } from "../../services/offers.service";
+import { Eye, EyeOff, Trash2 } from "lucide-react";
+import { getMyOffers, deleteOffer, renewOffer, toggleOfferActive } from "../../services/offers.service";
+import ConfirmDialog from "../../components/ConfirmDialog";
 import "../../styles/dashboard.css";
 import "../../styles/OffersManager.css";
 import { formatOfferBadge } from "../../utils/offerPricing";
@@ -11,7 +13,7 @@ import { invalidateCatalog } from "../../utils/catalogRefresh";
 import LightLoadingHint from "../../shared/LightLoadingHint";
 
 const lifecycleStatus = (o) => {
-  if (!o.isActive) return { label: "منتهٍ / متوقّف", color: "#ef4444" };
+  if (!o.isActive) return { label: "متوقّف", color: "#ef4444" };
   const end = o.expiresAt || o.autoDeleteAt;
   if (end) {
     const hours = (new Date(end) - new Date()) / (1000 * 60 * 60);
@@ -26,6 +28,8 @@ const lifecycleStatus = (o) => {
 export default function OffersManager() {
   const queryClient = useQueryClient();
   const [busyId, setBusyId] = useState(null);
+  const [confirmDelete, setConfirmDelete] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
   const {
     data: offers = [],
@@ -46,16 +50,44 @@ export default function OffersManager() {
     invalidateCatalog(queryClient);
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm("إيقاف هذا العرض؟")) return;
-    setBusyId(id);
+  const handleToggleActive = async (offer) => {
+    setBusyId(offer._id);
     try {
-      await deleteOffer(id);
+      const { data } = await toggleOfferActive(offer._id);
+      const nextActive = data.offer?.isActive ?? !offer.isActive;
+      queryClient.setQueryData(queryKeys.myOffersAll, (prev = []) =>
+        prev.map((o) => (o._id === offer._id ? { ...o, isActive: nextActive } : o))
+      );
+      queryClient.setQueryData(queryKeys.myOffers, (prev = []) =>
+        nextActive
+          ? prev.map((o) => (o._id === offer._id ? { ...o, isActive: true } : o))
+          : prev.filter((o) => o._id !== offer._id)
+      );
       refreshOffers();
     } catch (err) {
-      alert(err.response?.data?.message || "تعذّر الإيقاف");
+      alert(err.response?.data?.message || "تعذّر تغيير الحالة");
     } finally {
       setBusyId(null);
+    }
+  };
+
+  const executeDelete = async () => {
+    if (!confirmDelete) return;
+    setDeleting(true);
+    try {
+      await deleteOffer(confirmDelete.id);
+      queryClient.setQueryData(queryKeys.myOffersAll, (prev = []) =>
+        prev.filter((o) => o._id !== confirmDelete.id)
+      );
+      queryClient.setQueryData(queryKeys.myOffers, (prev = []) =>
+        prev.filter((o) => o._id !== confirmDelete.id)
+      );
+      refreshOffers();
+      setConfirmDelete(null);
+    } catch (err) {
+      alert(err.response?.data?.message || "تعذّر الحذف");
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -90,8 +122,9 @@ export default function OffersManager() {
       <div className="grid">
         {offers.map((o) => {
           const status = lifecycleStatus(o);
+          const isActive = o.isActive !== false;
           return (
-            <div className="offer-card" key={o._id}>
+            <div className={`offer-card${!isActive ? " offer-card--inactive" : ""}`} key={o._id}>
               {o.image && <img src={o.image} alt={o.title} />}
               <div className="content">
                 <div className="top">
@@ -113,8 +146,9 @@ export default function OffersManager() {
                   </small>
                 )}
 
-                <div className="bottom">
+                <div className="bottom offer-card-actions">
                   <button
+                    type="button"
                     className="view"
                     disabled={busyId === o._id}
                     onClick={() => handleRenew(o._id)}
@@ -122,11 +156,23 @@ export default function OffersManager() {
                     {busyId === o._id ? "..." : "تجديد"}
                   </button>
                   <button
+                    type="button"
+                    className="toggle"
+                    disabled={busyId === o._id}
+                    onClick={() => handleToggleActive(o)}
+                    title={isActive ? "إيقاف العرض" : "تفعيل العرض"}
+                  >
+                    {isActive ? <EyeOff size={14} strokeWidth={2.2} /> : <Eye size={14} strokeWidth={2.2} />}
+                    {isActive ? "إيقاف" : "تفعيل"}
+                  </button>
+                  <button
+                    type="button"
                     className="delete"
                     disabled={busyId === o._id}
-                    onClick={() => handleDelete(o._id)}
+                    onClick={() => setConfirmDelete({ id: o._id, title: o.title })}
                   >
-                    إيقاف
+                    <Trash2 size={14} strokeWidth={2.2} />
+                    حذف
                   </button>
                 </div>
               </div>
@@ -135,6 +181,20 @@ export default function OffersManager() {
         })}
       </div>
       )}
+
+      <ConfirmDialog
+        open={Boolean(confirmDelete)}
+        title="حذف نهائي"
+        message="هل أنت متأكد من حذف هذا العرض نهائياً؟
+
+لن تتمكن من استعادته لاحقاً."
+        confirmLabel="حذف نهائي"
+        cancelLabel="إلغاء"
+        danger
+        loading={deleting}
+        onConfirm={executeDelete}
+        onCancel={() => !deleting && setConfirmDelete(null)}
+      />
     </div>
   );
 }

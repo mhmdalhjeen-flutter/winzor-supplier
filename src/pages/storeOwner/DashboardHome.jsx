@@ -20,15 +20,17 @@ export default function DashboardHome() {
     const baseRoute  = isSupplier ? '/supplier' : '/store';
     const { permissions: storePages, isStoreOwner } = useStoreOwnerPermissions();
 
-    const { data: store } = useQuery({
+    const { data: storeResponse } = useQuery({
         queryKey: queryKeys.myStore,
         queryFn: async () => {
             const { data } = await getMyStore();
-            return data.store;
+            return data;
         },
         enabled: !isSupplier,
         staleTime: 5 * 60 * 1000,
     });
+
+    const store = storeResponse?.store;
 
     const { data: stats = { products: 0, pendingOrders: 0, messages: 0, cards: 0, bypassCards: false } } = useQuery({
         queryKey: queryKeys.dashboardStats,
@@ -158,8 +160,9 @@ export default function DashboardHome() {
             },
             {
                 id: 2,
-                label: 'عدد زيارات المتجر',
-                value: store?.totalVisits ?? 0,
+                label: 'زيارات هذا الشهر',
+                value: store?.monthlyVisits ?? 0,
+                subtitle: 'يتجدد تلقائياً مع بداية كل شهر',
                 Icon: Eye,
                 color: '#6366f1',
                 bg: '#eef2ff',
@@ -225,6 +228,9 @@ export default function DashboardHome() {
                             <div className="stat-card__body">
                                 <span className="stat-card__label">{stat.label}</span>
                                 <span className="stat-card__value">{stat.value}</span>
+                                {stat.subtitle ? (
+                                    <span className="stat-card__subtitle">{stat.subtitle}</span>
+                                ) : null}
                             </div>
                         </div>
                     );

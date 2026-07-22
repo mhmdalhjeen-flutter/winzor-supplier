@@ -44,8 +44,6 @@ export default function DashboardLayout() {
   const isSupportPage = location.pathname === `${baseRoute}/support`;
   const subscriptionExpired =
     !isSupplier && isStoreOwner && storeData && storeData.subscriptionActive === false && !isSupportPage;
-  const isHome =
-    location.pathname === baseRoute || location.pathname === `${baseRoute}/`;
 
   useEffect(() => {
     if (!storeQueryData) return;
@@ -168,10 +166,28 @@ export default function DashboardLayout() {
               >
                 <Menu size={22} strokeWidth={2} />
               </button>
-              <img src={BRAND_LOGO_64} alt={BRAND_NAME} className="topbar-brand-logo" width={36} height={36} />
-              {isHome && !isSupplier && storeData?.name ? (
-                <span className="topbar-store-name">{storeData.name}</span>
-              ) : null}
+              {!isSupplier && storeData ? (
+                <div className="topbar-store-brand">
+                  {storeData.logo ? (
+                    <img
+                      src={storeData.logo}
+                      alt={storeData.name || "شعار المتجر"}
+                      className="topbar-store-logo"
+                      width={44}
+                      height={44}
+                    />
+                  ) : (
+                    <div className="topbar-store-logo topbar-store-logo--fallback" aria-hidden>
+                      {(storeData.name || "م").charAt(0)}
+                    </div>
+                  )}
+                  {storeData.name ? (
+                    <span className="topbar-store-name">{storeData.name}</span>
+                  ) : null}
+                </div>
+              ) : (
+                <img src={BRAND_LOGO_64} alt={BRAND_NAME} className="topbar-brand-logo" width={36} height={36} />
+              )}
             </div>
 
             <div className="topbar-end">

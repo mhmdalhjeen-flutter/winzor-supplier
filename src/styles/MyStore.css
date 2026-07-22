@@ -254,7 +254,8 @@
 
 .store-card-actions {
   display: flex;
-  gap: 10px;
+  flex-wrap: wrap;
+  gap: 8px;
   margin-top: 14px;
 }
 
@@ -297,5 +298,48 @@
 .store-action-btn--delete:hover {
   background: #fef2f2;
   border-color: #fca5a5;
+}
+
+.store-action-btn--toggle {
+  background: #fff;
+  color: #475569;
+  border: 1.5px solid #e2e8f0;
+}
+
+.store-action-btn--toggle:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+.store-item-card--inactive {
+  opacity: 0.72;
+}
+
+.store-item-card--inactive img {
+  filter: grayscale(0.35);
+}
+
+.store-item-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.store-item-card__head h3 {
+  margin: 0;
+}
+
+.store-item-badge {
+  font-size: 11px;
+  font-weight: 800;
+  padding: 4px 8px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.store-item-badge--paused {
+  background: #fef3c7;
+  color: #b45309;
 }
 

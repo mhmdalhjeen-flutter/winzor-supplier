@@ -15,6 +15,9 @@ export const createOffer = (data) =>
 export const deleteOffer = (id) =>
   api.delete(`/offers/${id}`);
 
+export const toggleOfferActive = (id) =>
+  api.patch(`/offers/${id}/toggle-active`);
+
 // تجديد/تمديد عرض (دورة الحياة — المرحلة 6)
 export const renewOffer = (id, days) =>
   api.patch(`/offers/${id}/renew`, days ? { days } : {});

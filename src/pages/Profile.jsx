@@ -33,14 +33,16 @@ export default function Profile() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState({ text: "", isError: false });
 
-  const { data: store, isLoading: loading } = useQuery({
+  const { data: storeResponse, isLoading: loading } = useQuery({
     queryKey: queryKeys.myStore,
     queryFn: async () => {
       const { data } = await getMyStore();
-      return data.store;
+      return data;
     },
     staleTime: 5 * 60 * 1000,
   });
+
+  const store = storeResponse?.store;
 
   const showMsg = (text, isError = false) => {
     setMessage({ text, isError });
@@ -107,7 +109,10 @@ export default function Profile() {
         logo: storeForm.logo,
         coverImage: storeForm.coverImage,
       });
-      queryClient.setQueryData(queryKeys.myStore, data.store);
+      queryClient.setQueryData(queryKeys.myStore, (prev) => ({
+        ...(prev || {}),
+        store: data.store,
+      }));
       setStoreForm({
         name: data.store.name || "",
         description: data.store.description || "",

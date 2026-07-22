@@ -42,6 +42,7 @@
   font-size: 14px;
   color: #64748b;
   line-height: 1.5;
+  white-space: pre-line;
 }
 
 .confirm-dialog__actions {
