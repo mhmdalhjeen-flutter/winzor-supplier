@@ -214,12 +214,18 @@ export default function Profile() {
                 <div className="form-row">
                   <div className="form-group">
                     <label>المنطقة</label>
-                    <input value={storeForm.region} disabled className="input-readonly" />
+                    <input value={storeForm.region} disabled className="input-readonly" title="تواصل مع الإدارة لتغيير المنطقة" />
+                    <p className="field-hint-inline">لتغيير المنطقة تواصل مع الإدارة</p>
                   </div>
                   <div className="form-group">
                     <label>المنطقة الفرعية</label>
                     <input value={storeForm.subRegion} disabled className="input-readonly" />
                   </div>
+                </div>
+
+                <div className="form-group">
+                  <label>نوع النشاط</label>
+                  <input value={store.category || ''} disabled className="input-readonly" />
                 </div>
 
                 <div className="form-group">
@@ -258,11 +264,12 @@ export default function Profile() {
                 )}
                 <div className="profile-summary-grid">
                   {storeForm.phone && <span>📞 {storeForm.phone}</span>}
-                  {storeForm.whatsapp && <span>💬 {storeForm.whatsapp}</span>}
+                  {storeForm.whatsapp && <span>💬 واتساب: {storeForm.whatsapp}</span>}
                   {storeForm.address && <span>📍 {storeForm.address}</span>}
-                  {storeForm.region && <span>🗺️ {storeForm.region} — {storeForm.subRegion}</span>}
+                  {storeForm.region && <span>🗺️ {storeForm.region}{storeForm.subRegion ? ` — ${storeForm.subRegion}` : ''}</span>}
+                  {store.category && <span>🏷️ {store.category}</span>}
                 </div>
-                <p className="muted-text">يمكنك تعديل صورة المتجر والغلاف وبيانات العرض في أي وقت.</p>
+                <p className="muted-text">يمكنك تعديل الشعار والغلاف والوصف وبيانات التواصل في أي وقت.</p>
               </div>
             )}
           </div>

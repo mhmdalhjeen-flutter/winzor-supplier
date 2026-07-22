@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Bell, Clock, Tag, AlertCircle, RefreshCw } from "lucide-react";
 import { getNotifications, markRead, markAllRead } from "../services/notifications.service";
 import { queryKeys } from "../lib/queryClient";
+import { cleanupNotifications } from "../utils/notificationCleanup";
 import "../styles/NotificationDropdown.css";
 
 const PREVIEW_LIMIT = 6;
@@ -43,7 +44,7 @@ export default function NotificationDropdown({ count, baseRoute, onCountChange }
     queryKey: queryKeys.notifications,
     queryFn: async () => {
       const { data } = await getNotifications();
-      return data.notifications || [];
+      return cleanupNotifications(data.notifications || []);
     },
     enabled: open,
     staleTime: 20 * 1000,
@@ -165,9 +166,9 @@ export default function NotificationDropdown({ count, baseRoute, onCountChange }
             )}
           </div>
 
-          {items.length > PREVIEW_LIMIT && (
-            <button type="button" className="notif-view-more" onClick={viewAll}>
-              عرض المزيد
+          {items.length > 0 && (
+            <button type="button" className="notif-view-all" onClick={viewAll}>
+              عرض الكل
             </button>
           )}
         </div>

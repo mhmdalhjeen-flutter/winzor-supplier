@@ -1,3 +1,19 @@
+.create-story-page--edit {
+  max-width: 680px;
+}
+
+.create-story-page--edit .create-section {
+  animation: editSectionIn 0.3s ease backwards;
+}
+
+.create-story-page--edit .create-section:nth-child(2) { animation-delay: 0.04s; }
+.create-story-page--edit .create-section:nth-child(3) { animation-delay: 0.08s; }
+
+@keyframes editSectionIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 .form-page {
   padding: 20px;
   max-width: 720px;

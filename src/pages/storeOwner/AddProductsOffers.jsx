@@ -172,6 +172,9 @@ export default function AddProductsOffers() {
             description: item.description || '',
             freeDelivery: item.freeDelivery ? 'yes' : 'no',
             isWholesale: item.isWholesale || false,
+            sku: item.sku || '',
+            quantity: item.stock ?? item.quantity ?? '',
+            tags: item.tags || [],
           });
         } catch {
           showNotice('تعذّر تحميل المنتج', 'error');
@@ -203,6 +206,9 @@ export default function AddProductsOffers() {
             description: item.description || '',
             freeDelivery: item.freeDelivery ? 'yes' : 'no',
             expiresAt: isoToDateInput(item.expiresAt),
+            sku: item.sku || '',
+            quantity: item.stock ?? item.quantity ?? '',
+            tags: item.tags || [],
           });
         } catch {
           showNotice('تعذّر تحميل العرض', 'error');
@@ -316,6 +322,7 @@ export default function AddProductsOffers() {
         await api.put(`/products/${editProductId}`, payload);
         showNotice('تم تحديث المنتج بنجاح', 'success');
         invalidateCatalog(queryClient);
+        queryClient.invalidateQueries({ queryKey: queryKeys.myProducts });
         navigate(`${baseRoute}/my-store`);
         return;
       }
@@ -379,6 +386,7 @@ export default function AddProductsOffers() {
         await api.put(`/offers/${editOfferId}`, payload);
         showNotice('تم تحديث العرض بنجاح', 'success');
         invalidateCatalog(queryClient);
+        queryClient.invalidateQueries({ queryKey: queryKeys.myOffersAll });
         navigate(`${baseRoute}/my-store`);
         return;
       }
@@ -632,7 +640,7 @@ export default function AddProductsOffers() {
   );
 
   return (
-    <div className="form-page create-story-page">
+    <div className={`form-page create-story-page${isEditMode ? ' create-story-page--edit' : ''}`}>
       <FormNoticeToast notice={notice} onClose={clearNotice} />
       <FormRulesPopup
         open={rulesOpen}

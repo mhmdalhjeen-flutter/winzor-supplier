@@ -554,6 +554,19 @@ body { font-family: 'Cairo', sans-serif; background-color: var(--bg-body); color
   border: 1px solid #e2e8f0;
 }
 
+.dashboard-home-store__icon-wrap {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #2563eb, #4f46e5);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
+}
+
 .dashboard-home-store__text {
   min-width: 0;
 }
@@ -924,7 +937,19 @@ body.sidebar-open .topbar {
   border: 1px solid #f1f5f9;
   background: #fafafa;
   cursor: pointer;
-  transition: background 0.15s, border-color 0.15s;
+  transition: background 0.15s, border-color 0.15s, transform 0.15s;
+  animation: notifCardIn 0.3s ease backwards;
+}
+
+.notif-card:nth-child(1) { animation-delay: 0.02s; }
+.notif-card:nth-child(2) { animation-delay: 0.06s; }
+.notif-card:nth-child(3) { animation-delay: 0.1s; }
+.notif-card:nth-child(4) { animation-delay: 0.14s; }
+.notif-card:nth-child(5) { animation-delay: 0.18s; }
+
+@keyframes notifCardIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .notif-card:hover {
@@ -978,6 +1003,7 @@ body.sidebar-open .topbar {
 /* Profile enhancements */
 .profile-summary-grid { display: flex; flex-wrap: wrap; gap: 10px 16px; margin: 12px 0; font-size: 14px; color: #475569; }
 .profile-summary-block { margin: 0 0 8px; color: #334155; line-height: 1.6; }
+.field-hint-inline { margin: 4px 0 0; font-size: 11px; color: #94a3b8; }
 .input-readonly { background: #f1f5f9 !important; color: #64748b; cursor: not-allowed; }
 
 @media (max-width: 1100px) {

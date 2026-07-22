@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Bell, Clock, AlertCircle, RefreshCw, Tag } from "lucide-react";
 import { getNotifications, markRead, markAllRead } from "../services/notifications.service";
 import { queryKeys } from "../lib/queryClient";
+import { cleanupNotifications } from "../utils/notificationCleanup";
 import LightLoadingHint from "../shared/LightLoadingHint";
 import "../styles/dashboard.css";
 
@@ -22,7 +23,7 @@ export default function Notifications() {
     queryKey: queryKeys.notifications,
     queryFn: async () => {
       const { data } = await getNotifications();
-      return data.notifications || [];
+      return cleanupNotifications(data.notifications || []);
     },
     staleTime: 30 * 1000,
   });

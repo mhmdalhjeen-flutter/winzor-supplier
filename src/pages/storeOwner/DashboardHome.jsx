@@ -1,15 +1,15 @@
 // src/pages/DashboardHome.jsx
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Home } from 'lucide-react';
 import axios from '../../services/api';
 import { getDashboardOffers } from '../../services/offers.service';
-import { formatOfferBadge } from '../../utils/offerPricing';
 import { getStoredUser } from '../../utils/safeStorage';
 import { getMyStore } from '../../services/store.service';
-import { BRAND_LOGO_64 } from '../../utils/brandAssets';
 import OfferPriceDisplay from '../../components/OfferPriceDisplay';
 import useStoreOwnerPermissions from '../../hooks/useStoreOwnerPermissions';
 import StoreQuickActions from '../../components/StoreQuickActions';
+import LatestNotifications from '../../components/dashboard/LatestNotifications';
 import '../../styles/dashboard.css';
 
 export default function DashboardHome() {
@@ -156,13 +156,9 @@ export default function DashboardHome() {
         <div className="dashboard-home">
             {!isSupplier && store?.name ? (
                 <div className="dashboard-home-store">
-                    <img
-                        src={BRAND_LOGO_64}
-                        alt=""
-                        className="dashboard-home-store__logo"
-                        width={44}
-                        height={44}
-                    />
+                    <div className="dashboard-home-store__icon-wrap">
+                        <Home size={24} strokeWidth={2.2} />
+                    </div>
                     <div className="dashboard-home-store__text">
                         <h2 className="title dashboard-home-store__name">{store.name}</h2>
                         <p className="dashboard-home-store__subtitle">الرئيسية — نظرة عامة</p>
@@ -196,6 +192,8 @@ export default function DashboardHome() {
                 onMyStore={() => navigate(`${baseRoute}/my-store`)}
                 onBuyCodes={() => navigate(`${baseRoute}/buy-codes`)}
             />
+
+            <LatestNotifications baseRoute={baseRoute} />
 
             <div className="latest-offers-home">
                 <h3 className="sub-title">🎯 {isSupplier ? 'عروض مستودعي' : 'عروض متجري'}</h3>

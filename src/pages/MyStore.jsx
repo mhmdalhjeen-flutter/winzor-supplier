@@ -6,6 +6,7 @@ import api from "../services/api";
 import "../styles/dashboard.css";
 import "../styles/MyStore.css";
 import OfferPriceDisplay from "../components/OfferPriceDisplay";
+import ConfirmDialog from "../components/ConfirmDialog";
 import { formatPriceWithUnit } from "../utils/currency";
 import { queryKeys } from "../lib/queryClient";
 import { unwrapList } from "../utils/unwrapList";
@@ -21,6 +22,8 @@ export default function MyStore() {
   const queryClient = useQueryClient();
 
   const [view, setView] = useState("products");
+  const [confirmDelete, setConfirmDelete] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
   const {
     data: products = [],
@@ -32,7 +35,6 @@ export default function MyStore() {
       const { data } = await api.get("/products/my");
       return unwrapList(data, ["products"]);
     },
-    enabled: view === "products",
     staleTime: 60 * 1000,
   });
 
@@ -46,7 +48,6 @@ export default function MyStore() {
       const { data } = await api.get("/offers/my?all=true");
       return unwrapList(data, ["offers"]);
     },
-    enabled: view === "offers",
     staleTime: 60 * 1000,
   });
 
@@ -55,29 +56,34 @@ export default function MyStore() {
     ? productsError?.response?.data?.message || (productsError ? "تعذّر تحميل المنتجات" : null)
     : offersError?.response?.data?.message || (offersError ? "تعذّر تحميل العروض" : null);
 
-  const handleDeleteProduct = async (id) => {
-    if (!window.confirm("هل أنت متأكد من حذف هذا المنتج؟")) return;
-    try {
-      await api.delete(`/products/${id}`);
-      queryClient.setQueryData(queryKeys.myProducts, (prev = []) =>
-        prev.filter((p) => p._id !== id)
-      );
-      invalidateCatalog(queryClient);
-    } catch (err) {
-      alert("خطأ: " + (err.response?.data?.message || err.message));
-    }
+  const refreshAll = () => {
+    invalidateCatalog(queryClient);
+    queryClient.invalidateQueries({ queryKey: queryKeys.myProducts });
+    queryClient.invalidateQueries({ queryKey: queryKeys.myOffersAll });
+    queryClient.invalidateQueries({ queryKey: queryKeys.myOffers });
   };
 
-  const handleDeleteOffer = async (id) => {
-    if (!window.confirm("هل أنت متأكد من حذف هذا العرض؟")) return;
+  const executeDelete = async () => {
+    if (!confirmDelete) return;
+    setDeleting(true);
     try {
-      await api.delete(`/offers/${id}`);
-      queryClient.setQueryData(queryKeys.myOffersAll, (prev = []) =>
-        prev.filter((o) => o._id !== id)
-      );
-      invalidateCatalog(queryClient);
+      if (confirmDelete.type === "product") {
+        await api.delete(`/products/${confirmDelete.id}`);
+        queryClient.setQueryData(queryKeys.myProducts, (prev = []) =>
+          prev.filter((p) => p._id !== confirmDelete.id)
+        );
+      } else {
+        await api.delete(`/offers/${confirmDelete.id}`);
+        queryClient.setQueryData(queryKeys.myOffersAll, (prev = []) =>
+          prev.filter((o) => o._id !== confirmDelete.id)
+        );
+      }
+      refreshAll();
+      setConfirmDelete(null);
     } catch (err) {
       alert("خطأ: " + (err.response?.data?.message || err.message));
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -137,7 +143,11 @@ export default function MyStore() {
                     <button
                       type="button"
                       className="store-action-btn store-action-btn--delete"
-                      onClick={() => view === "products" ? handleDeleteProduct(item._id) : handleDeleteOffer(item._id)}
+                      onClick={() => setConfirmDelete({
+                        id: item._id,
+                        type: view === "products" ? "product" : "offer",
+                        name: item.name || item.title,
+                      })}
                     >
                       <Trash2 size={16} strokeWidth={2.2} />
                       حذف
@@ -149,6 +159,18 @@ export default function MyStore() {
           )}
         </div>
       )}
+
+      <ConfirmDialog
+        open={Boolean(confirmDelete)}
+        title={confirmDelete?.type === "product" ? "حذف المنتج" : "حذف العرض"}
+        message={confirmDelete ? `هل أنت متأكد من حذف «${confirmDelete.name}»؟ لا يمكن التراجع عن هذا الإجراء.` : ""}
+        confirmLabel="حذف"
+        cancelLabel="إلغاء"
+        danger
+        loading={deleting}
+        onConfirm={executeDelete}
+        onCancel={() => !deleting && setConfirmDelete(null)}
+      />
     </div>
   );
 }

@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Bell, Clock, AlertCircle, RefreshCw, Tag, ChevronLeft } from "lucide-react";
 import { getNotifications } from "../../services/notifications.service";
 import { queryKeys } from "../../lib/queryClient";
+import { cleanupNotifications } from "../../utils/notificationCleanup";
 import LightLoadingHint from "../../shared/LightLoadingHint";
 
 const PREVIEW_COUNT = 5;
@@ -36,7 +37,7 @@ export default function LatestNotifications({ baseRoute }) {
     queryKey: queryKeys.notifications,
     queryFn: async () => {
       const { data } = await getNotifications();
-      return data.notifications || [];
+      return cleanupNotifications(data.notifications || []);
     },
     staleTime: 30 * 1000,
   });

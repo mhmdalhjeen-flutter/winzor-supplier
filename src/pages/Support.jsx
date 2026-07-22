@@ -159,7 +159,13 @@ export default function Support() {
             <span>محادثة الدعم</span>
           </div>
 
-          {loading && <p className="support-loading">جاري تحميل المحادثة...</p>}
+          {loading && (
+            <div className="support-loading support-loading--skeleton">
+              <div className="support-skeleton-bubble" />
+              <div className="support-skeleton-bubble support-skeleton-bubble--short" />
+              <p>جاري تحميل المحادثة...</p>
+            </div>
+          )}
           {error && !loading && <p className="support-error">{error}</p>}
 
           {!loading && !error && (
