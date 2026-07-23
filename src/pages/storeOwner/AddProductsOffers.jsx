@@ -6,7 +6,7 @@ import MediaUploader from '../../components/MediaUploader';
 import TagsInput from '../../components/TagsInput';
 import CollapsibleSection from '../../components/CollapsibleSection';
 import { FormNoticeToast, FormRulesPopup, useFormNotice } from '../../components/FormNotice';
-import { OFFER_TYPE_OPTIONS } from '../../utils/offerPricing';
+import { OFFER_TYPE_OPTIONS, validateOfferPricing } from '../../utils/offerPricing';
 import PriceCurrencyInput from '../../components/PriceCurrencyInput';
 import PriceUnitInput from '../../components/PriceUnitInput';
 import { DEFAULT_CURRENCY, formatPriceWithUnit } from '../../utils/currency';
@@ -14,7 +14,7 @@ import { parsePriceUnit, resolvePriceUnit } from '../../utils/priceUnit';
 import { PWA_TAB_PARAM } from '../../pwa/pwaShortcutActions';
 import { invalidateCatalog } from '../../utils/catalogRefresh';
 import { queryKeys } from '../../lib/queryClient';
-import { enqueuePublishItem } from '../../lib/offlinePublishQueue';
+import { enqueuePublishItem, getPublishItem, updatePublishItem, resolveQueueBlob } from '../../lib/offlinePublishQueue';
 import '../../styles/AddProductsOffers.css';
 
 const PRODUCT_RULES = [
@@ -126,7 +126,9 @@ export default function AddProductsOffers() {
   const [searchParams, setSearchParams] = useSearchParams();
   const editProductId = searchParams.get('editProduct');
   const editOfferId = searchParams.get('editOffer');
+  const pendingId = searchParams.get('pendingId');
   const isEditMode = Boolean(editProductId || editOfferId);
+  const isPendingEdit = Boolean(pendingId);
   const [tab, setTab] = useState('product');
   const [loading, setLoading] = useState(false);
   const [rulesOpen, setRulesOpen] = useState(false);
@@ -139,6 +141,7 @@ export default function AddProductsOffers() {
   const [localImageFile, setLocalImageFile] = useState(null);
   const [expandedVariants, setExpandedVariants] = useState({});
   const [pricingPreview, setPricingPreview] = useState(null);
+  const [pendingItemId, setPendingItemId] = useState(null);
 
   useEffect(() => {
     const pwaTab = searchParams.get(PWA_TAB_PARAM);
@@ -214,6 +217,57 @@ export default function AddProductsOffers() {
   }, [editProductId, editOfferId]);
 
   useEffect(() => {
+    if (!pendingId) return;
+    (async () => {
+      try {
+        const item = await getPublishItem(pendingId);
+        if (!item) {
+          showNotice('الإضافة المعلقة غير موجودة', 'error');
+          return;
+        }
+        setPendingItemId(item.id);
+        if (item.type === 'product') {
+          setTab('product');
+          const p = item.payload || {};
+          setProduct({
+            ...EMPTY_PRODUCT,
+            name: p.name || '',
+            price: p.price ?? '',
+            currency: p.currency || DEFAULT_CURRENCY,
+            ...parsePriceUnit(p.priceUnit),
+            image: item.remoteImageUrl || p.image || '',
+            description: p.description || '',
+            freeDelivery: p.freeDelivery ? 'yes' : 'no',
+            isWholesale: p.isWholesale || false,
+          });
+        } else {
+          setTab('offer');
+          const o = item.payload || {};
+          setOffer({
+            ...EMPTY_OFFER,
+            title: o.title || '',
+            offerType: o.offerType || 'discount',
+            currency: o.currency || DEFAULT_CURRENCY,
+            ...parsePriceUnit(o.priceUnit),
+            originalPrice: o.originalPrice ?? '',
+            value: o.value ?? '',
+            finalPrice: o.finalPrice ?? '',
+            image: item.remoteImageUrl || o.image || '',
+            description: o.description || '',
+            freeDelivery: o.freeDelivery ? 'yes' : 'no',
+            expiresAt: isoToDateInput(o.expiresAt),
+          });
+        }
+        const blob = await resolveQueueBlob(item.imageBlob);
+        if (blob) setLocalImageFile(blob);
+        setMediaResetKey((k) => k + 1);
+      } catch {
+        showNotice('تعذّر تحميل الإضافة المعلقة', 'error');
+      }
+    })();
+  }, [pendingId]);
+
+  useEffect(() => {
     if (tab !== 'offer') return undefined;
     let cancelled = false;
 
@@ -240,6 +294,9 @@ export default function AddProductsOffers() {
 
   const previewPricing = pricingPreview?.pricing;
   const previewValid = pricingPreview?.valid === true;
+  const offlineOfferPricing = validateOfferPricing(offer);
+  const offerPricingReady = previewValid || offlineOfferPricing.valid;
+  const resolvedOfferFinalPrice = previewPricing?.finalPrice ?? offlineOfferPricing.finalPrice;
 
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const baseRoute = user?.role === 'supplier' ? '/supplier' : '/store';
@@ -331,18 +388,21 @@ export default function AddProductsOffers() {
     }
 
     if (!navigator.onLine || (localImageFile && !product.image)) {
-      await enqueuePublishItem({
-        type: 'product',
-        payload,
-        imageBlob: localImageFile,
-        imagePreviewUrl: localImageFile ? URL.createObjectURL(localImageFile) : '',
-        remoteImageUrl: product.image || '',
-      });
-      showNotice('تم حفظ المنتج محلياً — سيُرفع تلقائياً عند توفر الإنترنت', 'success');
-      clearDraft(DRAFT_PRODUCT_KEY);
-      setProduct(EMPTY_PRODUCT);
+      const queuePayload = { type: 'product', payload, imageBlob: localImageFile, imagePreviewUrl: localImageFile ? URL.createObjectURL(localImageFile) : '', remoteImageUrl: product.image || '' };
+      const wasPending = pendingItemId;
+      if (wasPending) {
+        await updatePublishItem(wasPending, { ...queuePayload, status: 'pending', error: null });
+        showNotice('تم تحديث المنتج المعلق — سيُرفع تلقائياً عند توفر الإنترنت', 'success');
+      } else {
+        await enqueuePublishItem(queuePayload);
+        showNotice('تم حفظ المنتج محلياً — سيُرفع تلقائياً عند توفر الإنترنت', 'success');
+        clearDraft(DRAFT_PRODUCT_KEY);
+        setProduct(EMPTY_PRODUCT);
+      }
       setLocalImageFile(null);
+      setPendingItemId(null);
       setMediaResetKey((k) => k + 1);
+      if (wasPending) navigate(`${baseRoute}/pending-uploads`);
       return;
     }
 
@@ -375,8 +435,8 @@ export default function AddProductsOffers() {
       showNotice('تاريخ انتهاء العرض مطلوب', 'error');
       return;
     }
-    if (!previewValid || previewPricing?.finalPrice == null) {
-      showNotice('أكمل حقول نوع العرض لحساب السعر النهائي', 'error');
+    if (!offerPricingReady || resolvedOfferFinalPrice == null) {
+      showNotice(offlineOfferPricing.message || 'أكمل حقول نوع العرض لحساب السعر النهائي', 'error');
       return;
     }
 
@@ -392,7 +452,7 @@ export default function AddProductsOffers() {
       offerType: offer.offerType,
       originalPrice: offer.originalPrice !== '' ? Number(offer.originalPrice) : undefined,
       value: offer.value !== '' ? Number(offer.value) : undefined,
-      finalPrice: offer.offerType === 'custom' ? Number(offer.finalPrice) : previewPricing.finalPrice,
+      finalPrice: offer.offerType === 'custom' ? Number(offer.finalPrice) : resolvedOfferFinalPrice,
       currency: offer.currency || DEFAULT_CURRENCY,
       priceUnit,
       image: offer.image,
@@ -418,18 +478,21 @@ export default function AddProductsOffers() {
     }
 
     if (!navigator.onLine || (localImageFile && !offer.image)) {
-      await enqueuePublishItem({
-        type: 'offer',
-        payload,
-        imageBlob: localImageFile,
-        imagePreviewUrl: localImageFile ? URL.createObjectURL(localImageFile) : '',
-        remoteImageUrl: offer.image || '',
-      });
-      showNotice('تم حفظ العرض محلياً — سيُرفع تلقائياً عند توفر الإنترنت', 'success');
-      clearDraft(DRAFT_OFFER_KEY);
-      setOffer(EMPTY_OFFER);
+      const queuePayload = { type: 'offer', payload, imageBlob: localImageFile, imagePreviewUrl: localImageFile ? URL.createObjectURL(localImageFile) : '', remoteImageUrl: offer.image || '' };
+      const wasPending = pendingItemId;
+      if (wasPending) {
+        await updatePublishItem(wasPending, { ...queuePayload, status: 'pending', error: null });
+        showNotice('تم تحديث العرض المعلق — سيُرفع تلقائياً عند توفر الإنترنت', 'success');
+      } else {
+        await enqueuePublishItem(queuePayload);
+        showNotice('تم حفظ العرض محلياً — سيُرفع تلقائياً عند توفر الإنترنت', 'success');
+        clearDraft(DRAFT_OFFER_KEY);
+        setOffer(EMPTY_OFFER);
+      }
       setLocalImageFile(null);
+      setPendingItemId(null);
       setMediaResetKey((k) => k + 1);
+      if (wasPending) navigate(`${baseRoute}/pending-uploads`);
       return;
     }
 
@@ -569,6 +632,9 @@ export default function AddProductsOffers() {
     }
     if (previewValid && previewPricing?.finalPrice != null) {
       return formatPriceWithUnit(previewPricing.finalPrice, offer.currency, offerUnit);
+    }
+    if (offlineOfferPricing.valid && offlineOfferPricing.finalPrice != null) {
+      return formatPriceWithUnit(offlineOfferPricing.finalPrice, offer.currency, offerUnit);
     }
     return '—';
   })();
@@ -910,9 +976,9 @@ export default function AddProductsOffers() {
               onCustomUnitChange={(value) => setOffer({ ...offer, priceUnitCustom: value })}
             />
 
-            {previewValid && previewPricing?.finalPrice != null && offer.offerType !== 'custom' && (
+            {(previewValid || offlineOfferPricing.valid) && resolvedOfferFinalPrice != null && offer.offerType !== 'custom' && (
               <div className="final-price-box">
-                {previewPricing.showCompare && previewPricing.displayOld && (
+                {previewPricing?.showCompare && previewPricing?.displayOld && (
                   <span style={{ textDecoration: 'line-through', color: '#94a3b8', marginLeft: 8 }}>
                     {previewPricing.displayOld}
                   </span>

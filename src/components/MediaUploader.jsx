@@ -1,9 +1,10 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { Camera, ImageIcon, RefreshCw, Trash2 } from 'lucide-react';
 import { uploadImage } from '../utils/imageUpload';
+import { normalizePickedImage } from '../utils/imageConvert';
 import ImageCropModal from './ImageCropModal';
 
-const IMAGE_ACCEPT = 'image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp';
+const IMAGE_ACCEPT = 'image/jpeg,image/png,image/webp,image/heic,image/heif,.jpg,.jpeg,.png,.webp,.heic,.heif';
 
 function normalizeImageFile(file) {
   if (!file) return null;
@@ -68,14 +69,19 @@ export default function MediaUploader({
     onChange?.('');
   };
 
-  const startCrop = (file) => {
-    const normalized = normalizeImageFile(file);
-    if (!normalized) {
-      onError?.('ملف غير صالح');
-      return;
+  const startCrop = async (file) => {
+    try {
+      const converted = await normalizePickedImage(file);
+      const normalized = normalizeImageFile(converted);
+      if (!normalized) {
+        onError?.('ملف غير صالح');
+        return;
+      }
+      setCropFile(normalized);
+      setCropOpen(true);
+    } catch (err) {
+      onError?.(err.message || 'تعذّر قراءة الصورة');
     }
-    setCropFile(normalized);
-    setCropOpen(true);
   };
 
   const handleCropConfirm = async (croppedFile) => {
@@ -133,7 +139,7 @@ export default function MediaUploader({
           {label}
           {required && <span className="req"> *</span>}
         </label>
-        <span className="media-uploader__hint">صورة واحدة فقط — JPG أو PNG أو WebP</span>
+        <span className="media-uploader__hint">JPG · PNG · WebP · HEIC</span>
       </div>
 
       <div className={`media-upload-area ${hasImage ? 'has-image' : ''}`}>
@@ -167,7 +173,7 @@ export default function MediaUploader({
           </div>
         ) : (
           <div className="media-preview-panel">
-            <div className="media-preview-wrap">
+            <div className="media-preview-wrap media-preview-wrap--large">
               <img src={previewUrl} alt="" className="media-preview-img" />
               {uploading && (
                 <div className="media-preview-overlay">

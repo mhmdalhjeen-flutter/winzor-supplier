@@ -15,9 +15,20 @@
 }
 
 .form-page {
-  padding: 20px;
-  max-width: 720px;
+  padding: 16px 12px 28px;
+  max-width: 100%;
   margin: 0 auto;
+}
+
+.create-story-page {
+  max-width: 640px;
+}
+
+@media (min-width: 768px) {
+  .form-page {
+    padding: 20px;
+    max-width: 720px;
+  }
 }
 
 .form-page-head {
@@ -238,33 +249,43 @@
 }
 
 /* Story-like create flow */
-.create-flow {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
 .create-section {
   background: #fff;
-  border-radius: 16px;
-  padding: 16px;
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+  border-radius: 18px;
+  padding: 18px 16px;
+  box-shadow: 0 4px 18px rgba(15, 23, 42, 0.05);
   border: 1px solid #eef2f7;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
+}
+
+.create-flow {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
 }
 
 .create-section input,
 .create-section textarea,
 .create-section select {
-  padding: 12px;
-  border-radius: 12px;
-  border: 1px solid #e5e7eb;
+  padding: 14px 14px;
+  border-radius: 14px;
+  border: 1px solid #e8edf3;
+  background: #fafbfc;
   outline: none;
   width: 100%;
   box-sizing: border-box;
   font: inherit;
+  transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+}
+
+.create-section input:focus,
+.create-section textarea:focus,
+.create-section select:focus {
+  border-color: #93c5fd;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
 }
 
 .create-section textarea {
@@ -537,8 +558,20 @@
   border-radius: 16px;
   overflow: hidden;
   background: #f1f5f9;
-  aspect-ratio: 4 / 3;
-  max-height: 320px;
+  aspect-ratio: 4 / 5;
+  max-height: 420px;
+  min-height: 280px;
+}
+
+.media-preview-wrap--large {
+  aspect-ratio: 3 / 4;
+  max-height: min(72vh, 480px);
+  min-height: 300px;
+}
+
+.media-preview-wrap--large .media-preview-img {
+  object-fit: contain;
+  background: #0f172a;
 }
 
 .media-preview-img {
@@ -1482,6 +1515,83 @@
 .crop-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+/* Enhanced crop editor */
+.crop-modal--enhanced {
+  width: min(96vw, 480px);
+}
+
+.crop-presets--compact button small {
+  display: none;
+}
+
+.crop-presets--compact button {
+  padding: 10px 8px;
+  text-align: center;
+}
+
+.crop-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.crop-tool-btn {
+  flex: 1;
+  min-width: calc(50% - 4px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 8px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #f8fafc;
+  color: #334155;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.crop-tool-btn:hover {
+  border-color: #93c5fd;
+  background: #eff6ff;
+}
+
+.crop-stage--large {
+  padding: 14px;
+  min-height: 240px;
+}
+
+.crop-sliders {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.crop-slider {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #475569;
+}
+
+.crop-slider span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.crop-slider input[type="range"] {
+  width: 100%;
+  accent-color: #2563eb;
 }
 
 /* Legacy ImagePicker (still used on other pages) */

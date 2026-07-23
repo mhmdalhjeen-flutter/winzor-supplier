@@ -162,7 +162,11 @@ export default function MyStore() {
               const itemType = view === "products" ? "product" : "offer";
               return (
                 <div key={item._id} className={`card store-item-card${!isActive ? " store-item-card--inactive" : ""}`}>
-                  {item.image && <img src={item.image} alt={item.name || item.title} />}
+                  {item.image && (
+                    <div className={`store-item-card__media-wrap${!isActive ? ' store-item-card__media-wrap--paused' : ''}`}>
+                      <img src={item.image} alt={item.name || item.title} />
+                    </div>
+                  )}
                   <div className="info">
                     <div className="store-item-card__head">
                       <h3>{item.name || item.title}</h3>

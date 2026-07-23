@@ -31,6 +31,7 @@ const ItemDetails = lazy(() => import("./pages/ItemDetails"));
 const Support = lazy(() => import("./pages/Support"));
 const Profile = lazy(() => import("./pages/Profile"));
 const AddProductOffer = lazy(() => import("./pages/storeOwner/AddProductsOffers"));
+const PendingUploads = lazy(() => import("./pages/storeOwner/PendingUploads"));
 const MemberPrizes = lazy(() => import("./pages/storeOwner/MemberPrizes"));
 const OffersManager = lazy(() => import("./pages/storeOwner/OffersManager"));
 const Notifications = lazy(() => import("./pages/Notifications"));
@@ -77,6 +78,7 @@ function MerchantApp() {
         <Route path="profile" element={<LazyPage><Profile /></LazyPage>} />
         <Route path="change-password" element={<ChangePassword />} />
         <Route path="add-product-offer" element={<LazyPage><AddProductOffer /></LazyPage>} />
+        <Route path="pending-uploads" element={<LazyPage><PendingUploads /></LazyPage>} />
         <Route path="offers" element={<LazyPage><OffersManager /></LazyPage>} />
         <Route path="notifications" element={<LazyPage><Notifications /></LazyPage>} />
       </Route>
@@ -105,6 +107,7 @@ function MerchantApp() {
         <Route path="profile" element={<LazyPage><Profile /></LazyPage>} />
         <Route path="change-password" element={<ChangePassword />} />
         <Route path="add-product-offer" element={<LazyPage><AddProductOffer /></LazyPage>} />
+        <Route path="pending-uploads" element={<LazyPage><PendingUploads /></LazyPage>} />
         <Route path="offers" element={<LazyPage><OffersManager /></LazyPage>} />
         <Route path="notifications" element={<LazyPage><Notifications /></LazyPage>} />
       </Route>

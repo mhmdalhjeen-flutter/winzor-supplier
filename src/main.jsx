@@ -10,6 +10,7 @@ import { StoreProvider } from "./context/StoreContext";
 import { queryClient } from "./lib/queryClient";
 import { persistOptions } from "./lib/queryPersister";
 import OfflinePublishHost from "./components/OfflinePublishHost";
+import GlobalToastHost from "./components/GlobalToastHost";
 import { initPwaServiceWorker } from "./pwa/registerServiceWorker";
 
 initPwaServiceWorker();
@@ -39,6 +40,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
         <BrowserRouter>
           <StoreProvider>
             <OfflinePublishHost />
+            <GlobalToastHost />
             <App />
           </StoreProvider>
         </BrowserRouter>

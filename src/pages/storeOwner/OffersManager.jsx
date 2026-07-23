@@ -125,7 +125,11 @@ export default function OffersManager() {
           const isActive = o.isActive !== false;
           return (
             <div className={`offer-card${!isActive ? " offer-card--inactive" : ""}`} key={o._id}>
-              {o.image && <img src={o.image} alt={o.title} />}
+              {o.image && (
+                <div className={`offer-card__media-wrap${!isActive ? ' offer-card__media-wrap--paused' : ''}`}>
+                  <img src={o.image} alt={o.title} />
+                </div>
+              )}
               <div className="content">
                 <div className="top">
                   <h3>{o.title}</h3>

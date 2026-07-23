@@ -1,104 +1,57 @@
 import { useEffect, useState } from 'react';
 import { onlineManager } from '@tanstack/react-query';
-import api from '../services/api';
-import { uploadImage } from '../utils/imageUpload';
-import { invalidateCatalog } from '../utils/catalogRefresh';
-import { queryClient, queryKeys } from '../lib/queryClient';
+import { Link } from 'react-router-dom';
 import {
   readPublishQueue,
-  updatePublishItem,
-  removePublishItem,
+  getPendingPublishCount,
 } from '../lib/offlinePublishQueue';
+import { processOfflinePublishQueue } from '../lib/offlinePublishSync';
+import { getStoredUser } from '../utils/safeStorage';
 
-let processing = false;
-
-async function processOneItem(item) {
-  if (item.status === 'synced') return;
-
-  await updatePublishItem(item.id, { status: 'uploading', attempts: (item.attempts || 0) + 1 });
-
-  let imageUrl = item.remoteImageUrl || item.payload?.image || '';
-
-  if (!imageUrl && item.imageBlob) {
-    const file = item.imageBlob instanceof Blob
-      ? new File([item.imageBlob], 'offline-image.jpg', { type: item.imageBlob.type || 'image/jpeg' })
-      : null;
-    if (!file) throw new Error('الصورة المحلية غير متوفرة');
-    imageUrl = await uploadImage(file);
-  }
-
-  if (!imageUrl) throw new Error('صورة المنشور مطلوبة');
-
-  const payload = { ...item.payload, image: imageUrl };
-
-  if (item.type === 'product') {
-    await api.post('/products', payload);
-    queryClient.invalidateQueries({ queryKey: queryKeys.myProducts });
-  } else if (item.type === 'offer') {
-    await api.post('/offers', payload);
-    queryClient.invalidateQueries({ queryKey: queryKeys.myOffers });
-    queryClient.invalidateQueries({ queryKey: queryKeys.myOffersAll });
-  } else {
-    throw new Error('نوع غير معروف');
-  }
-
-  invalidateCatalog(queryClient);
-  await removePublishItem(item.id);
-}
-
-export async function processOfflinePublishQueue() {
-  if (processing || !navigator.onLine) return;
-  processing = true;
-
-  try {
-    const queue = await readPublishQueue();
-    const pending = queue.filter((item) => item.status === 'pending' || item.status === 'failed');
-
-    for (const item of pending) {
-      try {
-        await processOneItem(item);
-      } catch (err) {
-        await updatePublishItem(item.id, {
-          status: 'failed',
-          error: err?.message || 'فشل الرفع',
-        });
-      }
-    }
-  } finally {
-    processing = false;
-  }
-}
+export { processOfflinePublishQueue, uploadPublishItemById, processOnePublishItem } from '../lib/offlinePublishSync';
 
 export default function OfflinePublishHost() {
   const [pendingCount, setPendingCount] = useState(0);
+  const user = getStoredUser({});
+  const baseRoute = user?.role === 'supplier' ? '/supplier' : '/store';
 
   const refreshCount = async () => {
-    const queue = await readPublishQueue();
-    setPendingCount(queue.filter((i) => i.status !== 'synced').length);
+    setPendingCount(await getPendingPublishCount());
+  };
+
+  const runSync = () => {
+    processOfflinePublishQueue().finally(refreshCount);
   };
 
   useEffect(() => {
     refreshCount();
 
-    const onOnline = () => {
-      processOfflinePublishQueue().finally(refreshCount);
-    };
-
+    const onOnline = () => runSync();
     const onQueueChange = () => refreshCount();
+    const onVisible = () => {
+      if (document.visibilityState === 'visible' && navigator.onLine) runSync();
+    };
 
     window.addEventListener('online', onOnline);
     window.addEventListener('offline-publish-queue-changed', onQueueChange);
-    onlineManager.subscribe((online) => {
-      if (online) onOnline();
+    document.addEventListener('visibilitychange', onVisible);
+
+    const unsubOnline = onlineManager.subscribe((online) => {
+      if (online) runSync();
     });
 
-    if (navigator.onLine) {
-      processOfflinePublishQueue().finally(refreshCount);
-    }
+    if (navigator.onLine) runSync();
+
+    const interval = window.setInterval(() => {
+      if (navigator.onLine) runSync();
+    }, 30_000);
 
     return () => {
       window.removeEventListener('online', onOnline);
       window.removeEventListener('offline-publish-queue-changed', onQueueChange);
+      document.removeEventListener('visibilitychange', onVisible);
+      unsubOnline();
+      window.clearInterval(interval);
     };
   }, []);
 
@@ -107,9 +60,14 @@ export default function OfflinePublishHost() {
   return (
     <div className="offline-publish-banner" role="status">
       <span className="offline-publish-banner__dot" />
-      {pendingCount === 1
-        ? 'منشور واحد بانتظار الرفع — سيُرفع تلقائياً عند توفر الإنترنت'
-        : `${pendingCount} منشورات بانتظار الرفع — سيتم رفعها تلقائياً عند توفر الإنترنت`}
+      <span className="offline-publish-banner__text">
+        {pendingCount === 1
+          ? 'منشور واحد بانتظار الرفع — سيُرفع تلقائياً عند توفر الإنترنت'
+          : `${pendingCount} منشورات بانتظار الرفع — سيتم رفعها تلقائياً عند توفر الإنترنت`}
+      </span>
+      <Link to={`${baseRoute}/pending-uploads`} className="offline-publish-banner__link">
+        عرض
+      </Link>
     </div>
   );
 }

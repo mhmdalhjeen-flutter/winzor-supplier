@@ -43,7 +43,54 @@ export function resolveOfferPrices(offer) {
   return { oldPrice: null, newPrice: offer?.finalPrice ?? null, showCompare: false };
 }
 
-/** @deprecated Use POST /api/pricing/offer-preview — kept for import compatibility */
-export function computeOfferFinalPrice() {
-  return null;
+function toNum(value) {
+  if (value == null || value === '') return null;
+  const n = Number(value);
+  return Number.isNaN(n) ? null : n;
+}
+
+/** Client-side mirror of backend pricing.service.js — used offline before upload. */
+export function computeOfferFinalPrice({ offerType, originalPrice, value, finalPrice }) {
+  const orig = toNum(originalPrice);
+  const val = toNum(value);
+  const direct = toNum(finalPrice);
+
+  switch (offerType) {
+    case 'discount':
+      if (orig == null || val == null || val < 0 || val > 100) return null;
+      return Math.max(0, Math.round(orig * (1 - val / 100) * 100) / 100);
+    case 'fixed_price':
+      if (val == null || val < 0) return null;
+      return Math.round(val * 100) / 100;
+    case 'fixed_discount':
+      if (orig == null || val == null || val < 0) return null;
+      return Math.max(0, Math.round((orig - val) * 100) / 100);
+    case 'bogo':
+      if (orig == null || orig < 0) return null;
+      return Math.round((orig / 2) * 100) / 100;
+    case 'free_item':
+      if (orig == null || orig < 0) return null;
+      return Math.round(orig * 100) / 100;
+    case 'custom':
+      if (direct == null || direct < 0) return null;
+      return Math.round(direct * 100) / 100;
+    default:
+      return null;
+  }
+}
+
+export function validateOfferPricing(offer) {
+  if (!offer?.offerType) {
+    return { valid: false, finalPrice: null, message: 'يجب اختيار نوع العرض' };
+  }
+  const finalPrice = computeOfferFinalPrice({
+    offerType: offer.offerType,
+    originalPrice: offer.originalPrice,
+    value: offer.value,
+    finalPrice: offer.finalPrice,
+  });
+  if (finalPrice == null) {
+    return { valid: false, finalPrice: null, message: 'أكمل حقول نوع العرض لحساب السعر النهائي' };
+  }
+  return { valid: true, finalPrice, message: null };
 }
