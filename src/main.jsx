@@ -11,6 +11,8 @@ import { queryClient } from "./lib/queryClient";
 import { persistOptions } from "./lib/queryPersister";
 import OfflinePublishHost from "./components/OfflinePublishHost";
 import GlobalToastHost from "./components/GlobalToastHost";
+import BackgroundRefreshHost from "./components/cache/BackgroundRefreshHost";
+import PushSubscriptionHost from "./components/pwa/PushSubscriptionHost";
 import { initPwaServiceWorker } from "./pwa/registerServiceWorker";
 
 initPwaServiceWorker();
@@ -41,6 +43,8 @@ ReactDOM.createRoot(document.getElementById("root")).render(
           <StoreProvider>
             <OfflinePublishHost />
             <GlobalToastHost />
+            <BackgroundRefreshHost />
+            <PushSubscriptionHost />
             <App />
           </StoreProvider>
         </BrowserRouter>

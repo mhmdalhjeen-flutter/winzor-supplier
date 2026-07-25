@@ -12,6 +12,9 @@ const PERSIST_ROOTS = new Set([
   'me',
   'orders',
   'chats',
+  'categories',
+  'regions',
+  'notifications',
 ]);
 
 export function shouldPersistQuery(query) {

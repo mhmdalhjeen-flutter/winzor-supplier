@@ -68,6 +68,7 @@ export default defineConfig({
         icons: pwaIcons,
       },
       workbox: {
+        importScripts: ['sw-push.js'],
         globPatterns: ['**/*.{js,css,html,webp,png,svg,ico,woff,woff2}'],
         cleanupOutdatedCaches: true,
         skipWaiting: false,
