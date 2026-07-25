@@ -1,1 +1,5 @@
-/*    /index.html   200
+# Cloudflare Workers/Pages static assets — SPA routing notes
+#
+# wrangler.toml sets not_found_handling = "single-page-application" for client routes.
+# Hashed Vite assets under /assets/ must return real 404 (not index.html) when missing.
+# Use public/assets/404.html if you add a custom assets 404 page later.
