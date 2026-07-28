@@ -158,7 +158,7 @@ export default function MediaUploader({
                 disabled={uploading}
               >
                 <Camera size={20} strokeWidth={2} />
-                التقاط صورة
+                استخدام الكاميرا
               </button>
               <button
                 type="button"

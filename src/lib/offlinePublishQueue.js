@@ -1,7 +1,7 @@
 import { get, set } from 'idb-keyval';
 
 const QUEUE_KEY = 'store-owner-offline-publish-v1';
-const STALE_UPLOAD_MS = 3 * 60 * 1000;
+const STALE_UPLOAD_MS = 45 * 1000;
 
 function newId() {
   return `pub-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
@@ -119,7 +119,7 @@ export async function updatePublishItem(id, patch) {
   const next = queue.map((item) => (item.id === id ? { ...item, ...nextPatch } : item));
   await writePublishQueue(next);
   const updated = next.find((item) => item.id === id) || null;
-  if (patch.status === 'pending') {
+  if (patch.status === 'pending' || patch.status === 'failed') {
     requestOfflinePublishSync();
   }
   return updated;

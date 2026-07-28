@@ -144,8 +144,13 @@ export default function PendingUploads() {
       if (navigator.onLine) runAutoSync();
     });
     const onChange = () => loadQueue();
+    const onOnline = () => runAutoSync();
     window.addEventListener('offline-publish-queue-changed', onChange);
-    return () => window.removeEventListener('offline-publish-queue-changed', onChange);
+    window.addEventListener('online', onOnline);
+    return () => {
+      window.removeEventListener('offline-publish-queue-changed', onChange);
+      window.removeEventListener('online', onOnline);
+    };
   }, [loadQueue, runAutoSync]);
 
   const handleUploadNow = async (id) => {

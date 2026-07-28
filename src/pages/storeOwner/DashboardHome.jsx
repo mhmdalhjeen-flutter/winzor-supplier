@@ -162,7 +162,8 @@ export default function DashboardHome() {
                 id: 2,
                 label: 'زيارات هذا الشهر',
                 value: store?.monthlyVisits ?? 0,
-                subtitle: 'هذا الشهر — يتجدد تلقائياً مع بداية كل شهر',
+                badge: 'هذا الشهر',
+                subtitle: 'يتجدّد تلقائياً مع بداية كل شهر',
                 Icon: Eye,
                 color: '#6366f1',
                 bg: '#eef2ff',
@@ -226,7 +227,12 @@ export default function DashboardHome() {
                                 <Icon size={22} strokeWidth={2.2} />
                             </div>
                             <div className="stat-card__body">
-                                <span className="stat-card__label">{stat.label}</span>
+                                <span className="stat-card__label">
+                                    {stat.label}
+                                    {stat.badge ? (
+                                        <span className="stat-card__month-badge">{stat.badge}</span>
+                                    ) : null}
+                                </span>
                                 <span className="stat-card__value">{stat.value}</span>
                                 {stat.subtitle ? (
                                     <span className="stat-card__subtitle">{stat.subtitle}</span>

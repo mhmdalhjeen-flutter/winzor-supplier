@@ -1,5 +1,6 @@
 import api from '../services/api';
 import { optimizeImageFile } from './optimizeImageFile';
+import { normalizePickedImage } from './imageConvert';
 
 const MAX_BYTES = 5 * 1024 * 1024;
 const ALLOWED_MIME = new Set(['image/jpeg', 'image/png', 'image/webp']);
@@ -25,9 +26,14 @@ function assertValidImageFile(file) {
  * Uses authenticated axios client (same as other store-owner API calls).
  */
 export async function uploadImage(file) {
-  assertValidImageFile(file);
+  if (!file) throw new Error('لم تُختر صورة');
 
-  const optimized = await optimizeImageFile(file);
+  const converted = await normalizePickedImage(file);
+  if (!converted) throw new Error('لم تُختر صورة');
+
+  assertValidImageFile(converted);
+
+  const optimized = await optimizeImageFile(converted);
   assertValidImageFile(optimized);
 
   const formData = new FormData();

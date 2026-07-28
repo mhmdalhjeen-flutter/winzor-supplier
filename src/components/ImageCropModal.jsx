@@ -242,7 +242,7 @@ export default function ImageCropModal({ file, open, onCancel, onConfirm }) {
   if (!open || !file) return null;
 
   const displayScale = natural.w
-    ? Math.min(1, 360 / natural.w, 420 / natural.h)
+    ? Math.min(1, 480 / natural.w, 520 / natural.h)
     : 1;
   const dispW = natural.w * displayScale;
   const dispH = natural.h * displayScale;

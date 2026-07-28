@@ -1,5 +1,6 @@
 import api from '../services/api';
 import { uploadImage } from '../utils/imageUpload';
+import { normalizePickedImage } from '../utils/imageConvert';
 import { invalidateCatalog } from '../utils/catalogRefresh';
 import { queryClient, queryKeys } from './queryClient';
 import {
@@ -12,7 +13,23 @@ import {
 
 let processing = false;
 let processingStartedAt = 0;
-const PROCESSING_STALE_MS = 5 * 60 * 1000;
+const PROCESSING_STALE_MS = 2 * 60 * 1000;
+
+function hasAuthToken() {
+  return Boolean(localStorage.getItem('token'));
+}
+
+async function blobToUploadableFile(blob) {
+  const raw = blob instanceof File
+    ? blob
+    : new File([blob], blob.name || 'offline-image.jpg', { type: blob.type || 'image/jpeg' });
+  const converted = await normalizePickedImage(raw);
+  const type = converted.type || 'image/jpeg';
+  const ext = type.includes('png') ? 'png' : type.includes('webp') ? 'webp' : 'jpg';
+  const name = converted.name?.includes('.') ? converted.name : `offline-${Date.now()}.${ext}`;
+  if (converted.name === name && converted.type === type) return converted;
+  return new File([converted], name, { type, lastModified: Date.now() });
+}
 
 export function showAppToast(text, type = 'success') {
   window.dispatchEvent(new CustomEvent('app-toast', { detail: { text, type } }));
@@ -51,9 +68,7 @@ export async function processOnePublishItem(item) {
   if (!imageUrl) {
     const blob = await resolveQueueBlob(item.imageBlob);
     if (!blob) throw new Error('الصورة المحلية غير متوفرة — أعد اختيار الصورة');
-    const file = blob instanceof File
-      ? blob
-      : new File([blob], blob.name || 'offline-image.jpg', { type: blob.type || 'image/jpeg' });
+    const file = await blobToUploadableFile(blob);
     imageUrl = await uploadImage(file);
   }
 
@@ -98,6 +113,7 @@ export async function uploadPublishItemById(id) {
 
 export async function processOfflinePublishQueue() {
   if (!navigator.onLine) return { processed: 0, failed: 0, skipped: true };
+  if (!hasAuthToken()) return { processed: 0, failed: 0, skipped: true };
 
   if (processing) {
     if (Date.now() - processingStartedAt < PROCESSING_STALE_MS) {
@@ -137,11 +153,15 @@ export async function processOfflinePublishQueue() {
     processing = false;
   }
 
-  if (processed > 0) {
+  if (processed > 0 || failed > 0) {
     window.dispatchEvent(new CustomEvent('offline-publish-queue-changed'));
   }
 
   return { processed, failed };
+}
+
+export function isOfflinePublishSyncing() {
+  return processing;
 }
 
 export function isPublishQueueProcessing() {

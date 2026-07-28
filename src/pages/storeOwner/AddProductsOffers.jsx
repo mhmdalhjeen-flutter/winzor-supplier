@@ -6,7 +6,7 @@ import MediaUploader from '../../components/MediaUploader';
 import TagsInput from '../../components/TagsInput';
 import CollapsibleSection from '../../components/CollapsibleSection';
 import { FormNoticeToast, FormRulesPopup, useFormNotice } from '../../components/FormNotice';
-import { OFFER_TYPE_OPTIONS, validateOfferPricing } from '../../utils/offerPricing';
+import { OFFER_TYPE_OPTIONS, validateOfferPricing, resolveOfferType } from '../../utils/offerPricing';
 import PriceCurrencyInput from '../../components/PriceCurrencyInput';
 import PriceUnitInput from '../../components/PriceUnitInput';
 import { DEFAULT_CURRENCY, formatPriceWithUnit } from '../../utils/currency';
@@ -75,7 +75,7 @@ function loadDraft(key, fallback) {
     if (!raw) return fallback;
     const merged = { ...fallback, ...JSON.parse(raw) };
     if (key === DRAFT_OFFER_KEY) {
-      merged.offerType = (merged.offerType || '').trim() || 'discount';
+      merged.offerType = resolveOfferType(merged);
     }
     return merged;
   } catch {
@@ -272,13 +272,22 @@ export default function AddProductsOffers() {
   }, [pendingId]);
 
   useEffect(() => {
+    if (tab !== 'offer') return;
+    setOffer((prev) => {
+      const nextType = resolveOfferType(prev);
+      if (prev.offerType === nextType) return prev;
+      return { ...prev, offerType: nextType };
+    });
+  }, [tab]);
+
+  useEffect(() => {
     if (tab !== 'offer') return undefined;
     let cancelled = false;
 
     const timer = setTimeout(async () => {
       try {
         const { data } = await api.post('/pricing/offer-preview', {
-          offerType: offer.offerType,
+          offerType: resolveOfferType(offer),
           originalPrice: offer.originalPrice,
           value: offer.value,
           finalPrice: offer.finalPrice,
@@ -298,9 +307,10 @@ export default function AddProductsOffers() {
 
   const previewPricing = pricingPreview?.pricing;
   const previewValid = pricingPreview?.valid === true;
+  const effectiveOfferType = resolveOfferType(offer);
   const normalizedOffer = {
     ...offer,
-    offerType: (offer.offerType || '').trim() || 'discount',
+    offerType: effectiveOfferType,
   };
   const offlineOfferPricing = validateOfferPricing(normalizedOffer);
   const offerPricingReady = navigator.onLine
@@ -462,7 +472,7 @@ export default function AddProductsOffers() {
       offerType: normalizedOffer.offerType,
       originalPrice: offer.originalPrice !== '' ? Number(offer.originalPrice) : undefined,
       value: offer.value !== '' ? Number(offer.value) : undefined,
-      finalPrice: offer.offerType === 'custom' ? Number(offer.finalPrice) : resolvedOfferFinalPrice,
+      finalPrice: effectiveOfferType === 'custom' ? Number(offer.finalPrice) : resolvedOfferFinalPrice,
       currency: offer.currency || DEFAULT_CURRENCY,
       priceUnit,
       image: offer.image,
@@ -529,7 +539,7 @@ export default function AddProductsOffers() {
   };
 
   const renderOfferFields = () => {
-    switch (offer.offerType) {
+    switch (effectiveOfferType) {
       case 'discount':
         return (
           <>
@@ -952,7 +962,7 @@ export default function AddProductsOffers() {
 
             <label className="field-label">نوع العرض *</label>
             <select
-              value={offer.offerType}
+              value={effectiveOfferType}
               onChange={(e) => setOffer({
                 ...offer,
                 offerType: e.target.value,
@@ -960,6 +970,7 @@ export default function AddProductsOffers() {
                 value: '',
                 finalPrice: '',
               })}
+              required
             >
               {OFFER_TYPE_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -986,7 +997,7 @@ export default function AddProductsOffers() {
               onCustomUnitChange={(value) => setOffer({ ...offer, priceUnitCustom: value })}
             />
 
-            {(previewValid || offlineOfferPricing.valid) && resolvedOfferFinalPrice != null && offer.offerType !== 'custom' && (
+            {(previewValid || offlineOfferPricing.valid) && resolvedOfferFinalPrice != null && effectiveOfferType !== 'custom' && (
               <div className="final-price-box">
                 {previewPricing?.showCompare && previewPricing?.displayOld && (
                   <span style={{ textDecoration: 'line-through', color: '#94a3b8', marginLeft: 8 }}>

@@ -9,6 +9,18 @@ export const OFFER_TYPE_OPTIONS = [
   { value: 'custom', label: '\u0646\u0648\u0639 \u0622\u062E\u0631' },
 ];
 
+const OFFER_TYPE_VALUES = new Set(OFFER_TYPE_OPTIONS.map((o) => o.value));
+
+/** Normalize offer type from form state / drafts — avoids empty select value offline. */
+export function resolveOfferType(offerOrType) {
+  const raw = typeof offerOrType === 'string'
+    ? offerOrType
+    : offerOrType?.offerType;
+  const trimmed = (raw || '').trim();
+  if (OFFER_TYPE_VALUES.has(trimmed)) return trimmed;
+  return 'discount';
+}
+
 export function offerTypeLabel(type) {
   return OFFER_TYPE_OPTIONS.find((o) => o.value === type)?.label || type;
 }
@@ -80,10 +92,7 @@ export function computeOfferFinalPrice({ offerType, originalPrice, value, finalP
 }
 
 export function validateOfferPricing(offer) {
-  const offerType = (offer?.offerType || '').trim() || 'discount';
-  if (!offerType) {
-    return { valid: false, finalPrice: null, message: 'يجب اختيار نوع العرض' };
-  }
+  const offerType = resolveOfferType(offer);
   const finalPrice = computeOfferFinalPrice({
     offerType,
     originalPrice: offer.originalPrice,
@@ -91,7 +100,7 @@ export function validateOfferPricing(offer) {
     finalPrice: offer.finalPrice,
   });
   if (finalPrice == null) {
-    return { valid: false, finalPrice: null, message: 'أكمل حقول نوع العرض لحساب السعر النهائي' };
+    return { valid: false, finalPrice: null, offerType, message: 'أكمل حقول نوع العرض لحساب السعر النهائي' };
   }
-  return { valid: true, finalPrice, message: null };
+  return { valid: true, finalPrice, offerType, message: null };
 }

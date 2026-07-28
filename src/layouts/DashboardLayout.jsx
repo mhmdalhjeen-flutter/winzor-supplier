@@ -144,11 +144,35 @@ export default function DashboardLayout() {
       {!subscriptionExpired && (
         <aside className={`sidebar${menuOpen ? " open" : ""}`}>
           <div className="sidebar-brand">
-            <img src={BRAND_LOGO_64} alt={BRAND_NAME} width={48} height={48} className="sidebar-brand__logo" />
-            <div>
-              <h2 className="logo">{BRAND_NAME}</h2>
-              <p className="sidebar-brand__tagline">{isSupplier ? "لوحة التاجر" : BRAND_TAGLINE}</p>
-            </div>
+            {!isSupplier && storeData ? (
+              <>
+                {storeData.logo ? (
+                  <img
+                    src={storeData.logo}
+                    alt={storeData.name || "شعار المتجر"}
+                    width={48}
+                    height={48}
+                    className="sidebar-brand__logo sidebar-brand__logo--store"
+                  />
+                ) : (
+                  <div className="sidebar-brand__logo sidebar-brand__logo--store sidebar-brand__logo--fallback" aria-hidden>
+                    {(storeData.name || "م").charAt(0)}
+                  </div>
+                )}
+                <div>
+                  <h2 className="logo sidebar-brand__store-name">{storeData.name || "متجري"}</h2>
+                  <p className="sidebar-brand__tagline">لوحة المتجر</p>
+                </div>
+              </>
+            ) : (
+              <>
+                <img src={BRAND_LOGO_64} alt={BRAND_NAME} width={48} height={48} className="sidebar-brand__logo" />
+                <div>
+                  <h2 className="logo">{BRAND_NAME}</h2>
+                  <p className="sidebar-brand__tagline">{isSupplier ? "لوحة التاجر" : BRAND_TAGLINE}</p>
+                </div>
+              </>
+            )}
           </div>
           <nav>{renderNavLinks()}</nav>
         </aside>
@@ -167,9 +191,9 @@ export default function DashboardLayout() {
               >
                 <Menu size={22} strokeWidth={2} />
               </button>
-              {!isSupplier && storeData ? (
+              {!isSupplier ? (
                 <div className="topbar-store-brand">
-                  {storeData.logo ? (
+                  {storeData?.logo ? (
                     <img
                       src={storeData.logo}
                       alt={storeData.name || "شعار المتجر"}
@@ -179,12 +203,10 @@ export default function DashboardLayout() {
                     />
                   ) : (
                     <div className="topbar-store-logo topbar-store-logo--fallback" aria-hidden>
-                      {(storeData.name || "م").charAt(0)}
+                      {(storeData?.name || "م").charAt(0)}
                     </div>
                   )}
-                  {storeData.name ? (
-                    <span className="topbar-store-name">{storeData.name}</span>
-                  ) : null}
+                  <span className="topbar-store-name">{storeData?.name || "متجري"}</span>
                 </div>
               ) : (
                 <img src={BRAND_LOGO_64} alt={BRAND_NAME} className="topbar-brand-logo" width={36} height={36} />
