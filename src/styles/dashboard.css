@@ -270,7 +270,20 @@ body { font-family: 'Cairo', sans-serif; background-color: var(--bg-body); color
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 24px; }
 .card { background: var(--white); border-radius: 20px; overflow: hidden; box-shadow: var(--shadow); transition: 0.3s; }
 .card:hover { transform: translateY(-8px); box-shadow: var(--shadow-lg); }
-.card img { width: 100%; height: 180px; object-fit: cover; }
+.card img {
+  width: 100%;
+  height: 180px;
+  object-fit: cover;
+  opacity: 1;
+  filter: none;
+}
+
+.my-store-page .card img,
+.my-store-page .store-item-card__media-wrap img,
+.offer-card__media-wrap img {
+  opacity: 1;
+  filter: none;
+}
 .card .info { padding: 20px; }
 
 /* TABS */

@@ -73,7 +73,11 @@ function loadDraft(key, fallback) {
   try {
     const raw = localStorage.getItem(key);
     if (!raw) return fallback;
-    return { ...fallback, ...JSON.parse(raw) };
+    const merged = { ...fallback, ...JSON.parse(raw) };
+    if (key === DRAFT_OFFER_KEY) {
+      merged.offerType = (merged.offerType || '').trim() || 'discount';
+    }
+    return merged;
   } catch {
     return fallback;
   }
@@ -294,8 +298,14 @@ export default function AddProductsOffers() {
 
   const previewPricing = pricingPreview?.pricing;
   const previewValid = pricingPreview?.valid === true;
-  const offlineOfferPricing = validateOfferPricing(offer);
-  const offerPricingReady = previewValid || offlineOfferPricing.valid;
+  const normalizedOffer = {
+    ...offer,
+    offerType: (offer.offerType || '').trim() || 'discount',
+  };
+  const offlineOfferPricing = validateOfferPricing(normalizedOffer);
+  const offerPricingReady = navigator.onLine
+    ? (previewValid || offlineOfferPricing.valid)
+    : offlineOfferPricing.valid;
   const resolvedOfferFinalPrice = previewPricing?.finalPrice ?? offlineOfferPricing.finalPrice;
 
   const user = JSON.parse(localStorage.getItem('user') || '{}');
@@ -449,7 +459,7 @@ export default function AddProductsOffers() {
     const priceUnit = resolvePriceUnit(offer.priceUnitType, offer.priceUnitCustom);
     const payload = {
       title: offer.title.trim(),
-      offerType: offer.offerType,
+      offerType: normalizedOffer.offerType,
       originalPrice: offer.originalPrice !== '' ? Number(offer.originalPrice) : undefined,
       value: offer.value !== '' ? Number(offer.value) : undefined,
       finalPrice: offer.offerType === 'custom' ? Number(offer.finalPrice) : resolvedOfferFinalPrice,

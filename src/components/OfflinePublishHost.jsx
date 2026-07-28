@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { onlineManager } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import {
-  readPublishQueue,
   getPendingPublishCount,
 } from '../lib/offlinePublishQueue';
 import { processOfflinePublishQueue } from '../lib/offlinePublishSync';
@@ -20,6 +19,7 @@ export default function OfflinePublishHost() {
   };
 
   const runSync = () => {
+    if (!navigator.onLine) return;
     processOfflinePublishQueue().finally(refreshCount);
   };
 
@@ -28,12 +28,14 @@ export default function OfflinePublishHost() {
 
     const onOnline = () => runSync();
     const onQueueChange = () => refreshCount();
+    const onSyncRequest = () => runSync();
     const onVisible = () => {
       if (document.visibilityState === 'visible' && navigator.onLine) runSync();
     };
 
     window.addEventListener('online', onOnline);
     window.addEventListener('offline-publish-queue-changed', onQueueChange);
+    window.addEventListener('offline-publish-sync-request', onSyncRequest);
     document.addEventListener('visibilitychange', onVisible);
 
     const unsubOnline = onlineManager.subscribe((online) => {
@@ -44,11 +46,12 @@ export default function OfflinePublishHost() {
 
     const interval = window.setInterval(() => {
       if (navigator.onLine) runSync();
-    }, 30_000);
+    }, 15_000);
 
     return () => {
       window.removeEventListener('online', onOnline);
       window.removeEventListener('offline-publish-queue-changed', onQueueChange);
+      window.removeEventListener('offline-publish-sync-request', onSyncRequest);
       document.removeEventListener('visibilitychange', onVisible);
       unsubOnline();
       window.clearInterval(interval);
@@ -62,11 +65,11 @@ export default function OfflinePublishHost() {
       <span className="offline-publish-banner__dot" />
       <span className="offline-publish-banner__text">
         {pendingCount === 1
-          ? 'منشور واحد بانتظار الرفع — سيُرفع تلقائياً عند توفر الإنترنت'
-          : `${pendingCount} منشورات بانتظار الرفع — سيتم رفعها تلقائياً عند توفر الإنترنت`}
+          ? 'عملية واحدة بانتظار الرفع — سيتم الرفع عند توفر الإنترنت'
+          : `${pendingCount} عمليات بانتظار الرفع — سيتم الرفع عند توفر الإنترنت`}
       </span>
       <Link to={`${baseRoute}/pending-uploads`} className="offline-publish-banner__link">
-        عرض
+        العمليات المعلقة
       </Link>
     </div>
   );

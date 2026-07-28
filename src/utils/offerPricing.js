@@ -80,11 +80,12 @@ export function computeOfferFinalPrice({ offerType, originalPrice, value, finalP
 }
 
 export function validateOfferPricing(offer) {
-  if (!offer?.offerType) {
+  const offerType = (offer?.offerType || '').trim() || 'discount';
+  if (!offerType) {
     return { valid: false, finalPrice: null, message: 'يجب اختيار نوع العرض' };
   }
   const finalPrice = computeOfferFinalPrice({
-    offerType: offer.offerType,
+    offerType,
     originalPrice: offer.originalPrice,
     value: offer.value,
     finalPrice: offer.finalPrice,

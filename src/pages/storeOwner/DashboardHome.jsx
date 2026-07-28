@@ -152,7 +152,7 @@ export default function DashboardHome() {
         : [
             {
                 id: 1,
-                label: 'عدد زبائن المتجر',
+                label: 'عدد زوار المتجر',
                 value: store?.customersCount ?? 0,
                 Icon: Users,
                 color: '#3b82f6',
@@ -162,7 +162,7 @@ export default function DashboardHome() {
                 id: 2,
                 label: 'زيارات هذا الشهر',
                 value: store?.monthlyVisits ?? 0,
-                subtitle: 'يتجدد تلقائياً مع بداية كل شهر',
+                subtitle: 'هذا الشهر — يتجدد تلقائياً مع بداية كل شهر',
                 Icon: Eye,
                 color: '#6366f1',
                 bg: '#eef2ff',

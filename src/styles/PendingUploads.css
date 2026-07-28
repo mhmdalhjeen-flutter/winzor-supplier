@@ -5,7 +5,64 @@
 }
 
 .pending-uploads-page__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
   margin-bottom: 20px;
+}
+
+.pending-sync-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid #bfdbfe;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.pending-sync-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.pending-sync-btn__spin {
+  animation: pendingSpin 0.8s linear infinite;
+}
+
+@keyframes pendingSpin {
+  to { transform: rotate(360deg); }
+}
+
+.pending-section {
+  margin-bottom: 22px;
+}
+
+.pending-section__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 12px;
+  font-size: 15px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.pending-section__count {
+  margin-inline-start: auto;
+  font-size: 11px;
+  font-weight: 800;
+  background: #f1f5f9;
+  color: #64748b;
+  padding: 3px 9px;
+  border-radius: 999px;
 }
 
 .pending-uploads-page .page-lead {

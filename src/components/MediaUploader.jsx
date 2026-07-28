@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react';
-import { Camera, ImageIcon, RefreshCw, Trash2 } from 'lucide-react';
+import { Camera, ImageIcon, RefreshCw, Trash2, Crop } from 'lucide-react';
 import { uploadImage } from '../utils/imageUpload';
 import { normalizePickedImage } from '../utils/imageConvert';
 import ImageCropModal from './ImageCropModal';
@@ -188,11 +188,20 @@ export default function MediaUploader({
               <button
                 type="button"
                 className="media-action-btn"
+                onClick={() => localFile && startCrop(localFile)}
+                disabled={uploading || !localFile}
+              >
+                <Crop size={16} strokeWidth={2.2} />
+                قص / تعديل
+              </button>
+              <button
+                type="button"
+                className="media-action-btn"
                 onClick={() => galleryRef.current?.click()}
                 disabled={uploading}
               >
                 <RefreshCw size={16} strokeWidth={2.2} />
-                استبدال الصورة
+                استبدال
               </button>
               <button
                 type="button"

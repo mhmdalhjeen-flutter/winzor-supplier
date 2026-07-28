@@ -78,7 +78,7 @@ export default function DashboardLayout() {
         {isSupplier ? "🏬" : "🏪"} <span>{isSupplier ? "مستودعي" : "متجري"}</span>
       </NavLink>
       <NavLink to={`${baseRoute}/add-product-offer`} onClick={() => setMenuOpen(false)}>📋 <span>اضافة منتج/عرض</span></NavLink>
-      <NavLink to={`${baseRoute}/pending-uploads`} onClick={() => setMenuOpen(false)}>⏳ <span>الإضافات المعلقة</span></NavLink>
+      <NavLink to={`${baseRoute}/pending-uploads`} onClick={() => setMenuOpen(false)}>⏳ <span>العمليات المعلقة</span></NavLink>
       <NavLink to={`${baseRoute}/offers`} onClick={() => setMenuOpen(false)}>🏷️ <span>إدارة العروض</span></NavLink>
 
       {!isSupplier && isStoreOwner && (

@@ -21,6 +21,8 @@ import { PwaInstallProvider } from "./context/PwaInstallContext";
 const DashboardHome = lazy(() => import("./pages/storeOwner/DashboardHome"));
 const MyStore = lazy(() => import("./pages/MyStore"));
 const Orders = lazy(() => import("./pages/Orders"));
+const OrderHistory = lazy(() => import("./pages/OrderHistory"));
+const OrderInvoices = lazy(() => import("./pages/OrderInvoices"));
 const Chats = lazy(() => import("./pages/Chats"));
 const Cart = lazy(() => import("./pages/Cart"));
 const Competitions = lazy(() => import("./pages/Competitions"));
@@ -66,6 +68,8 @@ function MerchantApp() {
         <Route index element={<LazyPage><DashboardHome /></LazyPage>} />
         <Route path="my-store" element={<LazyPage><MyStore /></LazyPage>} />
         <Route path="orders" element={<LazyPage><Orders /></LazyPage>} />
+        <Route path="orders/history" element={<LazyPage><OrderHistory /></LazyPage>} />
+        <Route path="orders/invoices" element={<LazyPage><OrderInvoices /></LazyPage>} />
         <Route path="chats" element={<LazyPage><Chats /></LazyPage>} />
         <Route path="cart" element={<StoreOnlyRoute><StoreFeatureRoute feature="cart"><LazyPage><Cart /></LazyPage></StoreFeatureRoute></StoreOnlyRoute>} />
         <Route path="competitions" element={<StoreOnlyRoute><StoreFeatureRoute feature="competitions"><LazyPage><Competitions /></LazyPage></StoreFeatureRoute></StoreOnlyRoute>} />
@@ -95,6 +99,8 @@ function MerchantApp() {
         <Route index element={<LazyPage><DashboardHome /></LazyPage>} />
         <Route path="my-store" element={<LazyPage><MyStore /></LazyPage>} />
         <Route path="orders" element={<LazyPage><Orders /></LazyPage>} />
+        <Route path="orders/history" element={<LazyPage><OrderHistory /></LazyPage>} />
+        <Route path="orders/invoices" element={<LazyPage><OrderInvoices /></LazyPage>} />
         <Route path="chats" element={<LazyPage><Chats /></LazyPage>} />
         <Route path="cart" element={<Navigate to="/supplier" replace />} />
         <Route path="competitions" element={<Navigate to="/supplier" replace />} />

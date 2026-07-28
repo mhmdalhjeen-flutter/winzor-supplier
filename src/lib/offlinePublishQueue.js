@@ -1,6 +1,7 @@
 import { get, set } from 'idb-keyval';
 
 const QUEUE_KEY = 'store-owner-offline-publish-v1';
+const STALE_UPLOAD_MS = 3 * 60 * 1000;
 
 function newId() {
   return `pub-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
@@ -48,6 +49,36 @@ async function writePublishQueue(list) {
   window.dispatchEvent(new CustomEvent('offline-publish-queue-changed'));
 }
 
+export function requestOfflinePublishSync() {
+  window.dispatchEvent(new CustomEvent('offline-publish-sync-request'));
+}
+
+/** Reset items stuck in uploading state after app crash / tab close. */
+export async function recoverStaleQueueItems() {
+  const queue = await readPublishQueue();
+  const now = Date.now();
+  let changed = false;
+
+  const next = queue.map((item) => {
+    if (item.status !== 'uploading') return item;
+    const touched = item.updatedAt || item.createdAt;
+    const age = touched ? now - new Date(touched).getTime() : STALE_UPLOAD_MS + 1;
+    if (age > STALE_UPLOAD_MS) {
+      changed = true;
+      return {
+        ...item,
+        status: 'pending',
+        error: null,
+        updatedAt: new Date().toISOString(),
+      };
+    }
+    return item;
+  });
+
+  if (changed) await writePublishQueue(next);
+  return changed;
+}
+
 export async function enqueuePublishItem({
   type,
   payload,
@@ -65,24 +96,33 @@ export async function enqueuePublishItem({
     status: 'pending',
     error: null,
     createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
     attempts: 0,
   };
 
   const queue = await readPublishQueue();
   queue.push(item);
   await writePublishQueue(queue);
+  requestOfflinePublishSync();
   return item;
 }
 
 export async function updatePublishItem(id, patch) {
   const queue = await readPublishQueue();
-  const nextPatch = { ...patch };
+  const nextPatch = {
+    ...patch,
+    updatedAt: new Date().toISOString(),
+  };
   if (patch.imageBlob !== undefined) {
     nextPatch.imageBlob = await serializeBlob(patch.imageBlob);
   }
   const next = queue.map((item) => (item.id === id ? { ...item, ...nextPatch } : item));
   await writePublishQueue(next);
-  return next.find((item) => item.id === id) || null;
+  const updated = next.find((item) => item.id === id) || null;
+  if (patch.status === 'pending') {
+    requestOfflinePublishSync();
+  }
+  return updated;
 }
 
 export async function removePublishItem(id) {
@@ -92,7 +132,9 @@ export async function removePublishItem(id) {
 
 export async function getPendingPublishCount() {
   const queue = await readPublishQueue();
-  return queue.filter((item) => item.status === 'pending' || item.status === 'uploading' || item.status === 'failed').length;
+  return queue.filter(
+    (item) => item.status === 'pending' || item.status === 'uploading' || item.status === 'failed',
+  ).length;
 }
 
 export async function getPreviewUrlForItem(item) {

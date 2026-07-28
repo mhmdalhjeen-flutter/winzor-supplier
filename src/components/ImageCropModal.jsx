@@ -105,6 +105,7 @@ export default function ImageCropModal({ file, open, onCancel, onConfirm }) {
   const [busy, setBusy] = useState(false);
   const [adjust, setAdjust] = useState(DEFAULT_ADJUST);
   const [imgKey, setImgKey] = useState(0);
+  const [zoom, setZoom] = useState(1);
 
   useEffect(() => {
     if (!open || !file) return undefined;
@@ -112,6 +113,7 @@ export default function ImageCropModal({ file, open, onCancel, onConfirm }) {
     setObjectUrl(url);
     setPreset('square');
     setAdjust(DEFAULT_ADJUST);
+    setZoom(1);
     setImgKey(0);
     return () => URL.revokeObjectURL(url);
   }, [open, file]);
@@ -151,7 +153,10 @@ export default function ImageCropModal({ file, open, onCancel, onConfirm }) {
     }
   };
 
-  const resetAdjustments = () => setAdjust(DEFAULT_ADJUST);
+  const resetAdjustments = () => {
+    setAdjust(DEFAULT_ADJUST);
+    setZoom(1);
+  };
 
   const autoEnhance = () => {
     setAdjust({ brightness: 108, contrast: 112, saturation: 108, sharpen: 35 });
@@ -244,7 +249,9 @@ export default function ImageCropModal({ file, open, onCancel, onConfirm }) {
 
   const filterStyle = {
     filter: `brightness(${adjust.brightness}%) contrast(${adjust.contrast}%) saturate(${adjust.saturation}%)`,
-    transition: 'filter 0.2s ease',
+    transform: `scale(${zoom})`,
+    transformOrigin: 'center center',
+    transition: 'filter 0.2s ease, transform 0.15s ease',
   };
 
   return (
@@ -325,6 +332,17 @@ export default function ImageCropModal({ file, open, onCancel, onConfirm }) {
         </div>
 
         <div className="crop-sliders">
+          <label className="crop-slider">
+            <span>تكبير</span>
+            <input
+              type="range"
+              min="1"
+              max="2.5"
+              step="0.05"
+              value={zoom}
+              onChange={(e) => setZoom(Number(e.target.value))}
+            />
+          </label>
           <label className="crop-slider">
             <span><Sun size={14} /> سطوع</span>
             <input

@@ -1,7 +1,5 @@
-import { API_URL } from '../lib/apiUrl';
+import api from '../services/api';
 import { optimizeImageFile } from './optimizeImageFile';
-
-const getUploadImageUrl = () => `${API_URL}/upload/image`;
 
 const MAX_BYTES = 5 * 1024 * 1024;
 const ALLOWED_MIME = new Set(['image/jpeg', 'image/png', 'image/webp']);
@@ -23,8 +21,8 @@ function assertValidImageFile(file) {
 }
 
 /**
- * Canonical upload path (React + Flutter share this contract):
- * File → optimize → POST /api/upload/image → Cloudinary → HTTPS URL → save URL in MongoDB.
+ * Canonical upload path: File → optimize → POST /upload/image → Cloudinary URL.
+ * Uses authenticated axios client (same as other store-owner API calls).
  */
 export async function uploadImage(file) {
   assertValidImageFile(file);
@@ -35,17 +33,12 @@ export async function uploadImage(file) {
   const formData = new FormData();
   formData.append('image', optimized);
 
-  const response = await fetch(getUploadImageUrl(), {
-    method: 'POST',
-    body: formData,
+  const { data } = await api.post('/upload/image', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
   });
 
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    throw new Error(data.message || 'فشل رفع الصورة');
-  }
-  if (!data.url) {
-    throw new Error('لم يُرجع الخادم رابط الصورة');
+  if (!data?.url) {
+    throw new Error(data?.message || 'لم يُرجع الخادم رابط الصورة');
   }
 
   return data.url;

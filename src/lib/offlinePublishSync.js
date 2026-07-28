@@ -7,9 +7,12 @@ import {
   updatePublishItem,
   removePublishItem,
   resolveQueueBlob,
+  recoverStaleQueueItems,
 } from './offlinePublishQueue';
 
 let processing = false;
+let processingStartedAt = 0;
+const PROCESSING_STALE_MS = 5 * 60 * 1000;
 
 export function showAppToast(text, type = 'success') {
   window.dispatchEvent(new CustomEvent('app-toast', { detail: { text, type } }));
@@ -50,7 +53,7 @@ export async function processOnePublishItem(item) {
     if (!blob) throw new Error('الصورة المحلية غير متوفرة — أعد اختيار الصورة');
     const file = blob instanceof File
       ? blob
-      : new File([blob], 'offline-image.jpg', { type: blob.type || 'image/jpeg' });
+      : new File([blob], blob.name || 'offline-image.jpg', { type: blob.type || 'image/jpeg' });
     imageUrl = await uploadImage(file);
   }
 
@@ -86,6 +89,7 @@ export async function processOnePublishItem(item) {
 }
 
 export async function uploadPublishItemById(id) {
+  await recoverStaleQueueItems();
   const queue = await readPublishQueue();
   const item = queue.find((i) => i.id === id);
   if (!item) throw new Error('العنصر غير موجود');
@@ -93,17 +97,31 @@ export async function uploadPublishItemById(id) {
 }
 
 export async function processOfflinePublishQueue() {
-  if (processing || !navigator.onLine) return { processed: 0, failed: 0 };
+  if (!navigator.onLine) return { processed: 0, failed: 0, skipped: true };
+
+  if (processing) {
+    if (Date.now() - processingStartedAt < PROCESSING_STALE_MS) {
+      return { processed: 0, failed: 0, skipped: true };
+    }
+    processing = false;
+  }
+
+  await recoverStaleQueueItems();
+
   processing = true;
+  processingStartedAt = Date.now();
 
   let processed = 0;
   let failed = 0;
 
   try {
     const queue = await readPublishQueue();
-    const pending = queue.filter((item) => item.status === 'pending' || item.status === 'failed');
+    const pending = queue.filter(
+      (item) => item.status === 'pending' || item.status === 'failed' || item.status === 'uploading',
+    );
 
     for (const item of pending) {
+      if (!navigator.onLine) break;
       try {
         await processOnePublishItem(item);
         processed += 1;
@@ -117,6 +135,10 @@ export async function processOfflinePublishQueue() {
     }
   } finally {
     processing = false;
+  }
+
+  if (processed > 0) {
+    window.dispatchEvent(new CustomEvent('offline-publish-queue-changed'));
   }
 
   return { processed, failed };
