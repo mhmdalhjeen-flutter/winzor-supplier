@@ -13,7 +13,7 @@ import { getStoredUser } from "../utils/safeStorage";
 import { getMyProducts, deleteProduct, toggleProductActive } from "../services/products.service";
 import { getMyOffers, deleteOffer, toggleOfferActive } from "../services/offers.service";
 import "../styles/dashboard.css";
-import "../styles/myStore.css";
+import "../styles/MyStore.css";
 
 export default function MyStore() {
   const user = getStoredUser({});

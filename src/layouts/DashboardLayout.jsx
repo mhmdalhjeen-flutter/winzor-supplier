@@ -101,6 +101,9 @@ export default function DashboardLayout() {
 
       <NavLink to={`${baseRoute}/support`} onClick={() => setMenuOpen(false)}>🎧 <span>الدعم الفني</span></NavLink>
       <NavLink to={`${baseRoute}/profile`} onClick={() => setMenuOpen(false)}>👤 <span>الملف الشخصي</span></NavLink>
+      {!isSupplier && isStoreOwner && (
+        <NavLink to={`${baseRoute}/payment-settings`} onClick={() => setMenuOpen(false)}>💳 <span>إعدادات الدفع</span></NavLink>
+      )}
 
       {canInstall && (
         <button
@@ -240,7 +243,7 @@ export default function DashboardLayout() {
           </NavLink>
           <NavLink to={`${baseRoute}/orders`}>
             <span className="nav-icon">📋</span>
-            <span className="nav-label">الطلبيات</span>
+            <span className="nav-label">طلبات المتجر</span>
             <BottomNavBadge count={badges.orders} />
           </NavLink>
           <NavLink to={`${baseRoute}/chats`}>

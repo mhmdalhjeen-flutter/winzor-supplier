@@ -17,6 +17,7 @@ export const queryKeys = {
   categoryTree: (type = "store") => ["categories", "tree", type],
   regionTree: ["regions", "tree"],
   myStore: ["store", "my"],
+  storePaymentMethods: ["store", "payment-methods"],
   myProducts: ["products", "my"],
   myOffers: ["offers", "my"],
   myOffersAll: ["offers", "my", "all"],

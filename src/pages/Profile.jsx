@@ -320,6 +320,9 @@ export default function Profile() {
         </div>
 
         <div className="profile-details-form" style={{ marginTop: 16 }}>
+          <Link to="payment-settings" className="save-btn" style={{ display: "inline-block", textAlign: "center", textDecoration: "none", marginBottom: 10 }}>
+            💳 إعدادات الدفع
+          </Link>
           <Link to="change-password" className="save-btn" style={{ display: "inline-block", textAlign: "center", textDecoration: "none" }}>
             🔐 تغيير كلمة المرور
           </Link>
