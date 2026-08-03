@@ -12,6 +12,7 @@ import {
   getPhoneCarrier,
   getPhoneInputStyle,
 } from "../utils/phoneValidation";
+import ItemCategoriesSection from "../components/ItemCategoriesSection";
 
 export default function Profile() {
   const queryClient = useQueryClient();
@@ -328,6 +329,8 @@ export default function Profile() {
           </Link>
         </div>
       </div>
+
+      {store && <ItemCategoriesSection />}
     </div>
   );
 }

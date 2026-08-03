@@ -46,7 +46,7 @@ export default function TagsInput({
   return (
     <div className="tags-input">
       <label className="field-label">{label}</label>
-      <p className="field-hint">تساعد في البحث الداخلي واكتشاف المنتجات</p>
+      <p className="field-hint">تساعد في البحث الداخلي واكتشاف العناصر</p>
 
       <div className="tags-input__box">
         {value.map((tag) => (

@@ -1,4 +1,5 @@
 import React from 'react';
+import NumericInput from './NumericInput';
 import { CURRENCY_OPTIONS, DEFAULT_CURRENCY } from '../utils/currency';
 
 export default function PriceCurrencyInput({
@@ -17,15 +18,13 @@ export default function PriceCurrencyInput({
   return (
     <div className={className}>
       {!currencyOnly && (
-        <input
-          type="number"
-          min="0"
-          step="any"
+        <NumericInput
           required={required}
           value={price}
-          onChange={(e) => onPriceChange(e.target.value)}
+          onChange={onPriceChange}
           placeholder={pricePlaceholder}
           className={inputClassName}
+          min={0}
           {...inputProps}
         />
       )}

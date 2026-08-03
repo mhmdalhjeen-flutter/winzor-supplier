@@ -5,7 +5,7 @@ const SPLASH_DONE_KEY = 'trader-startup-splash-done';
 const MIN_VISIBLE_MS = 2200;
 
 const SLOGANS = [
-  'إدارة المنتجات والعروض',
+  'إدارة العناصر والعروض',
   'متابعة الطلبيات والدردشات',
   'لوحة احترافية لمتجرك',
 ];

@@ -9,7 +9,7 @@ export default function PriceUnitInput({
 }) {
   return (
     <div className="price-unit-field">
-      <label className="field-label" htmlFor={`${idPrefix}-select`}>الوحدة</label>
+      <label className="field-label" htmlFor={`${idPrefix}-select`}>نوع الكمية</label>
       <select
         id={`${idPrefix}-select`}
         value={unitType}

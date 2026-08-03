@@ -1,19 +1,31 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Pencil, Trash2, Eye, EyeOff } from "lucide-react";
+import { Pencil, Trash2, Plus } from "lucide-react";
 import OfferPriceDisplay from "../components/OfferPriceDisplay";
+import AvailabilitySwitch from "../components/AvailabilitySwitch";
 import ConfirmDialog from "../components/ConfirmDialog";
 import { formatPriceWithUnit } from "../utils/currency";
+import { formatOfferBadge } from "../utils/offerPricing";
 import { queryKeys } from "../lib/queryClient";
 import { unwrapList } from "../utils/unwrapList";
 import LightLoadingHint from "../shared/LightLoadingHint";
 import { invalidateCatalog } from "../utils/catalogRefresh";
 import { getStoredUser } from "../utils/safeStorage";
 import { getMyProducts, deleteProduct, toggleProductActive } from "../services/products.service";
-import { getMyOffers, deleteOffer, toggleOfferActive } from "../services/offers.service";
-import "../styles/dashboard.css";
+import { getMyOffers, deleteOffer, toggleOfferActive, renewOffer } from "../services/offers.service";
 import "../styles/MyStore.css";
+
+const offerLifecycleLabel = (o) => {
+  if (!o.isActive) return { label: "غير متوفر", tone: "muted" };
+  const end = o.expiresAt || o.autoDeleteAt;
+  if (end) {
+    const hours = (new Date(end) - new Date()) / (1000 * 60 * 60);
+    if (hours <= 0) return { label: "منتهٍ", tone: "danger" };
+    if (hours <= 24) return { label: "ينتهي قريباً", tone: "warn" };
+  }
+  return { label: "نشط", tone: "ok" };
+};
 
 export default function MyStore() {
   const user = getStoredUser({});
@@ -22,7 +34,7 @@ export default function MyStore() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  const [view, setView] = useState("products");
+  const [view, setView] = useState("items");
   const [confirmDelete, setConfirmDelete] = useState(null);
   const [deleting, setDeleting] = useState(false);
   const [togglingId, setTogglingId] = useState(null);
@@ -53,17 +65,15 @@ export default function MyStore() {
     staleTime: 60 * 1000,
   });
 
-  const loading = view === "products" ? productsLoading : offersLoading;
-  const error = view === "products"
-    ? productsError?.response?.data?.message || (productsError ? "تعذّر تحميل المنتجات" : null)
+  const loading = view === "items" ? productsLoading : offersLoading;
+  const error = view === "items"
+    ? productsError?.response?.data?.message || (productsError ? "تعذّر تحميل العناصر" : null)
     : offersError?.response?.data?.message || (offersError ? "تعذّر تحميل العروض" : null);
 
-  const refreshAll = () => {
-    invalidateCatalog(queryClient);
-  };
+  const refreshAll = () => invalidateCatalog(queryClient);
 
   const removeFromCaches = (id, type) => {
-    if (type === "product") {
+    if (type === "item") {
       queryClient.setQueryData(queryKeys.myProducts, (prev = []) =>
         prev.filter((p) => p._id !== id)
       );
@@ -81,7 +91,7 @@ export default function MyStore() {
     const patch = (prev = []) =>
       prev.map((item) => (item._id === id ? { ...item, isActive } : item));
 
-    if (type === "product") {
+    if (type === "item") {
       queryClient.setQueryData(queryKeys.myProducts, patch);
     } else {
       queryClient.setQueryData(queryKeys.myOffersAll, patch);
@@ -95,7 +105,7 @@ export default function MyStore() {
     if (!confirmDelete) return;
     setDeleting(true);
     try {
-      if (confirmDelete.type === "product") {
+      if (confirmDelete.type === "item") {
         await deleteProduct(confirmDelete.id);
       } else {
         await deleteOffer(confirmDelete.id);
@@ -113,7 +123,7 @@ export default function MyStore() {
   const handleToggleActive = async (item, type) => {
     setTogglingId(item._id);
     try {
-      const { data } = type === "product"
+      const { data } = type === "item"
         ? await toggleProductActive(item._id)
         : await toggleOfferActive(item._id);
 
@@ -121,100 +131,173 @@ export default function MyStore() {
       updateActiveInCaches(item._id, type, nextActive);
       refreshAll();
     } catch (err) {
-      alert(err.response?.data?.message || "تعذّر تغيير الحالة");
+      alert(err.response?.data?.message || "تعذّر تغيير التوفر");
+    } finally {
+      setTogglingId(null);
+    }
+  };
+
+  const handleRenew = async (id) => {
+    setTogglingId(id);
+    try {
+      await renewOffer(id);
+      refreshAll();
+    } catch (err) {
+      alert(err.response?.data?.message || "تعذّر التجديد");
     } finally {
       setTogglingId(null);
     }
   };
 
   const openEdit = (item) => {
-    if (view === "products") {
+    if (view === "items") {
       navigate(`${baseRoute}/add-product-offer?editProduct=${item._id}`);
     } else {
       navigate(`${baseRoute}/add-product-offer?editOffer=${item._id}`);
     }
   };
 
-  const items = view === "products" ? products : offers;
+  const items = view === "items" ? products : offers;
 
   return (
     <div className="my-store-page">
-      <h2 className="title">🏪 {isSupplier ? "مستودع" : "متجر"}</h2>
+      <header className="my-store-page__head">
+        <div>
+          <h2 className="my-store-page__title">{isSupplier ? "مستودعي" : "متجري"}</h2>
+          <p className="my-store-page__subtitle">إدارة العناصر والعروض من مكان واحد</p>
+        </div>
+        <button
+          type="button"
+          className="my-store-page__add-btn"
+          onClick={() => navigate(`${baseRoute}/add-product-offer`)}
+        >
+          <Plus size={18} />
+          إضافة
+        </button>
+      </header>
 
-      <div className="tabs-container">
-        <button className={view === "products" ? "active" : ""} onClick={() => setView("products")}>المنتجات</button>
-        <button className={view === "offers" ? "active" : ""} onClick={() => setView("offers")}>العروض</button>
+      <div className="my-store-tabs">
+        <button
+          type="button"
+          className={view === "items" ? "active" : ""}
+          onClick={() => setView("items")}
+        >
+          العناصر
+          {products.length > 0 && <span className="my-store-tabs__count">{products.length}</span>}
+        </button>
+        <button
+          type="button"
+          className={view === "offers" ? "active" : ""}
+          onClick={() => setView("offers")}
+        >
+          العروض
+          {offers.length > 0 && <span className="my-store-tabs__count">{offers.length}</span>}
+        </button>
       </div>
 
       {loading && items.length === 0 && !error && (
-        <LightLoadingHint label={view === "products" ? "جاري تحميل المنتجات..." : "جاري تحميل العروض..."} />
+        <LightLoadingHint label={view === "items" ? "جاري تحميل العناصر..." : "جاري تحميل العروض..."} />
       )}
 
-      {error && <p className="error-text">❌ {error}</p>}
+      {error && <p className="error-text">{error}</p>}
 
       {!loading && !error && (
-        <div className="grid">
+        <div className="my-store-grid">
           {items.length === 0 ? (
-            <p className="empty-text">{view === "products" ? "لا توجد منتجات بعد" : "لا توجد عروض بعد"}</p>
+            <p className="my-store-empty">
+              {view === "items" ? "لا توجد عناصر بعد" : "لا توجد عروض بعد"}
+            </p>
           ) : (
             items.map((item) => {
               const isActive = item.isActive !== false;
-              const itemType = view === "products" ? "product" : "offer";
+              const itemType = view === "items" ? "item" : "offer";
+              const lifecycle = view === "offers" ? offerLifecycleLabel(item) : null;
+              const categoryName = item.storeItemCategory?.name;
+
               return (
-                <div key={item._id} className={`card store-item-card${!isActive ? " store-item-card--inactive" : ""}`}>
-                  {item.image && (
-                    <div className={`store-item-card__media-wrap${!isActive ? ' store-item-card__media-wrap--paused' : ''}`}>
+                <article
+                  key={item._id}
+                  className={`my-store-card${!isActive ? " my-store-card--unavailable" : ""}`}
+                >
+                  <div className="my-store-card__media" onClick={() => openEdit(item)} role="presentation">
+                    {item.image ? (
                       <img src={item.image} alt={item.name || item.title} />
-                    </div>
-                  )}
-                  <div className="info">
-                    <div className="store-item-card__head">
+                    ) : (
+                      <div className="my-store-card__placeholder">📦</div>
+                    )}
+                    {!isActive && <span className="my-store-card__unavailable-badge">غير متوفر</span>}
+                  </div>
+
+                  <div className="my-store-card__body">
+                    <div className="my-store-card__top">
                       <h3>{item.name || item.title}</h3>
-                      {!isActive && <span className="store-item-badge store-item-badge--paused">متوقّف</span>}
+                      {view === "offers" && (
+                        <span className="my-store-card__offer-badge">{formatOfferBadge(item)}</span>
+                      )}
                     </div>
 
-                    {view === "products" ? (
-                      <p className="price-tag">{formatPriceWithUnit(item.price, item.currency, item.priceUnit)}</p>
+                    {categoryName && (
+                      <span className="my-store-card__category">{categoryName}</span>
+                    )}
+
+                    {view === "items" ? (
+                      <p className="my-store-card__price">
+                        {formatPriceWithUnit(item.price, item.currency, item.priceUnit)}
+                      </p>
                     ) : (
                       <OfferPriceDisplay offer={item} />
                     )}
 
-                    <p className="details-text">{item.description}</p>
-
-                    {view === "offers" && item.expiresAt && (
-                      <p className="expire-text">⏳ ينتهي: {new Date(item.expiresAt).toLocaleDateString("ar-EG")}</p>
+                    {lifecycle && (
+                      <span className={`my-store-card__lifecycle my-store-card__lifecycle--${lifecycle.tone}`}>
+                        {lifecycle.label}
+                      </span>
                     )}
 
-                    <div className="store-card-actions">
-                      <button type="button" className="store-action-btn store-action-btn--edit" onClick={() => openEdit(item)}>
-                        <Pencil size={16} strokeWidth={2.2} />
+                    {view === "offers" && item.expiresAt && (
+                      <p className="my-store-card__expire">
+                        ينتهي: {new Date(item.expiresAt).toLocaleDateString("ar-EG")}
+                      </p>
+                    )}
+
+                    <div className="my-store-card__availability">
+                      <AvailabilitySwitch
+                        id={`avail-${item._id}`}
+                        checked={isActive}
+                        disabled={togglingId === item._id}
+                        onChange={() => handleToggleActive(item, itemType)}
+                      />
+                    </div>
+
+                    <div className="my-store-card__actions">
+                      <button type="button" className="my-store-card__btn" onClick={() => openEdit(item)}>
+                        <Pencil size={15} />
                         تعديل
                       </button>
+                      {view === "offers" && (
+                        <button
+                          type="button"
+                          className="my-store-card__btn my-store-card__btn--renew"
+                          disabled={togglingId === item._id}
+                          onClick={() => handleRenew(item._id)}
+                        >
+                          تجديد
+                        </button>
+                      )}
                       <button
                         type="button"
-                        className="store-action-btn store-action-btn--toggle"
-                        disabled={togglingId === item._id}
-                        title={isActive ? "إيقاف" : "تفعيل"}
-                        onClick={() => handleToggleActive(item, itemType)}
-                      >
-                        {isActive ? <EyeOff size={16} strokeWidth={2.2} /> : <Eye size={16} strokeWidth={2.2} />}
-                        {isActive ? "إيقاف" : "تفعيل"}
-                      </button>
-                      <button
-                        type="button"
-                        className="store-action-btn store-action-btn--delete"
+                        className="my-store-card__btn my-store-card__btn--delete"
                         onClick={() => setConfirmDelete({
                           id: item._id,
                           type: itemType,
                           name: item.name || item.title,
                         })}
                       >
-                        <Trash2 size={16} strokeWidth={2.2} />
-                        حذف
+                        <Trash2 size={15} />
                       </button>
                     </div>
                   </div>
-                </div>
+                </article>
               );
             })
           )}
@@ -225,9 +308,9 @@ export default function MyStore() {
         open={Boolean(confirmDelete)}
         title="حذف نهائي"
         message={confirmDelete ? (
-          confirmDelete.type === "product"
-            ? "هل أنت متأكد من حذف هذا المنتج نهائياً؟\n\nلن تتمكن من استعادته لاحقاً."
-            : "هل أنت متأكد من حذف هذا العرض نهائياً؟\n\nلن تتمكن من استعادته لاحقاً."
+          confirmDelete.type === "item"
+            ? `هل أنت متأكد من حذف "${confirmDelete.name}" نهائياً؟`
+            : `هل أنت متأكد من حذف العرض "${confirmDelete.name}" نهائياً؟`
         ) : ""}
         confirmLabel="حذف نهائي"
         cancelLabel="إلغاء"

@@ -1,0 +1,189 @@
+import { useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { ArrowRight } from 'lucide-react';
+import axios from '../services/api';
+import { queryKeys } from '../lib/queryClient';
+import { getStoredUser } from '../utils/safeStorage';
+import LightLoadingHint from '../shared/LightLoadingHint';
+import OrderInvoiceView from '../components/orders/OrderInvoiceView';
+import ConfirmOrderDialog from '../components/orders/ConfirmOrderDialog';
+import RejectOrderDialog from '../components/orders/RejectOrderDialog';
+import {
+  getOrderLegacyStatus,
+  shouldSkipConfirmDisclaimer,
+  ORDER_FILTER_KEYS,
+} from '../utils/storeOrderLabels';
+import '../styles/Orders.css';
+import '../styles/storeDashboard.css';
+
+export default function OrderDetails() {
+  const { orderId } = useParams();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const user = getStoredUser({});
+  const baseRoute = user?.role === 'supplier' ? '/supplier' : '/store';
+  const userId = user?.id || user?._id;
+
+  const [updating, setUpdating] = useState(false);
+  const [toast, setToast] = useState('');
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [showRejectDialog, setShowRejectDialog] = useState(false);
+
+  const { data: order, isLoading, isError, error } = useQuery({
+    queryKey: ['orderDetail', orderId],
+    queryFn: async () => {
+      const res = await axios.get(`/orders/${orderId}`);
+      return res.data.order;
+    },
+    enabled: Boolean(orderId),
+    staleTime: 15 * 1000,
+  });
+
+  const legacyStatus = order ? getOrderLegacyStatus(order) : null;
+  const isPending = legacyStatus === 'pending';
+  const isConfirmedWaiting = ['store_accepted', 'confirmed', 'preparing'].includes(legacyStatus);
+  const showActions = isPending;
+  const showDeliverAction = isConfirmedWaiting;
+
+  const showToast = (msg) => {
+    setToast(msg);
+    setTimeout(() => setToast(''), 3000);
+  };
+
+  const invalidateOrders = () => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.storeOrders });
+    queryClient.invalidateQueries({ queryKey: queryKeys.dashboardStats });
+    queryClient.invalidateQueries({ queryKey: ['storeOrderHistory'] });
+    queryClient.invalidateQueries({ queryKey: ['orderDetail', orderId] });
+  };
+
+  const changeStatus = async (newStatus, extra = {}) => {
+    setUpdating(true);
+    try {
+      const res = await axios.patch(`/orders/${orderId}/status`, {
+        status: newStatus,
+        ...extra,
+      });
+      invalidateOrders();
+      showToast(res.data.message || 'تم تحديث حالة الطلب');
+
+      let orderFilter = null;
+      if (newStatus === 'store_accepted') orderFilter = ORDER_FILTER_KEYS.CONFIRMED;
+      else if (newStatus === 'rejected') orderFilter = ORDER_FILTER_KEYS.REJECTED;
+      else if (newStatus === 'delivered_to_driver') orderFilter = ORDER_FILTER_KEYS.DELIVERED;
+
+      navigate(baseRoute, { replace: true, state: orderFilter ? { orderFilter } : {} });
+    } catch (err) {
+      showToast(err.response?.data?.message || 'تعذّر تحديث الحالة');
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleConfirmRequest = () => {
+    if (shouldSkipConfirmDisclaimer(userId)) {
+      changeStatus('store_accepted');
+      return;
+    }
+    setShowConfirmDialog(true);
+  };
+
+  const handleConfirmDialog = () => {
+    setShowConfirmDialog(false);
+    changeStatus('store_accepted');
+  };
+
+  const handleRejectConfirm = async (reason) => {
+    setShowRejectDialog(false);
+    await changeStatus('rejected', { rejectionReason: reason });
+  };
+
+  const handleDeliver = () => {
+    changeStatus('delivered_to_driver');
+  };
+
+  const loadError = error?.response?.data?.message || 'تعذّر تحميل تفاصيل الطلب';
+
+  return (
+    <div className="order-details-page" dir="rtl">
+      <header className="order-details-page__head">
+        <button
+          type="button"
+          className="order-details-page__back"
+          onClick={() => navigate(baseRoute)}
+        >
+          <ArrowRight size={20} />
+          <span>العودة</span>
+        </button>
+        <h1 className="order-details-page__title">تفاصيل الطلب</h1>
+      </header>
+
+      {toast && <div className="store-dash-toast">{toast}</div>}
+
+      <ConfirmOrderDialog
+        open={showConfirmDialog}
+        userId={userId}
+        onClose={() => setShowConfirmDialog(false)}
+        onConfirm={handleConfirmDialog}
+      />
+
+      <RejectOrderDialog
+        open={showRejectDialog}
+        onClose={() => setShowRejectDialog(false)}
+        onConfirm={handleRejectConfirm}
+        loading={updating}
+      />
+
+      {isLoading && <LightLoadingHint label="جاري تحميل الطلب..." />}
+
+      {isError && !isLoading && (
+        <div className="store-dash-empty">
+          <p>{loadError}</p>
+          <button type="button" onClick={() => navigate(baseRoute)}>العودة للرئيسية</button>
+        </div>
+      )}
+
+      {!isLoading && !isError && order && (
+        <>
+          <OrderInvoiceView order={order} />
+
+          {(showActions || showDeliverAction) && (
+            <div className="order-details-page__actions">
+              {showActions && (
+                <>
+                  <button
+                    type="button"
+                    className="order-details-page__btn order-details-page__btn--primary"
+                    disabled={updating}
+                    onClick={handleConfirmRequest}
+                  >
+                    {updating ? 'جارٍ التأكيد...' : 'تأكيد الطلب'}
+                  </button>
+                  <button
+                    type="button"
+                    className="order-details-page__btn order-details-page__btn--secondary"
+                    disabled={updating}
+                    onClick={() => setShowRejectDialog(true)}
+                  >
+                    رفض الطلب
+                  </button>
+                </>
+              )}
+              {showDeliverAction && (
+                <button
+                  type="button"
+                  className="order-details-page__btn order-details-page__btn--primary"
+                  disabled={updating}
+                  onClick={handleDeliver}
+                >
+                  {updating ? 'جارٍ التحديث...' : 'تم التسليم للدليفري'}
+                </button>
+              )}
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}

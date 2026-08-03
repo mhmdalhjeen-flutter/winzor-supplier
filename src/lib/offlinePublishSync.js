@@ -96,7 +96,7 @@ export async function processOnePublishItem(item) {
   await removePublishItem(item.id);
 
   const label = item.type === 'product'
-    ? (item.payload?.name || 'المنتج')
+    ? (item.payload?.name || 'العنصر')
     : (item.payload?.title || 'العرض');
   showAppToast(`تم رفع «${label}» بنجاح`, 'success');
 

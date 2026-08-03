@@ -157,7 +157,7 @@ export default function WarehouseDetail() {
           className={tab === 'products' ? 'active' : ''}
           onClick={() => setTab('products')}
         >
-          المنتجات ({products.length})
+          العناصر ({products.length})
         </button>
         <button
           className={tab === 'offers' ? 'active' : ''}
@@ -170,7 +170,7 @@ export default function WarehouseDetail() {
       {/* ─── Grid ────────────────────────────────────────────────────────────── */}
       {currentList.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '60px', color: '#64748b' }}>
-          {tab === 'products' ? 'لا توجد منتجات' : 'لا توجد عروض'}
+          {tab === 'products' ? 'لا توجد عناصر' : 'لا توجد عروض'}
         </div>
       ) : (
         <div className="grid">

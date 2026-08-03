@@ -121,7 +121,7 @@ export default function OrderInvoices() {
                                     </p>
                                 )}
                                 <p><strong>📞 الزبون: </strong>{order.customer?.phone || '—'}</p>
-                                <p><strong>📦 المنتجات: </strong>
+                                <p><strong>📦 العناصر: </strong>
                                     {(order.items || []).map(i => `${i.name} (×${i.quantity})`).join('، ')}
                                 </p>
                                 <p><strong>💰 الإجمالي: </strong>{order.total} ₪</p>
@@ -161,11 +161,11 @@ export default function OrderInvoices() {
                         <p><strong>التاريخ:</strong> {formatDate(detail.createdAt)}</p>
                         {detail.customerNotes && <p><strong>ملاحظات الزبون:</strong> {detail.customerNotes}</p>}
                         {detail.storeNotes && <p><strong>ملاحظات المتجر:</strong> {detail.storeNotes}</p>}
-                        <p><strong>المنتجات:</strong></p>
+                        <p><strong>العناصر:</strong></p>
                         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
                             <thead>
                                 <tr style={{ background: '#f9fafb' }}>
-                                    <th style={{ padding: 8, textAlign: 'right' }}>المنتج</th>
+                                    <th style={{ padding: 8, textAlign: 'right' }}>العنصر</th>
                                     <th style={{ padding: 8 }}>الكمية</th>
                                     <th style={{ padding: 8 }}>السعر</th>
                                     <th style={{ padding: 8 }}>الإجمالي</th>

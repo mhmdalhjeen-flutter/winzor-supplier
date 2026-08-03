@@ -29,8 +29,8 @@ export default function StoreQuickActions({
     {
       id: 'product',
       icon: PackagePlus,
-      title: 'إضافة منتج',
-      description: 'أنشئ منتجاً جديداً للمتجر',
+      title: 'إضافة عنصر',
+      description: 'أنشئ عنصراً جديداً للمتجر',
       tone: 'blue',
       onClick: onAddProduct,
     },

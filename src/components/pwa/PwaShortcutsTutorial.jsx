@@ -2,7 +2,7 @@ import { X, PackagePlus, Tag, Store, Ticket } from 'lucide-react';
 import { BRAND_LOGO_64, BRAND_NAME } from '../../utils/brandAssets';
 
 const SHORTCUTS = [
-  { icon: PackagePlus, label: 'إضافة منتج', description: 'أنشئ منتجاً جديداً', color: '#2563eb' },
+  { icon: PackagePlus, label: 'إضافة عنصر', description: 'أنشئ عنصراً جديداً', color: '#2563eb' },
   { icon: Tag, label: 'إضافة عرض', description: 'انشر عرضاً جديداً', color: '#059669' },
   { icon: Store, label: 'متجري', description: 'إدارة ملف المتجر', color: '#475569' },
   { icon: Ticket, label: 'شراء أكواد', description: 'اطلب بطاقات الهدايا', color: '#7c3aed' },

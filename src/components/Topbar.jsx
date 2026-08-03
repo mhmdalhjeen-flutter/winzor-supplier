@@ -7,7 +7,7 @@ export default function Topbar({ setOpen }) {
         <Menu />
       </button>
 
-      <input placeholder="ابحث عن منتجات أو عروض..." />
+      <input placeholder="ابحث عن عناصر أو عروض..." />
 
       <div className="actions">
         <Bell />

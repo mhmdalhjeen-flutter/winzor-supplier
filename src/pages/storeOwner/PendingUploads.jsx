@@ -60,7 +60,7 @@ function PendingItemCard({
       <div className="pending-card__body">
         <div className="pending-card__meta">
           <span className={`pending-card__type pending-card__type--${item.type}`}>
-            {isProduct ? 'منتج' : 'عرض'}
+            {isProduct ? 'عنصر' : 'عرض'}
           </span>
           {!isProduct && item.payload?.offerType && (
             <span className="pending-card__subtype">{offerTypeLabel(item.payload.offerType)}</span>
@@ -222,7 +222,7 @@ export default function PendingUploads() {
         <div>
           <h2 className="title">العمليات المعلقة</h2>
           <p className="page-lead">
-            منتجات وعروض محفوظة محلياً — تُرفع تلقائياً عند عودة الإنترنت
+            عناصر وعروض محفوظة محلياً — تُرفع تلقائياً عند عودة الإنترنت
           </p>
         </div>
         <button
@@ -248,7 +248,7 @@ export default function PendingUploads() {
         </div>
       )}
 
-      {renderSection('المنتجات المعلقة', <Package size={18} />, products)}
+      {renderSection('العناصر المعلقة', <Package size={18} />, products)}
       {renderSection('العروض المعلقة', <Tag size={18} />, offers)}
 
       <ConfirmDialog

@@ -15,7 +15,7 @@ export default function QuickPreviewModal({ open, kind, data, pricing, onClose }
   if (!open) return null;
 
   const isOffer = kind === 'offer';
-  const title = isOffer ? (data?.title || 'اسم العرض') : (data?.name || 'اسم المنتج');
+  const title = isOffer ? (data?.title || 'اسم العرض') : (data?.name || 'اسم العنصر');
   const description = data?.description || 'لا يوجد وصف بعد.';
   const image = data?.image;
   const tags = data?.tags || [];

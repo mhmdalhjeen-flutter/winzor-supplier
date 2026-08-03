@@ -1,236 +1,168 @@
-import { useEffect, useRef, useState } from 'react';
-import { RotateCw, Sparkles, Sun, Contrast, Droplets, Focus, Undo2 } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
-/** Suggested store-display aspect ratios */
-export const CROP_PRESETS = [
-  { id: 'square', label: 'مربع 1:1', ratio: 1, hint: 'موصى به لعرض المتجر' },
-  { id: 'portrait', label: 'عمودي 4:5', ratio: 4 / 5, hint: 'مناسب للمنشورات' },
-  { id: 'landscape', label: 'أفقي 16:9', ratio: 16 / 9, hint: 'بانر / غلاف' },
-  { id: 'free', label: 'حر', ratio: null, hint: 'بدون قص محدد' },
-];
-
-const DEFAULT_ADJUST = {
-  brightness: 100,
-  contrast: 100,
-  saturation: 100,
-  sharpen: 0,
-};
-
-function clampBox(next, natural) {
-  const { w, h } = natural;
-  let { x, y, width, height } = next;
-  width = Math.max(40, Math.min(width, w));
-  height = Math.max(40, Math.min(height, h));
-  x = Math.max(0, Math.min(x, w - width));
-  y = Math.max(0, Math.min(y, h - height));
-  return { x, y, width, height };
-}
-
-function initBox(w, h, ratioId) {
-  const ratio = CROP_PRESETS.find((p) => p.id === ratioId)?.ratio;
-  let width;
-  let height;
-  if (!ratio) {
-    width = w;
-    height = h;
-  } else if (w / h > ratio) {
-    height = h;
-    width = h * ratio;
-  } else {
-    width = w;
-    height = w / ratio;
-  }
-  return {
-    x: (w - width) / 2,
-    y: (h - height) / 2,
-    width,
-    height,
-  };
-}
-
-function drawRotatedImage(ctx, img, rotation) {
-  const r = ((rotation % 360) + 360) % 360;
-  const w = img.naturalWidth;
-  const h = img.naturalHeight;
-  if (r === 90 || r === 270) {
-    ctx.canvas.width = h;
-    ctx.canvas.height = w;
-  } else {
-    ctx.canvas.width = w;
-    ctx.canvas.height = h;
-  }
-  ctx.save();
-  ctx.translate(ctx.canvas.width / 2, ctx.canvas.height / 2);
-  ctx.rotate((r * Math.PI) / 180);
-  ctx.drawImage(img, -w / 2, -h / 2);
-  ctx.restore();
-}
-
-function applySharpen(ctx, amount) {
-  if (!amount) return;
-  const { width, height } = ctx.canvas;
-  const imageData = ctx.getImageData(0, 0, width, height);
-  const src = imageData.data;
-  const out = new Uint8ClampedArray(src);
-  const kernel = [0, -1, 0, -1, 5 + amount * 0.08, -1, 0, -1, 0];
-  for (let y = 1; y < height - 1; y += 1) {
-    for (let x = 1; x < width - 1; x += 1) {
-      for (let c = 0; c < 3; c += 1) {
-        let sum = 0;
-        let ki = 0;
-        for (let ky = -1; ky <= 1; ky += 1) {
-          for (let kx = -1; kx <= 1; kx += 1) {
-            const idx = ((y + ky) * width + (x + kx)) * 4 + c;
-            sum += src[idx] * kernel[ki];
-            ki += 1;
-          }
-        }
-        out[(y * width + x) * 4 + c] = Math.max(0, Math.min(255, sum));
-      }
-    }
-  }
-  ctx.putImageData(new ImageData(out, width, height), 0, 0);
-}
+const MIN_ZOOM = 1;
+const MAX_ZOOM = 4;
 
 /**
- * Canvas crop + lightweight adjustments before upload. Returns a File (JPEG).
+ * Mobile-style image cropper: drag to move, pinch to zoom, fixed crop frame.
  */
 export default function ImageCropModal({ file, open, onCancel, onConfirm }) {
-  const imgRef = useRef(null);
+  const containerRef = useRef(null);
   const [objectUrl, setObjectUrl] = useState('');
-  const [preset, setPreset] = useState('square');
   const [natural, setNatural] = useState({ w: 0, h: 0 });
-  const [box, setBox] = useState({ x: 0, y: 0, width: 0, height: 0 });
-  const [drag, setDrag] = useState(null);
-  const [busy, setBusy] = useState(false);
-  const [adjust, setAdjust] = useState(DEFAULT_ADJUST);
-  const [imgKey, setImgKey] = useState(0);
+  const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
+  const [busy, setBusy] = useState(false);
+  const dragRef = useRef(null);
+  const pinchRef = useRef(null);
 
   useEffect(() => {
     if (!open || !file) return undefined;
     const url = URL.createObjectURL(file);
     setObjectUrl(url);
-    setPreset('square');
-    setAdjust(DEFAULT_ADJUST);
+    setOffset({ x: 0, y: 0 });
     setZoom(1);
-    setImgKey(0);
     return () => URL.revokeObjectURL(url);
   }, [open, file]);
 
   const onImageLoad = (e) => {
-    const img = e.currentTarget;
-    const w = img.naturalWidth;
-    const h = img.naturalHeight;
-    setNatural({ w, h });
-    setBox(initBox(w, h, preset));
+    setNatural({ w: e.currentTarget.naturalWidth, h: e.currentTarget.naturalHeight });
   };
 
-  const changePreset = (id) => {
-    setPreset(id);
-    if (natural.w && natural.h) setBox(initBox(natural.w, natural.h, id));
-  };
-
-  const rotateImage = async () => {
-    const img = imgRef.current;
-    if (!img || !natural.w || busy) return;
-    setBusy(true);
-    try {
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      drawRotatedImage(ctx, img, 90);
-      const blob = await new Promise((resolve) => {
-        canvas.toBlob((b) => resolve(b), 'image/jpeg', 0.92);
-      });
-      if (!blob) return;
-      setObjectUrl((prev) => {
-        if (prev) URL.revokeObjectURL(prev);
-        return URL.createObjectURL(blob);
-      });
-      setImgKey((k) => k + 1);
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const resetAdjustments = () => {
-    setAdjust(DEFAULT_ADJUST);
-    setZoom(1);
-  };
-
-  const autoEnhance = () => {
-    setAdjust({ brightness: 108, contrast: 112, saturation: 108, sharpen: 35 });
-  };
-
-  const autoBrightness = () => {
-    setAdjust((prev) => ({ ...prev, brightness: 115 }));
-  };
+  const clampOffset = useCallback((nextOffset, nextZoom) => {
+    const frame = containerRef.current;
+    if (!frame || !natural.w) return nextOffset;
+    const fw = frame.clientWidth;
+    const fh = frame.clientHeight;
+    const scale = Math.max(fw / natural.w, fh / natural.h) * nextZoom;
+    const dw = natural.w * scale;
+    const dh = natural.h * scale;
+    const maxX = Math.max(0, (dw - fw) / 2);
+    const maxY = Math.max(0, (dh - fh) / 2);
+    return {
+      x: Math.max(-maxX, Math.min(maxX, nextOffset.x)),
+      y: Math.max(-maxY, Math.min(maxY, nextOffset.y)),
+    };
+  }, [natural]);
 
   const onPointerDown = (e) => {
-    e.preventDefault();
-    const img = imgRef.current;
-    if (!img || !natural.w) return;
-    const rect = img.getBoundingClientRect();
-    const scaleX = natural.w / rect.width;
-    const scaleY = natural.h / rect.height;
-    const px = (e.clientX - rect.left) * scaleX;
-    const py = (e.clientY - rect.top) * scaleY;
-    setDrag({ startX: px, startY: py, origin: { ...box } });
+    if (e.pointerType === 'touch' && pinchRef.current) return;
+    dragRef.current = {
+      id: e.pointerId,
+      startX: e.clientX,
+      startY: e.clientY,
+      origin: { ...offset },
+    };
+    e.currentTarget.setPointerCapture(e.pointerId);
   };
 
   const onPointerMove = (e) => {
-    if (!drag) return;
-    const img = imgRef.current;
-    if (!img) return;
-    const rect = img.getBoundingClientRect();
-    const scaleX = natural.w / rect.width;
-    const scaleY = natural.h / rect.height;
-    const px = (e.clientX - rect.left) * scaleX;
-    const py = (e.clientY - rect.top) * scaleY;
-    const dx = px - drag.startX;
-    const dy = py - drag.startY;
-    setBox(clampBox({ ...drag.origin, x: drag.origin.x + dx, y: drag.origin.y + dy }, natural));
+    const drag = dragRef.current;
+    if (!drag || drag.id !== e.pointerId) return;
+    const dx = e.clientX - drag.startX;
+    const dy = e.clientY - drag.startY;
+    setOffset(clampOffset({ x: drag.origin.x + dx, y: drag.origin.y + dy }, zoom));
   };
 
-  const onPointerUp = () => setDrag(null);
+  const onPointerUp = (e) => {
+    if (dragRef.current?.id === e.pointerId) dragRef.current = null;
+  };
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const el = containerRef.current;
+    if (!el) return undefined;
+
+    const onTouchStart = (e) => {
+      if (e.touches.length === 2) {
+        const [a, b] = e.touches;
+        pinchRef.current = {
+          dist: Math.hypot(b.clientX - a.clientX, b.clientY - a.clientY),
+          zoom,
+          offset: { ...offset },
+          midX: (a.clientX + b.clientX) / 2,
+          midY: (a.clientY + b.clientY) / 2,
+        };
+        dragRef.current = null;
+      }
+    };
+
+    const onTouchMove = (e) => {
+      if (e.touches.length !== 2 || !pinchRef.current) return;
+      e.preventDefault();
+      const [a, b] = e.touches;
+      const dist = Math.hypot(b.clientX - a.clientX, b.clientY - a.clientY);
+      const ratio = dist / pinchRef.current.dist;
+      const nextZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, pinchRef.current.zoom * ratio));
+      setZoom(nextZoom);
+      setOffset(clampOffset(pinchRef.current.offset, nextZoom));
+    };
+
+    const onTouchEnd = () => {
+      pinchRef.current = null;
+    };
+
+    el.addEventListener('touchstart', onTouchStart, { passive: true });
+    el.addEventListener('touchmove', onTouchMove, { passive: false });
+    el.addEventListener('touchend', onTouchEnd);
+    el.addEventListener('touchcancel', onTouchEnd);
+    return () => {
+      el.removeEventListener('touchstart', onTouchStart);
+      el.removeEventListener('touchmove', onTouchMove);
+      el.removeEventListener('touchend', onTouchEnd);
+      el.removeEventListener('touchcancel', onTouchEnd);
+    };
+  }, [open, zoom, offset, clampOffset]);
 
   const handleConfirm = async () => {
-    if (!imgRef.current || !natural.w) return;
+    if (!natural.w || !objectUrl) return;
     setBusy(true);
     try {
-      const cropCanvas = document.createElement('canvas');
-      const cropX = Math.round(box.x);
-      const cropY = Math.round(box.y);
-      const cropW = Math.round(box.width);
-      const cropH = Math.round(box.height);
+      const img = await new Promise((resolve, reject) => {
+        const image = new Image();
+        image.onload = () => resolve(image);
+        image.onerror = reject;
+        image.src = objectUrl;
+      });
+
+      const frame = containerRef.current;
+      const fw = frame.clientWidth;
+      const fh = frame.clientHeight;
+      const baseScale = Math.max(fw / natural.w, fh / natural.h);
+      const scale = baseScale * zoom;
+
+      const canvas = document.createElement('canvas');
+      canvas.width = fw;
+      canvas.height = fh;
+      const ctx = canvas.getContext('2d');
+
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0, 0, fw, fh);
+
+      const drawW = natural.w * scale;
+      const drawH = natural.h * scale;
+      const dx = (fw - drawW) / 2 + offset.x;
+      const dy = (fh - drawH) / 2 + offset.y;
+
+      ctx.drawImage(img, dx, dy, drawW, drawH);
 
       const maxEdge = 1600;
-      const outScale = Math.min(1, maxEdge / Math.max(cropW, cropH));
-      cropCanvas.width = Math.max(1, Math.round(cropW * outScale));
-      cropCanvas.height = Math.max(1, Math.round(cropH * outScale));
-      const ctx = cropCanvas.getContext('2d');
-
-      ctx.filter = `brightness(${adjust.brightness}%) contrast(${adjust.contrast}%) saturate(${adjust.saturation}%)`;
-      ctx.drawImage(
-        imgRef.current,
-        cropX,
-        cropY,
-        cropW,
-        cropH,
-        0,
-        0,
-        cropCanvas.width,
-        cropCanvas.height,
-      );
-      ctx.filter = 'none';
-      applySharpen(ctx, adjust.sharpen);
+      const outScale = Math.min(1, maxEdge / Math.max(fw, fh));
+      let outCanvas = canvas;
+      if (outScale < 1) {
+        outCanvas = document.createElement('canvas');
+        outCanvas.width = Math.round(fw * outScale);
+        outCanvas.height = Math.round(fh * outScale);
+        outCanvas.getContext('2d').drawImage(canvas, 0, 0, outCanvas.width, outCanvas.height);
+      }
 
       const blob = await new Promise((resolve) => {
-        cropCanvas.toBlob((b) => resolve(b), 'image/jpeg', 0.9);
+        outCanvas.toBlob((b) => resolve(b), 'image/jpeg', 0.92);
       });
       if (!blob) throw new Error('تعذّر قص الصورة');
+
       const base = (file.name || 'image').replace(/\.[^.]+$/, '');
-      onConfirm(new File([blob], `${base}-edited.jpg`, { type: 'image/jpeg', lastModified: Date.now() }));
+      onConfirm(new File([blob], `${base}-cropped.jpg`, { type: 'image/jpeg', lastModified: Date.now() }));
     } catch (err) {
       console.error(err);
       onCancel();
@@ -241,156 +173,42 @@ export default function ImageCropModal({ file, open, onCancel, onConfirm }) {
 
   if (!open || !file) return null;
 
-  const displayScale = natural.w
-    ? Math.min(1, 480 / natural.w, 520 / natural.h)
+  const baseScale = natural.w && containerRef.current
+    ? Math.max(containerRef.current.clientWidth / natural.w, containerRef.current.clientHeight / natural.h)
     : 1;
-  const dispW = natural.w * displayScale;
-  const dispH = natural.h * displayScale;
-
-  const filterStyle = {
-    filter: `brightness(${adjust.brightness}%) contrast(${adjust.contrast}%) saturate(${adjust.saturation}%)`,
-    transform: `scale(${zoom})`,
-    transformOrigin: 'center center',
-    transition: 'filter 0.2s ease, transform 0.15s ease',
-  };
 
   return (
-    <div className="crop-backdrop" role="dialog" aria-modal="true" aria-label="تحسين الصورة">
-      <div className="crop-modal crop-modal--enhanced">
-        <div className="crop-modal__head">
-          <h3>تحسين الصورة</h3>
-          <button type="button" className="crop-modal__close" onClick={onCancel} aria-label="إغلاق">×</button>
-        </div>
-
-        <p className="crop-modal__hint">
-          اضبط القص والإضاءة — التغييرات تظهر مباشرة على المعاينة.
-        </p>
-
-        <div className="crop-presets crop-presets--compact">
-          {CROP_PRESETS.map((p) => (
-            <button
-              key={p.id}
-              type="button"
-              className={preset === p.id ? 'active' : ''}
-              onClick={() => changePreset(p.id)}
-            >
-              <span>{p.label}</span>
-            </button>
-          ))}
-        </div>
-
-        <div className="crop-toolbar">
-          <button type="button" className="crop-tool-btn" onClick={rotateImage} title="تدوير">
-            <RotateCw size={18} strokeWidth={2} />
-            <span>تدوير</span>
-          </button>
-          <button type="button" className="crop-tool-btn" onClick={autoEnhance} title="تحسين تلقائي">
-            <Sparkles size={18} strokeWidth={2} />
-            <span>تلقائي</span>
-          </button>
-          <button type="button" className="crop-tool-btn" onClick={autoBrightness} title="سطوع تلقائي">
-            <Sun size={18} strokeWidth={2} />
-            <span>سطوع</span>
-          </button>
-          <button type="button" className="crop-tool-btn" onClick={resetAdjustments} title="إعادة ضبط">
-            <Undo2 size={18} strokeWidth={2} />
-            <span>إعادة</span>
-          </button>
-        </div>
-
+    <div className="mobile-crop-backdrop" role="dialog" aria-modal="true" aria-label="قص الصورة">
+      <div className="mobile-crop-modal">
         <div
-          className="crop-stage crop-stage--large"
+          ref={containerRef}
+          className="mobile-crop-viewport"
+          onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
-          onPointerLeave={onPointerUp}
+          onPointerCancel={onPointerUp}
         >
           {objectUrl && (
-            <div className="crop-stage__frame" style={{ width: dispW || 'auto', height: dispH || 'auto' }}>
-              <img
-                key={imgKey}
-                ref={imgRef}
-                src={objectUrl}
-                alt=""
-                onLoad={onImageLoad}
-                draggable={false}
-                style={{ width: '100%', height: '100%', display: 'block', ...filterStyle }}
-              />
-              {natural.w > 0 && (
-                <div
-                  className="crop-box"
-                  style={{
-                    left: `${(box.x / natural.w) * 100}%`,
-                    top: `${(box.y / natural.h) * 100}%`,
-                    width: `${(box.width / natural.w) * 100}%`,
-                    height: `${(box.height / natural.h) * 100}%`,
-                  }}
-                  onPointerDown={onPointerDown}
-                />
-              )}
-            </div>
+            <img
+              src={objectUrl}
+              alt=""
+              draggable={false}
+              onLoad={onImageLoad}
+              className="mobile-crop-image"
+              style={{
+                transform: `translate(${offset.x}px, ${offset.y}px) scale(${baseScale * zoom})`,
+              }}
+            />
           )}
+          <div className="mobile-crop-frame" aria-hidden />
         </div>
 
-        <div className="crop-sliders">
-          <label className="crop-slider">
-            <span>تكبير</span>
-            <input
-              type="range"
-              min="1"
-              max="2.5"
-              step="0.05"
-              value={zoom}
-              onChange={(e) => setZoom(Number(e.target.value))}
-            />
-          </label>
-          <label className="crop-slider">
-            <span><Sun size={14} /> سطوع</span>
-            <input
-              type="range"
-              min="70"
-              max="140"
-              value={adjust.brightness}
-              onChange={(e) => setAdjust((a) => ({ ...a, brightness: Number(e.target.value) }))}
-            />
-          </label>
-          <label className="crop-slider">
-            <span><Contrast size={14} /> تباين</span>
-            <input
-              type="range"
-              min="70"
-              max="140"
-              value={adjust.contrast}
-              onChange={(e) => setAdjust((a) => ({ ...a, contrast: Number(e.target.value) }))}
-            />
-          </label>
-          <label className="crop-slider">
-            <span><Droplets size={14} /> تشبّع</span>
-            <input
-              type="range"
-              min="70"
-              max="140"
-              value={adjust.saturation}
-              onChange={(e) => setAdjust((a) => ({ ...a, saturation: Number(e.target.value) }))}
-            />
-          </label>
-          <label className="crop-slider">
-            <span><Focus size={14} /> حدة</span>
-            <input
-              type="range"
-              min="0"
-              max="100"
-              value={adjust.sharpen}
-              onChange={(e) => setAdjust((a) => ({ ...a, sharpen: Number(e.target.value) }))}
-            />
-          </label>
-        </div>
-
-        <div className="crop-modal__actions">
-          <button type="button" className="crop-btn crop-btn--ghost" onClick={onCancel} disabled={busy}>
-            تخطي
+        <div className="mobile-crop-actions">
+          <button type="button" className="mobile-crop-btn mobile-crop-btn--ghost" onClick={onCancel} disabled={busy}>
+            إلغاء
           </button>
-          <button type="button" className="crop-btn crop-btn--primary" onClick={handleConfirm} disabled={busy}>
-            {busy ? 'جارٍ التحسين...' : 'تطبيق'}
+          <button type="button" className="mobile-crop-btn mobile-crop-btn--primary" onClick={handleConfirm} disabled={busy}>
+            {busy ? 'جارٍ المعالجة...' : 'تأكيد'}
           </button>
         </div>
       </div>

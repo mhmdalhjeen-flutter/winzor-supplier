@@ -77,9 +77,9 @@ export default function DashboardLayout() {
       <NavLink to={`${baseRoute}/my-store`} onClick={() => setMenuOpen(false)}>
         {isSupplier ? "🏬" : "🏪"} <span>{isSupplier ? "مستودعي" : "متجري"}</span>
       </NavLink>
-      <NavLink to={`${baseRoute}/add-product-offer`} onClick={() => setMenuOpen(false)}>📋 <span>اضافة منتج/عرض</span></NavLink>
+      <NavLink to={`${baseRoute}/add-product-offer`} onClick={() => setMenuOpen(false)}>📋 <span>إضافة عنصر/عرض</span></NavLink>
+      <NavLink to={`${baseRoute}/drafts`} onClick={() => setMenuOpen(false)}>📝 <span>المسودات</span></NavLink>
       <NavLink to={`${baseRoute}/pending-uploads`} onClick={() => setMenuOpen(false)}>⏳ <span>العمليات المعلقة</span></NavLink>
-      <NavLink to={`${baseRoute}/offers`} onClick={() => setMenuOpen(false)}>🏷️ <span>إدارة العروض</span></NavLink>
 
       {!isSupplier && isStoreOwner && (
         <>
@@ -237,9 +237,9 @@ export default function DashboardLayout() {
             <span className="nav-icon"><Home size={20} strokeWidth={2.2} /></span>
             <span className="nav-label">الرئيسية</span>
           </NavLink>
-          <NavLink to={`${baseRoute}/offers`}>
-            <span className="nav-icon">🏷️</span>
-            <span className="nav-label">العروض</span>
+          <NavLink to={`${baseRoute}/my-store`}>
+            <span className="nav-icon">🏪</span>
+            <span className="nav-label">{isSupplier ? "مستودعي" : "متجري"}</span>
           </NavLink>
           <NavLink to={`${baseRoute}/orders`}>
             <span className="nav-icon">📋</span>

@@ -297,7 +297,7 @@ export default function Cart() {
           <div className="cart-summary">
             <h3>ملخص الطلب</h3>
             <div className="summary-row">
-              <span>إجمالي المنتجات:</span>
+              <span>إجمالي العناصر:</span>
               <span>{total} ₪</span>
             </div>
             <div className="summary-row">

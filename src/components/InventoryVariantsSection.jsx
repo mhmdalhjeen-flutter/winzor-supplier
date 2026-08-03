@@ -35,7 +35,7 @@ export default function InventoryVariantsSection({ value, onChange }) {
     <div className="inventory-section">
       <div className="inventory-grid">
         <div className="field-block">
-          <label className="field-label">رمز المنتج (SKU)</label>
+          <label className="field-label">رمز العنصر (SKU)</label>
           <input
             value={data.sku}
             onChange={(e) => update({ sku: e.target.value })}
@@ -62,7 +62,7 @@ export default function InventoryVariantsSection({ value, onChange }) {
             checked={data.variantsEnabled}
             onChange={(e) => update({ variantsEnabled: e.target.checked })}
           />
-          <span>تفعيل خيارات المنتج (اللون، المقاس، ...)</span>
+          <span>تفعيل خيارات العنصر (اللون، المقاس، ...)</span>
         </label>
       </div>
 

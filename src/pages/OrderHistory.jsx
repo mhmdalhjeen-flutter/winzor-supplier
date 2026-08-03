@@ -111,7 +111,7 @@ export default function OrderHistory() {
                                 🔐 رمز التحقق: {detail.verificationCode}
                             </p>
                         )}
-                        <p><strong>المنتجات:</strong></p>
+                        <p><strong>العناصر:</strong></p>
                         <ul>
                             {(detail.items || []).map((i, idx) => (
                                 <li key={idx}>{i.name} ×{i.quantity} — {i.price * i.quantity} ₪</li>

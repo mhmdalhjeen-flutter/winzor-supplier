@@ -24,7 +24,7 @@ export default function RejectOrderDialog({ open, onClose, onConfirm, loading = 
           rows={4}
           value={reason}
           onChange={(e) => setReason(e.target.value)}
-          placeholder="مثال: المنتج غير متوفر حالياً..."
+          placeholder="مثال: العنصر غير متوفر حالياً..."
           autoFocus
         />
         <div className="store-order-dialog__actions">

@@ -26,7 +26,7 @@ export default function MediaUploader({
   onLocalFileChange,
   onError,
   required = false,
-  emptyHint = 'أضف صورة المنتج أو العرض',
+  emptyHint = 'أضف صورة العنصر أو العرض',
 }) {
   const inputId = useId();
   const galleryRef = useRef(null);
@@ -69,8 +69,14 @@ export default function MediaUploader({
     onChange?.('');
   };
 
-  const startCrop = async (file) => {
+  const startCrop = async (fileOrUrl) => {
     try {
+      let file = fileOrUrl;
+      if (typeof fileOrUrl === 'string' && fileOrUrl.startsWith('http')) {
+        const res = await fetch(fileOrUrl);
+        const blob = await res.blob();
+        file = new File([blob], 'image.jpg', { type: blob.type || 'image/jpeg' });
+      }
       const converted = await normalizePickedImage(file);
       const normalized = normalizeImageFile(converted);
       if (!normalized) {
@@ -90,11 +96,9 @@ export default function MediaUploader({
     await processSelectedFile(croppedFile);
   };
 
-  const handleCropCancel = async () => {
-    const original = cropFile;
+  const handleCropCancel = () => {
     setCropOpen(false);
     setCropFile(null);
-    if (original) await processSelectedFile(original);
   };
 
   const processSelectedFile = async (rawFile) => {
@@ -187,16 +191,16 @@ export default function MediaUploader({
             <div className="media-preview-actions">
               <button
                 type="button"
-                className="media-action-btn"
-                onClick={() => localFile && startCrop(localFile)}
-                disabled={uploading || !localFile}
+                className="media-action-btn media-action-btn--outline"
+                onClick={() => startCrop(localFile || previewUrl)}
+                disabled={uploading || !previewUrl}
               >
                 <Crop size={16} strokeWidth={2.2} />
-                قص / تعديل
+                قص
               </button>
               <button
                 type="button"
-                className="media-action-btn"
+                className="media-action-btn media-action-btn--outline"
                 onClick={() => galleryRef.current?.click()}
                 disabled={uploading}
               >
@@ -205,7 +209,7 @@ export default function MediaUploader({
               </button>
               <button
                 type="button"
-                className="media-action-btn media-action-btn--danger"
+                className="media-action-btn media-action-btn--outline media-action-btn--danger"
                 onClick={clearImage}
                 disabled={uploading}
               >

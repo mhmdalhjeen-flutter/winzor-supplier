@@ -7,7 +7,7 @@ export default function Sidebar({ open }) {
 
       <nav>
         <a><Home size={18}/> الرئيسية</a>
-        <a><Box size={18}/> المنتجات</a>
+        <a><Box size={18}/> العناصر</a>
         <a><ShoppingCart size={18}/> العروض</a>
         <a><Settings size={18}/> الإعدادات</a>
         <a><Headset size={18}/> الدعم</a>

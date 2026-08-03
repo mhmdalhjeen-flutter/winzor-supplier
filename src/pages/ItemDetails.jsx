@@ -33,8 +33,8 @@ export default function ItemDetails() {
         // eslint-disable-next-line react-hooks/immutability
         showToast(
           err.response?.status === 404
-            ? 'المنتج غير موجود أو غير متاح'
-            : 'تعذّر تحميل بيانات المنتج'
+            ? 'العنصر غير موجود أو غير متاح'
+            : 'تعذّر تحميل بيانات العنصر'
         );
       } finally {
         setLoading(false);
@@ -93,7 +93,7 @@ const openWhatsapp = () => {
       <div style={{ textAlign: 'center', padding: '80px' }}>
         <div style={{ fontSize: '60px', marginBottom: '16px' }}>🔍</div>
         <p style={{ color: '#ef4444', fontSize: '18px', fontWeight: 'bold' }}>
-          لم يتم العثور على المنتج
+          لم يتم العثور على العنصر
         </p>
         <button
           onClick={() => navigate(-1)}
@@ -142,7 +142,7 @@ const openWhatsapp = () => {
             fontSize: '12px', padding: '3px 12px',
             borderRadius: '20px', fontWeight: 'bold',
           }}>
-            {itemType === 'offer' ? '🎁 عرض خاص' : '📦 منتج'}
+            {itemType === 'offer' ? '🎁 عرض خاص' : '📦 عنصر'}
           </span>
 
           <h1 style={{ margin: '0 0 12px', fontSize: '24px', color: '#1e293b' }}>

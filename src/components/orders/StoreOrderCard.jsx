@@ -6,8 +6,13 @@ import {
   formatOrderDate,
 } from '../../utils/storeOrderLabels';
 
+import { formatOrderLineMeta, purchaseMethodLabel } from '../../utils/purchaseMode';
+
 function OrderItemRow({ item }) {
-  const subtotal = (item.price || 0) * (item.quantity || 0);
+  const purchaseMethod = item.purchaseMethod || 'quantity';
+  const subtotal = item.subtotal ?? (purchaseMethod === 'price'
+    ? (item.requestedAmount ?? item.price ?? 0)
+    : (item.price || 0) * (item.quantity || 0));
   return (
     <div className="store-order-item">
       <div className="store-order-item__media">
@@ -19,9 +24,8 @@ function OrderItemRow({ item }) {
       </div>
       <div className="store-order-item__body">
         <p className="store-order-item__name">{item.name}</p>
-        <p className="store-order-item__meta">
-          {item.price} ₪ × {item.quantity}
-        </p>
+        <p className="store-order-item__meta">{formatOrderLineMeta(item)}</p>
+        <span className="store-order-item__method">{purchaseMethodLabel(purchaseMethod)}</span>
       </div>
       <strong className="store-order-item__total">{subtotal.toFixed(2)} ₪</strong>
     </div>
@@ -38,7 +42,13 @@ export default function StoreOrderCard({
 }) {
   const statusMeta = getStoreOrderStatusMeta(order.status);
   const items = order.items || [];
-  const productsSubtotal = items.reduce((sum, i) => sum + (i.price || 0) * (i.quantity || 0), 0);
+  const productsSubtotal = items.reduce((sum, i) => {
+    if (typeof i.subtotal === 'number') return sum + i.subtotal;
+    if ((i.purchaseMethod || 'quantity') === 'price') {
+      return sum + (i.requestedAmount ?? i.price ?? 0);
+    }
+    return sum + (i.price || 0) * (i.quantity || 0);
+  }, 0);
   const transfer = order.transferInformation || {};
   const isPending = order.status === 'pending';
   const showActions = isPending;
@@ -73,14 +83,14 @@ export default function StoreOrderCard({
       </section>
 
       <section className="store-order-card__section">
-        <h4>المنتجات</h4>
+        <h4>العناصر</h4>
         <div className="store-order-card__items">
           {items.map((item) => (
             <OrderItemRow key={`${item.item}-${item.name}`} item={item} />
           ))}
         </div>
         <div className="store-order-card__totals">
-          <div><span>مجموع المنتجات</span><strong>{productsSubtotal.toFixed(2)} ₪</strong></div>
+          <div><span>مجموع العناصر</span><strong>{productsSubtotal.toFixed(2)} ₪</strong></div>
           <div className="store-order-card__totals-final">
             <span>الإجمالي النهائي</span>
             <strong>{order.total} ₪</strong>

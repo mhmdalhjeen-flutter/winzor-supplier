@@ -148,6 +148,6 @@ export async function getPreviewUrlForItem(item) {
 
 export function getItemTitle(item) {
   if (!item) return '';
-  if (item.type === 'product') return item.payload?.name || 'منتج بدون اسم';
+  if (item.type === 'product') return item.payload?.name || 'عنصر بدون اسم';
   return item.payload?.title || 'عرض بدون اسم';
 }

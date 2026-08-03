@@ -32,7 +32,7 @@ export default function Products() {
 
   return (
     <div className="grid-page">
-      <h2 className="title">📦 المنتجات المتاحة</h2>
+      <h2 className="title">📦 العناصر المتاحة</h2>
 
       <div className="grid">
         {products.map((p) => (
