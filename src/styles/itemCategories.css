@@ -4,6 +4,12 @@
   border-top: 1px solid #e2e8f0;
 }
 
+.item-categories-section--embedded {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+}
+
 .item-categories-section__head h3 {
   margin: 0 0 6px;
   font-size: 17px;

@@ -1,6 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import '../styles/dashboard.css';
+import {
+  Send, Camera, ChevronRight, Check, CheckCheck,
+  MessageCircle, X, Paperclip,
+} from 'lucide-react';
 import '../styles/Chats.css';
 import { mergeChatMessages, messagesShallowEqual } from '../utils/chatMessages';
 import ReferencedItemsBar from '../components/ReferencedItemsBar';
@@ -12,519 +15,604 @@ import { API_URL } from '../lib/apiUrl';
 
 const API = API_URL;
 const POLL_MS = 3000;
-const WARN_KEY = "chatExpiryWarned";
+const WARN_KEY = 'chatExpiryWarned';
+const MAX_INPUT_LINES = 3;
+
+function isMessageSenderMine(sender, myId) {
+  const senderId = sender?._id || sender;
+  return String(senderId) === String(myId) && !!myId;
+}
+
+function ChatListPreview({ conv, myId, unread }) {
+  const lastMsg = conv.lastMessage;
+  const previewText = (lastMsg?.image || lastMsg?.hasImage)
+    ? '📷 صورة'
+    : lastMsg?.text || 'ابدأ المحادثة';
+  const isMine = lastMsg && isMessageSenderMine(lastMsg.sender, myId);
+
+  return (
+    <div className="chat-preview-row">
+      {isMine && (
+        <span className={`chat-preview-status${lastMsg.read ? ' is-read' : ''}`} aria-hidden>
+          {lastMsg.read ? <CheckCheck size={15} strokeWidth={2.5} /> : <Check size={15} strokeWidth={2.5} />}
+        </span>
+      )}
+      <p className={unread > 0 ? 'chat-preview-unread' : ''}>{previewText}</p>
+    </div>
+  );
+}
+
+function useAutoResizeTextarea(value, maxLines = MAX_INPUT_LINES) {
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+
+    el.style.height = 'auto';
+    const style = window.getComputedStyle(el);
+    const lineHeight = parseFloat(style.lineHeight) || 22;
+    const paddingTop = parseFloat(style.paddingTop) || 0;
+    const paddingBottom = parseFloat(style.paddingBottom) || 0;
+    const maxHeight = lineHeight * maxLines + paddingTop + paddingBottom;
+    const nextHeight = Math.min(el.scrollHeight, maxHeight);
+
+    el.style.height = `${nextHeight}px`;
+    el.style.overflowY = el.scrollHeight > maxHeight ? 'auto' : 'hidden';
+  }, [value, maxLines]);
+
+  return ref;
+}
 
 export default function Chats() {
-    const navigate = useNavigate();
-    const token  = localStorage.getItem("token");
-    const myUser = getStoredUser({});
-    const myId   = myUser._id || myUser.id;
-    const baseRoute = myUser?.role === 'supplier' ? '/supplier' : '/store';
-    
-    
+  const navigate = useNavigate();
+  const token = localStorage.getItem('token');
+  const myUser = getStoredUser({});
+  const myId = myUser._id || myUser.id;
+  const baseRoute = myUser?.role === 'supplier' ? '/supplier' : '/store';
 
-    const headers = {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-    };
+  const headers = {
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${token}`,
+  };
 
-    const [conversations, setConversations] = useState([]);
-    const [activeConv, setActiveConv]       = useState(null);
-    const [messages, setMessages]           = useState([]);
-    const [text, setText]                   = useState("");
-    const [loading, setLoading]             = useState(true);
-    const [sending, setSending]             = useState(false);
-    const [showWarning, setShowWarning]     = useState(false);
-    const [replyTo, setReplyTo]             = useState(null); // الرسالة المُردّ عليها
-    const [imagePreview, setImagePreview]   = useState(null); // صورة مرفقة
-    const [imageFile, setImageFile]         = useState(null);
+  const [conversations, setConversations] = useState([]);
+  const [activeConv, setActiveConv] = useState(null);
+  const [messages, setMessages] = useState([]);
+  const [text, setText] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [sending, setSending] = useState(false);
+  const [showWarning, setShowWarning] = useState(false);
+  const [replyTo, setReplyTo] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
+  const [imageFile, setImageFile] = useState(null);
+  const [lightboxUrl, setLightboxUrl] = useState(null);
 
-    const messagesEndRef = useRef(null);
-    const pollingRef     = useRef(null);
-    const activeConvRef  = useRef(null);
-    const fileInputRef   = useRef(null);
-    const cameraInputRef = useRef(null);
+  const messagesEndRef = useRef(null);
+  const pollingRef = useRef(null);
+  const activeConvRef = useRef(null);
+  const fileInputRef = useRef(null);
+  const cameraInputRef = useRef(null);
+  const textareaRef = useAutoResizeTextarea(text);
 
-    useEffect(() => { activeConvRef.current = activeConv; }, [activeConv]);
+  useEffect(() => { activeConvRef.current = activeConv; }, [activeConv]);
 
-    useEffect(() => {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
-        if (!localStorage.getItem(WARN_KEY)) setShowWarning(true);
-    }, []);
+  useEffect(() => {
+    if (!localStorage.getItem(WARN_KEY)) setShowWarning(true);
+  }, []);
 
-    const dismissWarning = () => {
-        localStorage.setItem(WARN_KEY, "1");
-        setShowWarning(false);
-    };
+  const dismissWarning = () => {
+    localStorage.setItem(WARN_KEY, '1');
+    setShowWarning(false);
+  };
 
-    // ===== جلب المحادثات =====
-    const fetchConversations = useCallback(async () => {
-        try {
-            const res  = await fetch(`${API}/chats`, { headers });
-            const data = await res.json();
-            if (res.ok) setConversations(data.conversations || []);
-        } catch { }
-        finally { setLoading(false); }
-    }, []);
+  const fetchConversations = useCallback(async () => {
+    try {
+      const res = await fetch(`${API}/chats`, { headers });
+      const data = await res.json();
+      if (res.ok) setConversations(data.conversations || []);
+    } catch {
+      /* ignore */
+    } finally {
+      setLoading(false);
+    }
+  }, [token]);
 
-    // ===== جلب الرسائل =====
-    const fetchMessages = useCallback(async (convId, silent = false) => {
-        try {
-            const res  = await fetch(`${API}/chats/${convId}`, { headers });
-            const data = await res.json();
-            if (!res.ok) return;
-            setMessages(prev => {
-                const merged = mergeChatMessages(data.messages, prev);
-                if (messagesShallowEqual(prev, merged)) return prev;
-                if (!silent) scrollToBottom();
-                return merged;
-            });
-        } catch { }
-    }, []);
+  const scrollToBottom = () =>
+    setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 80);
 
-    // ===== Polling =====
-    const startPolling = useCallback((convId) => {
-        if (pollingRef.current) clearInterval(pollingRef.current);
-        pollingRef.current = setInterval(() => {
-            if (activeConvRef.current?._id === convId) {
-                fetchMessages(convId, true);
-                fetchConversations();
-            }
-        }, POLL_MS);
-    }, [fetchMessages, fetchConversations]);
+  const fetchMessages = useCallback(async (convId, silent = false) => {
+    try {
+      const res = await fetch(`${API}/chats/${convId}`, { headers });
+      const data = await res.json();
+      if (!res.ok) return;
+      setMessages((prev) => {
+        const merged = mergeChatMessages(data.messages, prev);
+        if (messagesShallowEqual(prev, merged)) return prev;
+        if (!silent) scrollToBottom();
+        return merged;
+      });
+    } catch {
+      /* ignore */
+    }
+  }, [token]);
 
-    useEffect(() => {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
+  const stopPolling = useCallback(() => {
+    if (pollingRef.current) {
+      clearInterval(pollingRef.current);
+      pollingRef.current = null;
+    }
+  }, []);
+
+  const startPolling = useCallback((convId) => {
+    stopPolling();
+    pollingRef.current = setInterval(() => {
+      if (activeConvRef.current?._id === convId) {
+        fetchMessages(convId, true);
         fetchConversations();
-        return () => { if (pollingRef.current) clearInterval(pollingRef.current); };
-    }, []);
+      }
+    }, POLL_MS);
+  }, [fetchMessages, fetchConversations, stopPolling]);
 
-    // ===== فتح محادثة =====
-    const openConversation = (conv) => {
-        setActiveConv(conv);
-        setMessages([]);
-        setReplyTo(null);
-        setImagePreview(null);
-        setImageFile(null);
-        fetchMessages(conv._id);
-        startPolling(conv._id);
-    };
+  useEffect(() => {
+    fetchConversations();
+    return () => stopPolling();
+  }, [fetchConversations, stopPolling]);
 
-    // ===== context من صفحة المنتج =====
-    useEffect(() => {
-        const ctx = localStorage.getItem("chatContext");
-        if (!ctx) return;
-        const parsed = JSON.parse(ctx);
-        localStorage.removeItem("chatContext");
+  const openConversation = useCallback((conv) => {
+    setActiveConv(conv);
+    setMessages([]);
+    setReplyTo(null);
+    setImagePreview(null);
+    setImageFile(null);
+    fetchMessages(conv._id);
+    startPolling(conv._id);
+  }, [fetchMessages, startPolling]);
 
-        (async () => {
-            try {
-                const res  = await fetch(`${API}/chats`, {
-                    method: "POST", headers,
-                    body: JSON.stringify({
-                        recipientId: parsed.storeOwnerId,
-                        context: {
-                            itemId:    parsed.productId || parsed.context?.itemId,
-                            itemType:  parsed.itemType || parsed.context?.itemType || "Product",
-                            itemName:  parsed.productName || parsed.context?.itemName,
-                            itemImage: parsed.productImg || parsed.context?.itemImage,
-                        },
-                    }),
-                });
-                const data = await res.json();
-                if (!res.ok) return;
-                openConversation(data.conversation);
-                fetchConversations();
-                if (parsed.prefillText) {
-    // جاء من صفحة الطلبات — نضع نص الطلب مباشرة
-                  setTimeout(() => setText(parsed.prefillText), 400);
-              } else if (parsed.productName) {
-                  // جاء من صفحة المنتج — نضع رسالة الاهتمام
-                  setTimeout(() => setText(
-                      `مرحباً، أنا مهتم بـ: ${parsed.productName} — ${parsed.productPrice} ₪`
-                  ), 400);
-              }
-            } catch { }
-        })();
-    }, []);
+  useEffect(() => {
+    const ctx = localStorage.getItem('chatContext');
+    if (!ctx) return;
+    const parsed = JSON.parse(ctx);
+    localStorage.removeItem('chatContext');
 
-    // ===== اختيار صورة =====
-    const handleImageSelect = async (file) => {
-        if (!file) return;
-        if (file.size > 5 * 1024 * 1024)
-            return alert("الصورة أكبر من 5MB");
-        try {
-            const url = await uploadImage(file);
-            setImageFile(url);
-            setImagePreview(url);
-        } catch (err) {
-            alert(err.message || "فشل رفع الصورة");
+    (async () => {
+      try {
+        const res = await fetch(`${API}/chats`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            recipientId: parsed.storeOwnerId,
+            context: {
+              itemId: parsed.productId || parsed.context?.itemId,
+              itemType: parsed.itemType || parsed.context?.itemType || 'Product',
+              itemName: parsed.productName || parsed.context?.itemName,
+              itemImage: parsed.productImg || parsed.context?.itemImage,
+            },
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) return;
+        openConversation(data.conversation);
+        fetchConversations();
+        if (parsed.prefillText) {
+          setTimeout(() => setText(parsed.prefillText), 400);
+        } else if (parsed.productName) {
+          setTimeout(() => setText(
+            `مرحباً، أنا مهتم بـ: ${parsed.productName} — ${parsed.productPrice} ₪`,
+          ), 400);
         }
+      } catch {
+        /* ignore */
+      }
+    })();
+  }, [openConversation, fetchConversations, token]);
+
+  const handleImageSelect = async (file) => {
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) return alert('الصورة أكبر من 5MB');
+    try {
+      const url = await uploadImage(file);
+      setImageFile(url);
+      setImagePreview(url);
+    } catch (err) {
+      alert(err.message || 'فشل رفع الصورة');
+    }
+  };
+
+  const sendMessage = async () => {
+    if ((!text.trim() && !imageFile) || !activeConv || sending) return;
+    setSending(true);
+
+    const optimistic = {
+      _id: `tmp-${Date.now()}`,
+      clientKey: `c-${Date.now()}`,
+      sender: { _id: myId },
+      text: text.trim(),
+      image: imageFile || null,
+      replyTo: replyTo || null,
+      createdAt: new Date(),
+      read: false,
     };
 
-    // ===== إرسال رسالة =====
-    const sendMessage = async () => {
-        if ((!text.trim() && !imageFile) || !activeConv || sending) return;
-        setSending(true);
+    setMessages((prev) => [...prev, optimistic]);
+    const sentText = text.trim();
+    const sentImage = imageFile;
+    const sentReply = replyTo;
+    setText('');
+    setImagePreview(null);
+    setImageFile(null);
+    setReplyTo(null);
+    scrollToBottom();
 
-        const optimistic = {
-            // eslint-disable-next-line react-hooks/purity
-            _id:       "tmp-" + Date.now(),
-            clientKey: "c-" + Date.now(),
-            sender:    { _id: myId },
-            text:      text.trim(),
-            image:     imageFile || null,
-            replyTo:   replyTo || null,
-            createdAt: new Date(),
-            read:      false,
-        };
+    try {
+      const res = await fetch(`${API}/chats/${activeConv._id}`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          text: sentText,
+          image: sentImage,
+          replyTo: sentReply ? {
+            messageId: sentReply._id,
+            text: sentReply.text,
+            senderName: sentReply.sender?.name || 'مستخدم',
+          } : null,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message);
+      setMessages((prev) => prev.map((m) =>
+        m._id === optimistic._id
+          ? { ...data.message, clientKey: optimistic.clientKey }
+          : m,
+      ));
+      fetchConversations();
+    } catch (err) {
+      setMessages((prev) => prev.filter((m) => m._id !== optimistic._id));
+      setText(sentText);
+      setImageFile(sentImage);
+      setReplyTo(sentReply);
+      alert(`خطأ: ${err.message}`);
+    } finally {
+      setSending(false);
+    }
+  };
 
-        setMessages(prev => [...prev, optimistic]);
-        const sentText  = text.trim();
-        const sentImage = imageFile;
-        const sentReply = replyTo;
-        setText("");
-        setImagePreview(null);
-        setImageFile(null);
-        setReplyTo(null);
-        scrollToBottom();
+  const getOther = (conv) =>
+    conv.participants?.find((p) => {
+      const pid = p._id?.toString() || p?.toString();
+      return pid !== myId?.toString();
+    }) || conv.participants?.[0];
 
-        try {
-            const res  = await fetch(`${API}/chats/${activeConv._id}`, {
-                method: "POST", headers,
-                body: JSON.stringify({
-                    text:    sentText,
-                    image:   sentImage,
-                    replyTo: sentReply ? {
-                        messageId:  sentReply._id,
-                        text:       sentReply.text,
-                        senderName: sentReply.sender?.name || "مستخدم",
-                    } : null,
-                }),
-            });
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.message);
-            setMessages(prev => prev.map(m =>
-                m._id === optimistic._id
-                    ? { ...data.message, clientKey: optimistic.clientKey }
-                    : m
-            ));
-            fetchConversations();
-        } catch (err) {
-            setMessages(prev => prev.filter(m => m._id !== optimistic._id));
-            setText(sentText);
-            setImageFile(sentImage);
-            setReplyTo(sentReply);
-            alert("خطأ: " + err.message);
-        } finally {
-            setSending(false);
-        }
-    };
+  const getInitial = (name) => name?.charAt(0) || '؟';
 
-    const scrollToBottom = () =>
-        setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }), 80);
+  const formatTime = (date) => {
+    if (!date) return '';
+    const d = new Date(date);
+    const diff = Date.now() - d;
+    if (diff < 86400000) return d.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+    if (diff < 172800000) return 'أمس';
+    if (diff < 604800000) return d.toLocaleDateString('ar-EG', { weekday: 'short' });
+    return d.toLocaleDateString('ar-EG', { day: 'numeric', month: 'short' });
+  };
 
-    const getOther = (conv) =>
-        conv.participants?.find(p => {
-            const pid = p._id?.toString() || p?.toString();
-            return pid !== myId?.toString();
-        }) || conv.participants?.[0];
+  const formatListTime = (date) => {
+    if (!date) return '';
+    const d = new Date(date);
+    const diff = Date.now() - d;
+    if (diff < 60000) return 'الآن';
+    if (diff < 86400000) return d.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+    if (diff < 172800000) return 'أمس';
+    return d.toLocaleDateString('ar-EG', { day: 'numeric', month: 'short' });
+  };
 
-    const getInitial = (name) => name?.charAt(0) || "؟";
+  const openItemInStore = (item) => {
+    const path = getChatItemPath(item, { role: 'store', baseRoute });
+    if (path) navigate(path);
+    else alert('لا يمكن فتح هذا العنصر من لوحة المتجر');
+  };
 
-    const formatTime = (date) => {
-        if (!date) return "";
-        const d    = new Date(date);
-        // eslint-disable-next-line react-hooks/purity
-        const diff = Date.now() - d;
-        if (diff < 86400000)  return d.toLocaleTimeString("ar-EG", { hour:"2-digit", minute:"2-digit" });
-        if (diff < 172800000) return "أمس";
-        return d.toLocaleDateString("ar-EG");
-    };
+  const backToList = () => {
+    stopPolling();
+    setActiveConv(null);
+    setMessages([]);
+  };
 
-    const openItemInStore = (item) => {
-        const path = getChatItemPath(item, { role: 'store', baseRoute });
-        if (path) navigate(path);
-        else alert('لا يمكن فتح هذا العنصر من لوحة المتجر');
-    };
+  const referencedItems = activeConv ? getReferencedItems(activeConv) : [];
+  const showList = !activeConv;
+  const showWindow = !!activeConv;
 
-    const referencedItems = activeConv ? getReferencedItems(activeConv) : [];
-
+  if (loading) {
     return (
-        <div className="chats-page">
-            {/* تنبيه الحذف */}
-            {showWarning && (
-                <div style={{
-                    position:"fixed", top:"80px", left:"50%", transform:"translateX(-50%)",
-                    background:"#1e293b", color:"#fff", padding:"1rem 1.5rem",
-                    borderRadius:"12px", zIndex:9999, maxWidth:"380px", width:"90%",
-                    boxShadow:"0 8px 24px rgba(0,0,0,0.3)", direction:"rtl",
-                }}>
-                    <div style={{ display:"flex", gap:"0.75rem", alignItems:"flex-start" }}>
-                        <span style={{ fontSize:"1.5rem" }}>⏳</span>
-                        <div>
-                            <p style={{ margin:"0 0 0.4rem", fontWeight:"bold" }}>تنبيه: الرسائل تُحذف تلقائياً</p>
-                            <p style={{ margin:0, fontSize:"0.82rem", opacity:0.85, lineHeight:1.5 }}>
-                                تُحذف الرسائل بعد <strong>4 أيام</strong> من إرسالها لتخفيف التخزين.
-                            </p>
-                        </div>
-                    </div>
-                    <button onClick={dismissWarning} style={{
-                        marginTop:"0.75rem", width:"100%", padding:"0.5rem",
-                        background:"#667eea", color:"#fff", border:"none",
-                        borderRadius:"8px", cursor:"pointer", fontWeight:"bold",
-                    }}>فهمت ✓</button>
+      <div className="chats-page" dir="rtl">
+        <div className="messenger-container chat-skeleton">
+          <div className="chats-sidebar">
+            <div className="sidebar-header">
+              <div className="chat-skeleton__line chat-skeleton__line--title" />
+            </div>
+            <div className="chats-list">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <div key={i} className="chat-skeleton__item">
+                  <div className="chat-skeleton__avatar" />
+                  <div className="chat-skeleton__body">
+                    <div className="chat-skeleton__line chat-skeleton__line--name" />
+                    <div className="chat-skeleton__line chat-skeleton__line--msg" />
+                  </div>
                 </div>
+              ))}
+            </div>
+          </div>
+          <div className="chat-window chat-window--empty">
+            <MessageCircle size={48} strokeWidth={1.5} className="chat-empty-icon" />
+            <p>جاري تحميل المحادثات...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="chats-page" dir="rtl">
+      {showWarning && (
+        <div className="chat-expiry-toast">
+          <div className="chat-expiry-toast__inner">
+            <span className="chat-expiry-toast__icon">⏳</span>
+            <div>
+              <p className="chat-expiry-toast__title">تنبيه: الرسائل تُحذف تلقائياً</p>
+              <p className="chat-expiry-toast__text">
+                تُحذف الرسائل بعد <strong>4 أيام</strong> من إرسالها لتخفيف التخزين.
+              </p>
+            </div>
+          </div>
+          <button type="button" className="chat-expiry-toast__btn" onClick={dismissWarning}>
+            فهمت ✓
+          </button>
+        </div>
+      )}
+
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        className="hidden-input"
+        onChange={(e) => handleImageSelect(e.target.files?.[0])}
+      />
+      <input
+        ref={cameraInputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        capture="environment"
+        className="hidden-input"
+        onChange={(e) => handleImageSelect(e.target.files?.[0])}
+      />
+
+      <div className="messenger-container">
+        <div className={`chats-sidebar ${showWindow ? 'mobile-hidden' : ''}`}>
+          <div className="sidebar-header">
+            <h3><MessageCircle size={20} strokeWidth={2.2} /> الرسائل</h3>
+            <span>{conversations.length} محادثة</span>
+          </div>
+          <div className="chats-list">
+            {conversations.length === 0 ? (
+              <div className="chats-empty-state">
+                <MessageCircle size={40} strokeWidth={1.5} />
+                <p>لا توجد محادثات بعد</p>
+                <span>ستظهر محادثات الزبائن هنا</span>
+              </div>
+            ) : (
+              conversations.map((conv) => {
+                const other = getOther(conv);
+                const unread = getUnreadCountForUser(conv.unreadCount, myId);
+                const isActive = activeConv?._id === conv._id;
+
+                return (
+                  <div
+                    key={conv._id}
+                    className={`chat-item${isActive ? ' active' : ''}${unread > 0 ? ' has-unread' : ''}`}
+                    onClick={() => openConversation(conv)}
+                  >
+                    <div className="chat-avatar">{getInitial(other?.name)}</div>
+                    <div className="chat-info">
+                      <h4>{other?.name || 'مستخدم'}</h4>
+                      <ChatListPreview conv={conv} myId={myId} unread={unread} />
+                    </div>
+                    <div className="chat-meta">
+                      <span className={`chat-time${unread > 0 ? ' chat-time--unread' : ''}`}>
+                        {formatListTime(conv.lastMessage?.createdAt || conv.updatedAt)}
+                      </span>
+                      {unread > 0 && (
+                        <span className="chat-unread-badge" aria-label={`${unread} غير مقروء`}>
+                          {unread > 99 ? '99+' : unread}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+
+        {!activeConv ? (
+          <div className={`chat-window chat-window--empty ${showList ? 'mobile-hidden' : ''}`}>
+            <MessageCircle size={56} strokeWidth={1.2} className="chat-empty-icon" />
+            <p className="chat-empty-title">اختر محادثة للبدء</p>
+            <span className="chat-empty-sub">رسائل الزبائن تظهر هنا</span>
+          </div>
+        ) : (
+          <div className={`chat-window ${showList ? 'mobile-hidden' : ''}`}>
+            <button
+              type="button"
+              className="chat-back-fab"
+              onClick={backToList}
+              aria-label="رجوع للمحادثات"
+            >
+              <ChevronRight size={22} strokeWidth={2.2} />
+            </button>
+
+            <div className="chat-window-header">
+              <div className="chat-window-header__user">
+                <div className="chat-avatar">{getInitial(getOther(activeConv)?.name)}</div>
+                <div>
+                  <h4>{getOther(activeConv)?.name || 'مستخدم'}</h4>
+                  <span className="chat-window-header__hint">⏳ الرسائل تُحذف بعد 4 أيام</span>
+                </div>
+              </div>
+              <button
+                type="button"
+                className="chat-window-header__wa"
+                onClick={() => {
+                  const other = getOther(activeConv);
+                  const phone = other?.phone || other?.whatsapp;
+                  if (!phone) return alert('رقم الواتساب غير متاح');
+                  window.open(`https://wa.me/${phone.replace(/\D/g, '')}`, '_blank');
+                }}
+              >
+                واتساب
+              </button>
+            </div>
+
+            <ReferencedItemsBar items={referencedItems} onItemClick={openItemInStore} />
+
+            <div className="chat-messages">
+              {messages.length === 0 && (
+                <div className="chat-messages-empty">
+                  <span>👋</span>
+                  <p>ابدأ المحادثة الآن</p>
+                </div>
+              )}
+
+              {messages.map((msg, i) => {
+                const isMine = isMessageSenderMine(msg.sender, myId);
+                return (
+                  <div
+                    key={msg.clientKey || msg._id || i}
+                    className={`msg msg--animate ${isMine ? 'sent' : 'received'}`}
+                    onDoubleClick={() => setReplyTo(msg)}
+                    title="انقر مرتين للرد"
+                  >
+                    {msg.replyTo?.text && (
+                      <div className="msg-reply-quote">
+                        <span className="msg-reply-name">{msg.replyTo.senderName}:</span>{' '}
+                        {msg.replyTo.text}
+                      </div>
+                    )}
+                    {msg.image && (
+                      <button
+                        type="button"
+                        className="msg-image-btn"
+                        onClick={() => setLightboxUrl(msg.image)}
+                      >
+                        <img src={msg.image} alt="" className="msg-image" />
+                      </button>
+                    )}
+                    {msg.text && <p className="msg-text">{msg.text}</p>}
+                    <span className="msg-meta">
+                      {formatTime(msg.createdAt)}
+                      {isMine && (
+                        <span className={`read-status${msg.read ? ' is-read' : ''}`} aria-label={msg.read ? 'مقروء' : 'مُرسَل'}>
+                          {msg.read ? <CheckCheck size={14} strokeWidth={2.5} /> : <Check size={14} strokeWidth={2.5} />}
+                        </span>
+                      )}
+                    </span>
+                  </div>
+                );
+              })}
+
+              {sending && (
+                <div className="typing-indicator" aria-label="جاري الإرسال">
+                  <span /><span /><span />
+                </div>
+              )}
+
+              <div ref={messagesEndRef} />
+            </div>
+
+            {replyTo && (
+              <div className="reply-preview-bar">
+                <div>
+                  <span className="reply-preview-bar__label">
+                    رداً على: {replyTo.sender?.name || 'مستخدم'}
+                  </span>
+                  <p>{replyTo.image ? '📷 صورة' : replyTo.text}</p>
+                </div>
+                <button type="button" onClick={() => setReplyTo(null)} aria-label="إلغاء الرد">✕</button>
+              </div>
             )}
 
-            {/* inputs مخفية للصور */}
-            <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp"
-                style={{ display:"none" }}
-                onChange={e => handleImageSelect(e.target.files[0])} />
-            <input ref={cameraInputRef} type="file" accept="image/jpeg,image/png,image/webp" capture="environment"
-                style={{ display:"none" }}
-                onChange={e => handleImageSelect(e.target.files[0])} />
+            {imagePreview && (
+              <div className="image-preview-bar">
+                <img src={imagePreview} alt="" />
+                <span>صورة مرفقة</span>
+                <button
+                  type="button"
+                  onClick={() => { setImagePreview(null); setImageFile(null); }}
+                  aria-label="إزالة الصورة"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+            )}
 
-            <div className="messenger-container">
-                {/* Sidebar */}
-                <div className="chats-sidebar">
-                    <div className="sidebar-header">
-                        <h3>💬 الرسائل</h3>
-                        <span style={{ fontSize:"0.8rem", color:"var(--text-secondary)" }}>
-                            {conversations.length} محادثة
-                        </span>
-                    </div>
-                    <div className="chats-list">
-                        {conversations.length === 0 ? (
-                            <div style={{ padding:"2rem", textAlign:"center", color:"var(--text-secondary)" }}>
-                                <p style={{ fontSize:"2rem" }}>💬</p>
-                                <p>لا توجد محادثات بعد</p>
-                            </div>
-                        ) : conversations.map(conv => {
-                            const other      = getOther(conv);
-                            const unread     = getUnreadCountForUser(conv.unreadCount, myId);
-                            const isActive   = activeConv?._id === conv._id;
-                            const lastMsgTxt = conv.lastMessage?.image
-                                ? "📷 صورة"
-                                : conv.lastMessage?.text || "ابدأ المحادثة";
-
-                            return (
-                                <div key={conv._id}
-                                    className={`chat-item ${isActive ? "active" : ""}`}
-                                    onClick={() => openConversation(conv)}
-                                >
-                                    <div className="chat-avatar">
-                                        {getInitial(other?.name)}
-                                        {unread > 0 && <span className="online-dot" />}
-                                    </div>
-                                    <div className="chat-info">
-                                        <h4>{other?.name || "مستخدم"}</h4>
-                                        <p style={{
-                                            overflow:"hidden", whiteSpace:"nowrap",
-                                            textOverflow:"ellipsis", maxWidth:"140px", fontSize:"0.82rem",
-                                        }}>
-                                            {lastMsgTxt}
-                                        </p>
-                                    </div>
-                                    <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:"4px" }}>
-                                        <span className="chat-time">{formatTime(conv.updatedAt)}</span>
-                                        {unread > 0 && (
-                                            <span style={{
-                                                background:"#ef4444", color:"#fff", borderRadius:"50%",
-                                                width:"18px", height:"18px", fontSize:"0.7rem",
-                                                display:"flex", alignItems:"center", justifyContent:"center",
-                                                fontWeight:"bold",
-                                            }}>
-                                                {unread > 9 ? "9+" : unread}
-                                            </span>
-                                        )}
-                                    </div>
-                                </div>
-                            );
-                        })}
-                    </div>
-                </div>
-
-                {/* Chat Window */}
-                {!activeConv ? (
-                    <div className="chat-window" style={{
-                        display:"flex", alignItems:"center", justifyContent:"center",
-                        flexDirection:"column", gap:"1rem", color:"var(--text-secondary)",
-                    }}>
-                        <div style={{ fontSize:"4rem" }}>💬</div>
-                        <p>اختر محادثة للبدء</p>
-                    </div>
-                ) : (
-                    <div className="chat-window">
-                        {/* Header */}
-                        <div className="window-header">
-                            <div className="user-details">
-                                <div className="chat-avatar" style={{ cursor:"default" }}>
-                                    {getInitial(getOther(activeConv)?.name)}
-                                </div>
-                                <div>
-                                    <h4 style={{ margin:0 }}>{getOther(activeConv)?.name || "مستخدم"}</h4>
-                                    <span style={{ fontSize:"0.72rem", color:"var(--text-secondary)" }}>
-                                        ⏳ الرسائل تُحذف بعد 4 أيام
-                                    </span>
-                                </div>
-                            </div>
-                            <div className="header-links">
-                                <button className="mini-wa" onClick={() => {
-                                    const other = getOther(activeConv);
-                                    const phone = other?.phone || other?.whatsapp;
-                                    if (!phone) return alert("رقم الواتساب غير متاح");
-                                    window.open(`https://wa.me/${phone.replace(/\D/g,"")}`, "_blank");
-                                }}>📱 واتساب</button>
-                            </div>
-                        </div>
-
-                        <ReferencedItemsBar items={referencedItems} onItemClick={openItemInStore} />
-
-                        {/* الرسائل */}
-                        <div className="chat-messages">
-                            {messages.length === 0 && (
-                                <div style={{ textAlign:"center", color:"var(--text-secondary)", padding:"2rem" }}>
-                                    ابدأ المحادثة الآن 👋
-                                </div>
-                            )}
-                            {messages.map((msg, i) => {
-                                const senderId = msg.sender?._id || msg.sender;
-                                const isMine   = senderId?.toString() === myId?.toString();
-                                return (
-                                    <div key={msg.clientKey || msg._id || i}
-                                        className={`msg ${isMine ? "sent" : "received"}`}
-                                        onDoubleClick={() => setReplyTo(msg)} // دبل كليك للرد
-                                        title="انقر مرتين للرد"
-                                    >
-                                        {/* التعليق على رسالة */}
-                                        {msg.replyTo?.text && (
-                                            <div style={{
-                                                borderRight:"3px solid rgba(255,255,255,0.5)",
-                                                paddingRight:"8px", marginBottom:"6px",
-                                                fontSize:"0.75rem", opacity:0.8,
-                                                background:"rgba(0,0,0,0.1)",
-                                                borderRadius:"4px", padding:"4px 8px",
-                                            }}>
-                                                <span style={{ fontWeight:"bold" }}>
-                                                    {msg.replyTo.senderName}:
-                                                </span> {msg.replyTo.text}
-                                            </div>
-                                        )}
-
-                                        {/* الصورة */}
-                                        {msg.image && (
-                                            <img src={msg.image} alt="صورة"
-                                                style={{
-                                                    maxWidth:"220px", borderRadius:"8px",
-                                                    display:"block", marginBottom: msg.text ? "6px" : 0,
-                                                    cursor:"pointer",
-                                                }}
-                                                onClick={() => window.open(msg.image, "_blank")}
-                                            />
-                                        )}
-
-                                        {/* النص */}
-                                        {msg.text && (
-                                            <p style={{ margin:0, whiteSpace:"pre-wrap" }}>{msg.text}</p>
-                                        )}
-
-                                        <span className="msg-meta">
-                                            {formatTime(msg.createdAt)}
-                                            {isMine && (
-                                                <span className="read-status">{msg.read ? "✓✓" : "✓"}</span>
-                                            )}
-                                        </span>
-                                    </div>
-                                );
-                            })}
-                            {sending && (
-                                <div className="typing-indicator" aria-label="جاري الكتابة">
-                                    <span /><span /><span />
-                                </div>
-                            )}
-                            <div ref={messagesEndRef} />
-                        </div>
-
-                        {/* منطقة الرد على رسالة */}
-                        {replyTo && (
-                            <div style={{
-                                padding:"0.5rem 1rem", background:"rgba(102,126,234,0.08)",
-                                borderTop:"1px solid var(--border)",
-                                display:"flex", alignItems:"center", justifyContent:"space-between",
-                                direction:"rtl",
-                            }}>
-                                <div style={{ fontSize:"0.82rem" }}>
-                                    <span style={{ color:"#667eea", fontWeight:"bold" }}>
-                                        رداً على: {replyTo.sender?.name || "مستخدم"}
-                                    </span>
-                                    <p style={{ margin:"2px 0 0", opacity:0.7, whiteSpace:"nowrap",
-                                        overflow:"hidden", textOverflow:"ellipsis", maxWidth:"250px" }}>
-                                        {replyTo.image ? "📷 صورة" : replyTo.text}
-                                    </p>
-                                </div>
-                                <button onClick={() => setReplyTo(null)} style={{
-                                    background:"none", border:"none", cursor:"pointer",
-                                    fontSize:"1.2rem", color:"var(--text-secondary)",
-                                }}>✕</button>
-                            </div>
-                        )}
-
-                        {/* معاينة الصورة المرفقة */}
-                        {imagePreview && (
-                            <div style={{
-                                padding:"0.5rem 1rem", borderTop:"1px solid var(--border)",
-                                display:"flex", alignItems:"center", gap:"0.75rem",
-                            }}>
-                                <img src={imagePreview} alt="معاينة"
-                                    style={{ width:"60px", height:"60px", borderRadius:"8px", objectFit:"cover" }} />
-                                <span style={{ fontSize:"0.82rem", color:"var(--text-secondary)" }}>صورة مرفقة</span>
-                                <button onClick={() => { setImagePreview(null); setImageFile(null); }}
-                                    style={{ background:"none", border:"none", cursor:"pointer",
-                                        fontSize:"1.2rem", color:"#ef4444", marginRight:"auto" }}>✕</button>
-                            </div>
-                        )}
-
-                        {/* Input */}
-                        <div className="chat-input-area">
-                            {/* زر الكاميرا */}
-                            <button onClick={() => cameraInputRef.current?.click()}
-                                title="التقاط صورة"
-                                style={{
-                                    background:"none", border:"none", cursor:"pointer",
-                                    fontSize:"1.3rem", padding:"0 4px", color:"var(--text-secondary)",
-                                }}>📷</button>
-
-                            {/* زر اختيار صورة */}
-                            <button onClick={() => fileInputRef.current?.click()}
-                                title="إرفاق صورة"
-                                style={{
-                                    background:"none", border:"none", cursor:"pointer",
-                                    fontSize:"1.3rem", padding:"0 4px", color:"var(--text-secondary)",
-                                }}>🖼️</button>
-
-                            <input
-                                type="text"
-                                placeholder="اكتب رسالتك... (Enter للإرسال)"
-                                value={text}
-                                onChange={e => setText(e.target.value)}
-                                onKeyDown={e => {
-                                    if (e.key === "Enter" && !e.shiftKey) {
-                                        e.preventDefault();
-                                        sendMessage();
-                                    }
-                                }}
-                                disabled={sending}
-                                autoFocus
-                            />
-                            <button className="send-msg-btn" onClick={sendMessage}
-                                disabled={sending || (!text.trim() && !imageFile)}>
-                                {sending ? "⏳" : "إرسال ←"}
-                            </button>
-                        </div>
-                    </div>
-                )}
+            <div className="chat-composer">
+              <div className="chat-composer__tools">
+                <button
+                  type="button"
+                  className="chat-media-btn"
+                  title="إرفاق صورة"
+                  aria-label="إرفاق صورة"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <Paperclip size={21} strokeWidth={2} />
+                </button>
+                <button
+                  type="button"
+                  className="chat-media-btn"
+                  title="التقاط صورة"
+                  aria-label="التقاط صورة"
+                  onClick={() => cameraInputRef.current?.click()}
+                >
+                  <Camera size={21} strokeWidth={2} />
+                </button>
+              </div>
+              <div className="chat-composer__input-wrap">
+                <textarea
+                  ref={textareaRef}
+                  className="chat-composer__textarea"
+                  placeholder="اكتب رسالة..."
+                  value={text}
+                  rows={1}
+                  onChange={(e) => setText(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      sendMessage();
+                    }
+                  }}
+                  disabled={sending}
+                />
+              </div>
+              <button
+                type="button"
+                className="chat-composer__send"
+                onClick={sendMessage}
+                disabled={sending || (!text.trim() && !imageFile)}
+                aria-label="إرسال"
+              >
+                <Send size={20} strokeWidth={2.4} />
+              </button>
             </div>
+          </div>
+        )}
+      </div>
+
+      {lightboxUrl && (
+        <div className="chat-lightbox" onClick={() => setLightboxUrl(null)} role="presentation">
+          <button type="button" className="chat-lightbox__close" onClick={() => setLightboxUrl(null)} aria-label="إغلاق">
+            <X size={24} />
+          </button>
+          <img src={lightboxUrl} alt="" onClick={(e) => e.stopPropagation()} />
         </div>
-    );
+      )}
+    </div>
+  );
 }

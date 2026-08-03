@@ -17,20 +17,19 @@ export const getUser = () => getStoredUser(null);
 
 export const getRole = () => getStoredUser(null)?.role ?? null;
 
-export const logout = async () => {
+export const logout = () => {
   const token = localStorage.getItem("token");
-  if (token) {
-    try {
-      await api.post("/auth/logout", {}, {
-        headers: { "x-device-id": getDeviceId() },
-      });
-    } catch {
-      /* مسح محلي حتى لو فشل الخادم */
-    }
-  }
+  const deviceId = getDeviceId();
 
   localStorage.removeItem("token");
   localStorage.removeItem("refreshToken");
   localStorage.removeItem("user");
   clearDeviceId();
+
+  if (token) {
+    api.post("/auth/logout", {}, {
+      headers: { "x-device-id": deviceId },
+      timeout: 4000,
+    }).catch(() => {});
+  }
 };

@@ -3,8 +3,8 @@ import { logout as authLogout } from "../utils/auth";
 const MESSAGE = "يرجى تجديد الاشتراك للدخول إلى لوحة المتجر";
 
 export default function SubscriptionExpiredGate({ navigate, baseRoute }) {
-  const handleLogout = async () => {
-    await authLogout();
+  const handleLogout = () => {
+    authLogout();
     navigate("/login", { replace: true });
   };
 

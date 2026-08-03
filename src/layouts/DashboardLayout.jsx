@@ -25,6 +25,7 @@ export default function DashboardLayout() {
   const [welcomeOpen, setWelcomeOpen] = useState(false);
   const [suggestedDefaults, setSuggestedDefaults] = useState(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
 
   const { data: storeQueryData } = useQuery({
     queryKey: queryKeys.myStore,
@@ -62,8 +63,11 @@ export default function DashboardLayout() {
 
   const toggleMenu = () => setMenuOpen((open) => !open);
 
-  const logout = async () => {
-    await authLogout();
+  const logout = () => {
+    if (loggingOut) return;
+    setLoggingOut(true);
+    setMenuOpen(false);
+    authLogout();
     navigate("/login", { replace: true });
   };
 
@@ -101,9 +105,6 @@ export default function DashboardLayout() {
 
       <NavLink to={`${baseRoute}/support`} onClick={() => setMenuOpen(false)}>🎧 <span>الدعم الفني</span></NavLink>
       <NavLink to={`${baseRoute}/profile`} onClick={() => setMenuOpen(false)}>👤 <span>الملف الشخصي</span></NavLink>
-      {!isSupplier && isStoreOwner && (
-        <NavLink to={`${baseRoute}/payment-settings`} onClick={() => setMenuOpen(false)}>💳 <span>إعدادات الدفع</span></NavLink>
-      )}
 
       {canInstall && (
         <button
@@ -118,8 +119,8 @@ export default function DashboardLayout() {
         </button>
       )}
 
-      <button type="button" className="logout-link" onClick={logout}>
-        🚪 <span>تسجيل الخروج</span>
+      <button type="button" className="logout-link" onClick={logout} disabled={loggingOut}>
+        🚪 <span>{loggingOut ? "جاري الخروج..." : "تسجيل الخروج"}</span>
       </button>
     </>
   );

@@ -12,7 +12,7 @@ import {
 import { queryKeys } from '../lib/queryClient';
 import '../styles/itemCategories.css';
 
-export default function ItemCategoriesSection() {
+export default function ItemCategoriesSection({ embedded = false }) {
   const queryClient = useQueryClient();
   const [newName, setNewName] = useState('');
   const [editingId, setEditingId] = useState(null);
@@ -103,12 +103,14 @@ export default function ItemCategoriesSection() {
     }
   };
 
-  return (
-    <section className="item-categories-section" id="item-categories">
-      <div className="item-categories-section__head">
-        <h3>أنواع العناصر</h3>
-        <p>أنشئ تصنيفات خاصة بمتجرك لتنظيم العناصر والعروض</p>
-      </div>
+  const content = (
+    <>
+      {!embedded && (
+        <div className="item-categories-section__head">
+          <h3>أنواع العناصر</h3>
+          <p>أنشئ تصنيفات خاصة بمتجرك لتنظيم العناصر والعروض</p>
+        </div>
+      )}
 
       {message.text && (
         <div className={message.isError ? 'alert-error' : 'alert-success'}>{message.text}</div>
@@ -182,6 +184,16 @@ export default function ItemCategoriesSection() {
         onConfirm={executeDelete}
         onCancel={() => !busy && setConfirmDelete(null)}
       />
+    </>
+  );
+
+  if (embedded) {
+    return <div className="item-categories-section item-categories-section--embedded">{content}</div>;
+  }
+
+  return (
+    <section className="item-categories-section" id="item-categories">
+      {content}
     </section>
   );
 }

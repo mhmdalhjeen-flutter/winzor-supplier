@@ -2,7 +2,9 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import "../styles/dashboard.css";
+import "../styles/AddProductsOffers.css";
 import ImagePicker from "../components/ImagePicker";
+import CollapsibleSection from "../components/CollapsibleSection";
 import api from "../services/api";
 import { getMyStore, updateMyStore } from "../services/store.service";
 import { queryKeys } from "../lib/queryClient";
@@ -13,12 +15,14 @@ import {
   getPhoneInputStyle,
 } from "../utils/phoneValidation";
 import ItemCategoriesSection from "../components/ItemCategoriesSection";
+import useStoreOwnerPermissions from "../hooks/useStoreOwnerPermissions";
 
 export default function Profile() {
   const queryClient = useQueryClient();
   const [user, setUser] = useState(JSON.parse(localStorage.getItem("user") || "{}"));
   const [isEditingUser, setIsEditingUser] = useState(false);
   const [isEditingStore, setIsEditingStore] = useState(false);
+  const [categoriesOpen, setCategoriesOpen] = useState(false);
   const [userForm, setUserForm] = useState({ name: user.name || "", phone: user.phone || "" });
   const [storeForm, setStoreForm] = useState({
     name: "",
@@ -34,6 +38,9 @@ export default function Profile() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState({ text: "", isError: false });
 
+  const isSupplier = user?.role === "supplier";
+  const { isStoreOwner } = useStoreOwnerPermissions();
+
   const { data: storeResponse, isLoading: loading } = useQuery({
     queryKey: queryKeys.myStore,
     queryFn: async () => {
@@ -41,9 +48,17 @@ export default function Profile() {
       return data;
     },
     staleTime: 5 * 60 * 1000,
+    enabled: !isSupplier,
   });
 
   const store = storeResponse?.store;
+  const displayName = store?.name || user.name || (isSupplier ? "المستودع" : "المتجر");
+  const displayPhone = store?.phone || user.phone || user.email || "";
+  const avatarContent = store?.logo ? (
+    <img src={store.logo} alt="" className="profile-header-card__avatar-img" />
+  ) : (
+    (displayName?.charAt(0) || user.name?.charAt(0) || "?").toUpperCase()
+  );
 
   const showMsg = (text, isError = false) => {
     setMessage({ text, isError });
@@ -141,6 +156,76 @@ export default function Profile() {
       {message.text && (
         <div className={message.isError ? "alert-error" : "alert-success"}>{message.text}</div>
       )}
+
+      <div className="profile-container">
+        <div className="profile-header-card">
+          <div className="profile-header-card__avatar" aria-hidden>
+            {avatarContent}
+          </div>
+          <div className="profile-header-card__body">
+            {isEditingUser ? (
+              <form className="profile-header-card__edit-form" onSubmit={saveUser}>
+                <label className="field-label" htmlFor="profile-user-name">الاسم</label>
+                <input
+                  id="profile-user-name"
+                  name="name"
+                  value={userForm.name}
+                  onChange={(e) => setUserForm({ ...userForm, name: e.target.value })}
+                  autoFocus
+                />
+                <div className="profile-header-card__edit-actions">
+                  <button type="submit" className="save-btn" disabled={saving}>حفظ</button>
+                  <button type="button" className="cancel-btn" onClick={() => setIsEditingUser(false)}>إلغاء</button>
+                </div>
+              </form>
+            ) : (
+              <>
+                <h3 className="profile-header-card__name">{displayName}</h3>
+                <p className="profile-header-card__role">{isSupplier ? "تاجر معتمد" : "صاحب محل"}</p>
+                {displayPhone && (
+                  <p className="profile-header-card__phone" dir="ltr">{displayPhone}</p>
+                )}
+              </>
+            )}
+          </div>
+          {!isEditingUser && (
+            <button type="button" className="edit-profile-btn profile-header-card__edit" onClick={() => setIsEditingUser(true)}>
+              تعديل الاسم
+            </button>
+          )}
+        </div>
+
+        <div className="profile-settings-links">
+          {!isSupplier && isStoreOwner && (
+            <Link to="payment-settings" className="profile-settings-link">
+              <span className="profile-settings-link__icon">💳</span>
+              <span className="profile-settings-link__text">
+                <strong>إعدادات الدفع</strong>
+                <small>حسابات الدفع وتفضيلات العملات</small>
+              </span>
+            </Link>
+          )}
+          <Link to="change-password" className="profile-settings-link">
+            <span className="profile-settings-link__icon">🔐</span>
+            <span className="profile-settings-link__text">
+              <strong>تغيير كلمة المرور</strong>
+              <small>تحديث كلمة مرور حسابك</small>
+            </span>
+          </Link>
+        </div>
+
+        {!isSupplier && isStoreOwner && (
+          <CollapsibleSection
+            title="أنواع العناصر"
+            subtitle="إدارة تصنيفات العناصر والعروض في متجرك"
+            open={categoriesOpen}
+            onToggle={() => setCategoriesOpen((v) => !v)}
+          >
+            <ItemCategoriesSection embedded />
+          </CollapsibleSection>
+        )}
+      </div>
+
       {store && (
         <section id="store-branding" className="profile-store-section">
           <div className="profile-cover-wrap">
@@ -282,55 +367,6 @@ export default function Profile() {
           </div>
         </section>
       )}
-
-      {/* ── بيانات الحساب ── */}
-      <div className="profile-container">
-        <div className="profile-header-card">
-          <div className="avatar-large">{user.name?.charAt(0).toUpperCase()}</div>
-          <div className="profile-info-summary">
-            <h3>{user.name}</h3>
-            <p className="role-badge">{user.role === "supplier" ? "تاجر معتمد" : "صاحب محل"}</p>
-            <p className="email-text">{user.email || user.phone}</p>
-          </div>
-          {!isEditingUser && (
-            <button type="button" className="edit-profile-btn" onClick={() => setIsEditingUser(true)}>
-              تعديل الاسم
-            </button>
-          )}
-        </div>
-
-        <div className="profile-details-form">
-          <form onSubmit={saveUser}>
-            <div className="form-group">
-              <label>الاسم الكامل</label>
-              <input
-                name="name"
-                value={isEditingUser ? userForm.name : user.name}
-                disabled={!isEditingUser}
-                onChange={(e) => setUserForm({ ...userForm, name: e.target.value })}
-              />
-            </div>
-
-            {isEditingUser && (
-              <div className="form-actions">
-                <button type="submit" className="save-btn" disabled={saving}>حفظ</button>
-                <button type="button" className="cancel-btn" onClick={() => setIsEditingUser(false)}>إلغاء</button>
-              </div>
-            )}
-          </form>
-        </div>
-
-        <div className="profile-details-form" style={{ marginTop: 16 }}>
-          <Link to="payment-settings" className="save-btn" style={{ display: "inline-block", textAlign: "center", textDecoration: "none", marginBottom: 10 }}>
-            💳 إعدادات الدفع
-          </Link>
-          <Link to="change-password" className="save-btn" style={{ display: "inline-block", textAlign: "center", textDecoration: "none" }}>
-            🔐 تغيير كلمة المرور
-          </Link>
-        </div>
-      </div>
-
-      {store && <ItemCategoriesSection />}
     </div>
   );
 }
