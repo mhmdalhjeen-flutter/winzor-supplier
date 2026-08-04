@@ -1,3 +1,4 @@
+import { Phone, Pencil } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -180,17 +181,23 @@ export default function Profile() {
               </form>
             ) : (
               <>
-                <h3 className="profile-header-card__name">{displayName}</h3>
-                <p className="profile-header-card__role">{isSupplier ? "تاجر معتمد" : "صاحب محل"}</p>
+                <div className="profile-header-card__title-row">
+                  <h3 className="profile-header-card__name">{displayName}</h3>
+                  <span className="profile-header-card__role">{isSupplier ? "تاجر معتمد" : "صاحب محل"}</span>
+                </div>
                 {displayPhone && (
-                  <p className="profile-header-card__phone" dir="ltr">{displayPhone}</p>
+                  <p className="profile-header-card__phone" dir="ltr">
+                    <Phone size={14} strokeWidth={2.2} aria-hidden />
+                    <span>{displayPhone}</span>
+                  </p>
                 )}
               </>
             )}
           </div>
           {!isEditingUser && (
             <button type="button" className="edit-profile-btn profile-header-card__edit" onClick={() => setIsEditingUser(true)}>
-              تعديل الاسم
+              <Pencil size={15} strokeWidth={2.2} />
+              تعديل
             </button>
           )}
         </div>

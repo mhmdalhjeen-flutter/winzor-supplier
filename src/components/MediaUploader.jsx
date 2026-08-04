@@ -1,8 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react';
-import { Camera, ImageIcon, RefreshCw, Trash2, Crop } from 'lucide-react';
+import { Camera, ImageIcon, RefreshCw, Trash2 } from 'lucide-react';
 import { uploadImage } from '../utils/imageUpload';
 import { normalizePickedImage } from '../utils/imageConvert';
-import ImageCropModal from './ImageCropModal';
 
 const IMAGE_ACCEPT = 'image/jpeg,image/png,image/webp,image/heic,image/heif,.jpg,.jpeg,.png,.webp,.heic,.heif';
 
@@ -16,7 +15,7 @@ function normalizeImageFile(file) {
 }
 
 /**
- * Single-image uploader with separate camera / gallery inputs.
+ * Single-image uploader — tap the placeholder to pick camera or gallery.
  * Supports offline local preview via onLocalFileChange.
  */
 export default function MediaUploader({
@@ -34,8 +33,7 @@ export default function MediaUploader({
   const [previewUrl, setPreviewUrl] = useState(value || '');
   const [uploading, setUploading] = useState(false);
   const [localFile, setLocalFile] = useState(null);
-  const [cropFile, setCropFile] = useState(null);
-  const [cropOpen, setCropOpen] = useState(false);
+  const [sourcePickerOpen, setSourcePickerOpen] = useState(false);
   const blobRef = useRef(null);
 
   useEffect(() => {
@@ -69,38 +67,6 @@ export default function MediaUploader({
     onChange?.('');
   };
 
-  const startCrop = async (fileOrUrl) => {
-    try {
-      let file = fileOrUrl;
-      if (typeof fileOrUrl === 'string' && fileOrUrl.startsWith('http')) {
-        const res = await fetch(fileOrUrl);
-        const blob = await res.blob();
-        file = new File([blob], 'image.jpg', { type: blob.type || 'image/jpeg' });
-      }
-      const converted = await normalizePickedImage(file);
-      const normalized = normalizeImageFile(converted);
-      if (!normalized) {
-        onError?.('ملف غير صالح');
-        return;
-      }
-      setCropFile(normalized);
-      setCropOpen(true);
-    } catch (err) {
-      onError?.(err.message || 'تعذّر قراءة الصورة');
-    }
-  };
-
-  const handleCropConfirm = async (croppedFile) => {
-    setCropOpen(false);
-    setCropFile(null);
-    await processSelectedFile(croppedFile);
-  };
-
-  const handleCropCancel = () => {
-    setCropOpen(false);
-    setCropFile(null);
-  };
-
   const processSelectedFile = async (rawFile) => {
     const file = normalizeImageFile(rawFile);
     if (!file) return;
@@ -127,10 +93,28 @@ export default function MediaUploader({
     }
   };
 
-  const onFileInput = (e) => {
+  const onFileInput = async (e) => {
     const file = e.target.files?.[0];
     e.target.value = '';
-    if (file) startCrop(file);
+    if (!file) return;
+
+    try {
+      const converted = await normalizePickedImage(file);
+      await processSelectedFile(converted);
+    } catch (err) {
+      onError?.(err.message || 'تعذّر قراءة الصورة');
+    }
+  };
+
+  const openSourcePicker = () => {
+    if (uploading) return;
+    setSourcePickerOpen(true);
+  };
+
+  const pickSource = (source) => {
+    setSourcePickerOpen(false);
+    if (source === 'camera') cameraRef.current?.click();
+    else galleryRef.current?.click();
   };
 
   const hasImage = Boolean(previewUrl);
@@ -148,36 +132,30 @@ export default function MediaUploader({
 
       <div className={`media-upload-area ${hasImage ? 'has-image' : ''}`}>
         {!hasImage ? (
-          <div className="media-upload-empty">
-            <div className="media-upload-empty__icon" aria-hidden>
-              <ImageIcon size={36} strokeWidth={1.6} />
+          <button
+            type="button"
+            className="media-upload-trigger"
+            onClick={openSourcePicker}
+            disabled={uploading}
+            aria-label={emptyHint}
+          >
+            <div className="media-upload-empty">
+              <div className="media-upload-empty__icon" aria-hidden>
+                <ImageIcon size={32} strokeWidth={1.6} />
+              </div>
+              <p className="media-upload-empty__title">{emptyHint}</p>
+              <p className="media-upload-empty__sub">اضغط لإضافة صورة</p>
             </div>
-            <p className="media-upload-empty__title">{emptyHint}</p>
-            <p className="media-upload-empty__sub">التقط صورة أو اختر من المعرض</p>
-            <div className="media-source-buttons">
-              <button
-                type="button"
-                className="media-source-btn media-source-btn--camera"
-                onClick={() => cameraRef.current?.click()}
-                disabled={uploading}
-              >
-                <Camera size={20} strokeWidth={2} />
-                استخدام الكاميرا
-              </button>
-              <button
-                type="button"
-                className="media-source-btn media-source-btn--gallery"
-                onClick={() => galleryRef.current?.click()}
-                disabled={uploading}
-              >
-                <ImageIcon size={20} strokeWidth={2} />
-                اختيار من المعرض
-              </button>
-            </div>
-          </div>
+          </button>
         ) : (
           <div className="media-preview-panel">
-            <div className="media-preview-wrap media-preview-wrap--large">
+            <button
+              type="button"
+              className="media-preview-wrap media-preview-wrap--compact"
+              onClick={openSourcePicker}
+              disabled={uploading}
+              aria-label="استبدال الصورة"
+            >
               <img src={previewUrl} alt="" className="media-preview-img" />
               {uploading && (
                 <div className="media-preview-overlay">
@@ -187,25 +165,16 @@ export default function MediaUploader({
               {isLocalOnly && !uploading && (
                 <span className="media-preview-badge">محفوظة محلياً</span>
               )}
-            </div>
-            <div className="media-preview-actions">
+            </button>
+            <div className="media-preview-actions media-preview-actions--compact">
               <button
                 type="button"
                 className="media-action-btn media-action-btn--outline"
-                onClick={() => startCrop(localFile || previewUrl)}
-                disabled={uploading || !previewUrl}
-              >
-                <Crop size={16} strokeWidth={2.2} />
-                قص
-              </button>
-              <button
-                type="button"
-                className="media-action-btn media-action-btn--outline"
-                onClick={() => galleryRef.current?.click()}
+                onClick={openSourcePicker}
                 disabled={uploading}
               >
                 <RefreshCw size={16} strokeWidth={2.2} />
-                استبدال
+                استبدال الصورة
               </button>
               <button
                 type="button"
@@ -214,7 +183,7 @@ export default function MediaUploader({
                 disabled={uploading}
               >
                 <Trash2 size={16} strokeWidth={2.2} />
-                إزالة
+                إزالة الصورة
               </button>
             </div>
           </div>
@@ -238,12 +207,32 @@ export default function MediaUploader({
         onChange={onFileInput}
       />
 
-      <ImageCropModal
-        open={cropOpen}
-        file={cropFile}
-        onCancel={handleCropCancel}
-        onConfirm={handleCropConfirm}
-      />
+      {sourcePickerOpen && (
+        <div className="media-source-sheet" role="dialog" aria-modal="true" aria-label="اختر مصدر الصورة">
+          <button
+            type="button"
+            className="media-source-sheet__backdrop"
+            aria-label="إغلاق"
+            onClick={() => setSourcePickerOpen(false)}
+          />
+          <div className="media-source-sheet__panel">
+            <p className="media-source-sheet__title">اختر مصدر الصورة</p>
+            <div className="media-source-sheet__actions">
+              <button type="button" className="media-source-sheet__btn" onClick={() => pickSource('camera')}>
+                <Camera size={20} strokeWidth={2} />
+                الكاميرا
+              </button>
+              <button type="button" className="media-source-sheet__btn" onClick={() => pickSource('gallery')}>
+                <ImageIcon size={20} strokeWidth={2} />
+                المعرض
+              </button>
+            </div>
+            <button type="button" className="media-source-sheet__cancel" onClick={() => setSourcePickerOpen(false)}>
+              إلغاء
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

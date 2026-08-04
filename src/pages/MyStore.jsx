@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Pencil, Trash2, Plus } from "lucide-react";
 import OfferPriceDisplay from "../components/OfferPriceDisplay";
@@ -32,9 +32,22 @@ export default function MyStore() {
   const isSupplier = user?.role === "supplier";
   const baseRoute = isSupplier ? "/supplier" : "/store";
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
 
-  const [view, setView] = useState("items");
+  const sectionParam = searchParams.get("section");
+  const [view, setView] = useState(sectionParam === "offers" ? "offers" : "items");
+
+  useEffect(() => {
+    if (sectionParam === "items" || sectionParam === "offers") {
+      setView(sectionParam);
+    }
+  }, [sectionParam]);
+
+  const switchView = (next) => {
+    setView(next);
+    setSearchParams({ section: next }, { replace: true });
+  };
   const [confirmDelete, setConfirmDelete] = useState(null);
   const [deleting, setDeleting] = useState(false);
   const [togglingId, setTogglingId] = useState(null);
@@ -149,6 +162,11 @@ export default function MyStore() {
     }
   };
 
+  const openAdd = () => {
+    const tab = view === "items" ? "product" : "offer";
+    navigate(`${baseRoute}/add-product-offer?tab=${tab}`);
+  };
+
   const openEdit = (item) => {
     if (view === "items") {
       navigate(`${baseRoute}/add-product-offer?editProduct=${item._id}`);
@@ -166,21 +184,13 @@ export default function MyStore() {
           <h2 className="my-store-page__title">{isSupplier ? "مستودعي" : "متجري"}</h2>
           <p className="my-store-page__subtitle">إدارة العناصر والعروض من مكان واحد</p>
         </div>
-        <button
-          type="button"
-          className="my-store-page__add-btn"
-          onClick={() => navigate(`${baseRoute}/add-product-offer`)}
-        >
-          <Plus size={18} />
-          إضافة
-        </button>
       </header>
 
       <div className="my-store-tabs">
         <button
           type="button"
           className={view === "items" ? "active" : ""}
-          onClick={() => setView("items")}
+          onClick={() => switchView("items")}
         >
           العناصر
           {products.length > 0 && <span className="my-store-tabs__count">{products.length}</span>}
@@ -188,10 +198,24 @@ export default function MyStore() {
         <button
           type="button"
           className={view === "offers" ? "active" : ""}
-          onClick={() => setView("offers")}
+          onClick={() => switchView("offers")}
         >
           العروض
           {offers.length > 0 && <span className="my-store-tabs__count">{offers.length}</span>}
+        </button>
+      </div>
+
+      <div className="my-store-section-bar">
+        <h3 className="my-store-section-bar__title">
+          {view === "items" ? "العناصر" : "العروض"}
+        </h3>
+        <button
+          type="button"
+          className="my-store-page__add-btn"
+          onClick={openAdd}
+        >
+          <Plus size={18} />
+          {view === "items" ? "إضافة عنصر" : "إضافة عرض"}
         </button>
       </div>
 

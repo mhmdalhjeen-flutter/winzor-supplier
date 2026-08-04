@@ -49,16 +49,22 @@ function useAutoResizeTextarea(value, maxLines = MAX_INPUT_LINES) {
     const el = ref.current;
     if (!el) return;
 
-    el.style.height = 'auto';
-    const style = window.getComputedStyle(el);
-    const lineHeight = parseFloat(style.lineHeight) || 22;
-    const paddingTop = parseFloat(style.paddingTop) || 0;
-    const paddingBottom = parseFloat(style.paddingBottom) || 0;
-    const maxHeight = lineHeight * maxLines + paddingTop + paddingBottom;
-    const nextHeight = Math.min(el.scrollHeight, maxHeight);
+    const resize = () => {
+      el.style.height = 'auto';
+      const style = window.getComputedStyle(el);
+      const lineHeight = parseFloat(style.lineHeight) || 22;
+      const paddingTop = parseFloat(style.paddingTop) || 0;
+      const paddingBottom = parseFloat(style.paddingBottom) || 0;
+      const borderTop = parseFloat(style.borderTopWidth) || 0;
+      const borderBottom = parseFloat(style.borderBottomWidth) || 0;
+      const maxHeight = lineHeight * maxLines + paddingTop + paddingBottom + borderTop + borderBottom;
+      const nextHeight = Math.min(el.scrollHeight, maxHeight);
 
-    el.style.height = `${nextHeight}px`;
-    el.style.overflowY = el.scrollHeight > maxHeight ? 'auto' : 'hidden';
+      el.style.height = `${nextHeight}px`;
+      el.style.overflowY = el.scrollHeight > maxHeight ? 'auto' : 'hidden';
+    };
+
+    requestAnimationFrame(resize);
   }, [value, maxLines]);
 
   return ref;

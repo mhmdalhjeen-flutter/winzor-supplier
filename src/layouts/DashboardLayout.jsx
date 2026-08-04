@@ -25,7 +25,6 @@ export default function DashboardLayout() {
   const [welcomeOpen, setWelcomeOpen] = useState(false);
   const [suggestedDefaults, setSuggestedDefaults] = useState(null);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [loggingOut, setLoggingOut] = useState(false);
 
   const { data: storeQueryData } = useQuery({
     queryKey: queryKeys.myStore,
@@ -64,8 +63,6 @@ export default function DashboardLayout() {
   const toggleMenu = () => setMenuOpen((open) => !open);
 
   const logout = () => {
-    if (loggingOut) return;
-    setLoggingOut(true);
     setMenuOpen(false);
     authLogout();
     navigate("/login", { replace: true });
@@ -119,8 +116,8 @@ export default function DashboardLayout() {
         </button>
       )}
 
-      <button type="button" className="logout-link" onClick={logout} disabled={loggingOut}>
-        🚪 <span>{loggingOut ? "جاري الخروج..." : "تسجيل الخروج"}</span>
+      <button type="button" className="logout-link" onClick={logout}>
+        🚪 <span>تسجيل الخروج</span>
       </button>
     </>
   );

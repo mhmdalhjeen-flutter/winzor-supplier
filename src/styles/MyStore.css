@@ -103,6 +103,21 @@
   flex-shrink: 0;
 }
 
+.my-store-section-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.my-store-section-bar__title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 800;
+  color: #334155;
+}
+
 .my-store-tabs {
   display: flex;
   gap: 8px;
@@ -149,17 +164,42 @@
   color: #2563eb;
 }
 
-/* Grid: 1 col mobile, 2 tablet, 3+ desktop */
+/* Grid: horizontal scroll on mobile, grid on tablet+ */
 .my-store-grid {
-  display: grid;
-  grid-template-columns: 1fr;
+  display: flex;
   gap: 12px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  padding: 2px 2px 10px;
+  margin: 0 -8px;
+  padding-inline: 8px;
+}
+
+.my-store-grid .my-store-card {
+  flex: 0 0 calc(100% * 3 / 4);
+  max-width: calc(100% * 3 / 4);
+  scroll-snap-align: start;
 }
 
 @media (min-width: 640px) {
   .my-store-grid {
+    display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: 14px;
+    overflow-x: visible;
+    scroll-snap-type: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .my-store-grid .my-store-card {
+    flex: unset;
+    max-width: none;
+    scroll-snap-align: unset;
   }
 
   .my-store-page {
@@ -175,7 +215,8 @@
 }
 
 .my-store-empty {
-  grid-column: 1 / -1;
+  flex: 1 1 100%;
+  width: 100%;
   text-align: center;
   padding: 48px 16px;
   color: #64748b;

@@ -44,6 +44,17 @@ const OFFER_RULES = [
 
 const VARIANT_PRESETS = ['اللون', 'المقاس', 'السعة', 'النوع'];
 
+function createVariantId() {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return `variant-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+}
+
+function withVariantIds(variants = []) {
+  return variants.map((variant) => (variant.id ? variant : { ...variant, id: createVariantId() }));
+}
+
 const DRAFT_PRODUCT_KEY = 'create-draft-product';
 const DRAFT_OFFER_KEY = 'create-draft-offer';
 
@@ -177,8 +188,15 @@ export default function AddProductsOffers() {
     if (!draft) return;
     setCurrentDraftId(draftIdParam);
     setTab(draft.type === 'offer' ? 'offer' : 'product');
-    if (draft.type === 'product') setProduct({ ...EMPTY_PRODUCT, ...draft.data });
-    else setOffer({ ...EMPTY_OFFER, offerType: 'fixed_price', ...draft.data });
+    if (draft.type === 'product') {
+      const data = { ...EMPTY_PRODUCT, ...draft.data };
+      if (data.variants?.length) data.variants = withVariantIds(data.variants);
+      setProduct(data);
+    } else {
+      const data = { ...EMPTY_OFFER, offerType: 'fixed_price', ...draft.data };
+      if (data.variants?.length) data.variants = withVariantIds(data.variants);
+      setOffer(data);
+    }
     if (draft.data?.image) setMediaResetKey((k) => k + 1);
   }, [draftIdParam, isEditMode, isPendingEdit]);
 
@@ -361,6 +379,8 @@ export default function AddProductsOffers() {
 
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const baseRoute = user?.role === 'supplier' ? '/supplier' : '/store';
+  const myStoreSection = tab === 'product' ? 'items' : 'offers';
+  const goToMyStoreSection = () => navigate(`${baseRoute}/my-store?section=${myStoreSection}`);
   const activeRules = tab === 'product' ? PRODUCT_RULES : OFFER_RULES;
   const rulesTitle = tab === 'product' ? 'قواعد إضافة العنصر' : 'قواعد إضافة العرض';
 
@@ -377,7 +397,7 @@ export default function AddProductsOffers() {
       return {
         ...prev,
         variantsEnabled: true,
-        variants: [...prev.variants, { name, values: '' }],
+        variants: [...prev.variants, { id: createVariantId(), name, values: '' }],
       };
     });
   };
@@ -456,7 +476,7 @@ export default function AddProductsOffers() {
         clearCurrentDraft();
         invalidateCatalog(queryClient);
         queryClient.invalidateQueries({ queryKey: queryKeys.myProducts });
-        navigate(`${baseRoute}/my-store`);
+        goToMyStoreSection();
       } catch (err) {
         showNotice(err.response?.data?.message || 'تعذّر تحديث العنصر', 'error');
       } finally {
@@ -481,6 +501,7 @@ export default function AddProductsOffers() {
       setPendingItemId(null);
       setMediaResetKey((k) => k + 1);
       if (wasPending) navigate(`${baseRoute}/pending-uploads`);
+      else goToMyStoreSection();
       return;
     }
 
@@ -493,6 +514,7 @@ export default function AddProductsOffers() {
       setProduct(EMPTY_PRODUCT);
       setLocalImageFile(null);
       setMediaResetKey((k) => k + 1);
+      goToMyStoreSection();
     } catch (err) {
       showNotice(err.response?.data?.message || 'تعذّر إضافة العنصر', 'error');
     } finally {
@@ -551,7 +573,7 @@ export default function AddProductsOffers() {
         clearCurrentDraft();
         invalidateCatalog(queryClient);
         queryClient.invalidateQueries({ queryKey: queryKeys.myOffersAll });
-        navigate(`${baseRoute}/my-store`);
+        goToMyStoreSection();
       } catch (err) {
         showNotice(err.response?.data?.message || 'تعذّر تحديث العرض', 'error');
       } finally {
@@ -576,6 +598,7 @@ export default function AddProductsOffers() {
       setPendingItemId(null);
       setMediaResetKey((k) => k + 1);
       if (wasPending) navigate(`${baseRoute}/pending-uploads`);
+      else goToMyStoreSection();
       return;
     }
 
@@ -588,6 +611,7 @@ export default function AddProductsOffers() {
       setOffer(EMPTY_OFFER);
       setLocalImageFile(null);
       setMediaResetKey((k) => k + 1);
+      goToMyStoreSection();
     } catch (err) {
       showNotice(err.response?.data?.message || 'تعذّر إضافة العرض', 'error');
     } finally {
@@ -732,7 +756,7 @@ export default function AddProductsOffers() {
               {activeData.variants.map((variant, index) => {
                 const isOpen = expandedVariants[index] !== false;
                 return (
-                  <div key={`${variant.name}-${index}`} className="variant-card">
+                  <div key={variant.id ?? `variant-${index}`} className="variant-card">
                     <button type="button" className="variant-card__head" onClick={() => toggleVariantExpanded(index)}>
                       <span className="variant-card__name">{variant.name || `متغير ${index + 1}`}</span>
                       <span className="variant-card__chevron">{isOpen ? '▾' : '◂'}</span>
@@ -758,7 +782,7 @@ export default function AddProductsOffers() {
 
   const renderPublishSection = () => (
     <section className="create-section create-section--publish">
-      <h3 className="create-section__title">{isEditMode ? '7. حفظ التعديلات' : '7. الحفظ والنشر'}</h3>
+      <h3 className="create-section__title">{isEditMode ? 'حفظ التعديلات' : 'الحفظ والنشر'}</h3>
       <p className="create-section__subtitle">{isEditMode ? 'راجع التغييرات ثم احفظ' : 'عاين النتيجة، احفظ مسودة، أو انشر فوراً'}</p>
 
       <div className="publish-actions">
@@ -830,6 +854,8 @@ export default function AddProductsOffers() {
           </div>
 
           <div className="form-card">
+            <h3 className="form-card__title">المعلومات الأساسية</h3>
+
             <label className="field-label">اسم العنصر *</label>
             <input
               value={product.name}
@@ -838,7 +864,11 @@ export default function AddProductsOffers() {
               required
             />
 
-            <div className="form-card__divider" />
+            <ItemCategorySelect
+              value={product.storeItemCategoryId}
+              onChange={(id) => setProduct({ ...product, storeItemCategoryId: id || '' })}
+              id="product-category"
+            />
 
             <PriceUnitInput
               idPrefix="product-price-unit"
@@ -847,8 +877,6 @@ export default function AddProductsOffers() {
               onUnitTypeChange={(value) => setProduct({ ...product, priceUnitType: value, priceUnitCustom: value === 'other' ? product.priceUnitCustom : '' })}
               onCustomUnitChange={(value) => setProduct({ ...product, priceUnitCustom: value })}
             />
-
-            <div className="form-card__divider" />
 
             <label className="field-label">السعر *</label>
             <PriceCurrencyInput
@@ -861,8 +889,6 @@ export default function AddProductsOffers() {
               className="price-currency-row"
             />
 
-            <div className="form-card__divider" />
-
             <label className="field-label">الوصف</label>
             <textarea
               value={product.description}
@@ -874,15 +900,10 @@ export default function AddProductsOffers() {
 
           <CollapsibleSection
             title="إعدادات إضافية"
-            subtitle="التصنيف، التوصيل، المتغيرات والوسوم"
+            subtitle="طريقة الشراء، التوصيل، المتغيرات والوسوم"
             open={advancedOpen}
             onToggle={() => setAdvancedOpen((v) => !v)}
           >
-            <ItemCategorySelect
-              value={product.storeItemCategoryId}
-              onChange={(id) => setProduct({ ...product, storeItemCategoryId: id || '' })}
-              id="product-category"
-            />
             <PurchaseModeSelect
               value={product.purchaseMode}
               onChange={(mode) => setProduct({ ...product, purchaseMode: mode })}
@@ -934,34 +955,31 @@ export default function AddProductsOffers() {
           </div>
 
           <div className="form-card">
+            <h3 className="form-card__title">المعلومات الأساسية</h3>
+
             <RelatedItemSelect
               value={offer.relatedProductId}
               onChange={handleRelatedItemChange}
               required
             />
 
-            <div className="form-card__divider" />
+            <label className="field-label">نوع العرض</label>
+            <select
+              value={effectiveOfferType}
+              onChange={(e) => setOffer({ ...offer, offerType: e.target.value, originalPrice: '', value: '', finalPrice: '' })}
+            >
+              {OFFER_TYPE_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
 
-            <label className="field-label">سعر العرض *</label>
-            <div className="price-with-unit-row">
-              <PriceCurrencyInput
-                price={offer.value}
-                currency={offer.currency}
-                onPriceChange={(value) => setOffer({ ...offer, value, offerType: 'fixed_price' })}
-                onCurrencyChange={(value) => setOffer({ ...offer, currency: value })}
-                pricePlaceholder="0.00"
-                required
-                className="price-currency-row"
-              />
-            </div>
+            <div className="type-fields">{renderOfferFields()}</div>
 
             {(previewValid || offlineOfferPricing.valid) && resolvedOfferFinalPrice != null && (
               <div className="final-price-box">
                 السعر النهائي: <strong>{previewPriceLabel}</strong>
               </div>
             )}
-
-            <div className="form-card__divider" />
 
             <label className="field-label">وصف العرض</label>
             <textarea
@@ -970,8 +988,6 @@ export default function AddProductsOffers() {
               placeholder="اشرح العرض للزبائن..."
               rows={3}
             />
-
-            <div className="form-card__divider" />
 
             <label className="field-label" htmlFor="offer-expiry">تاريخ انتهاء العرض *</label>
             <input
@@ -990,7 +1006,7 @@ export default function AddProductsOffers() {
 
           <CollapsibleSection
             title="إعدادات إضافية"
-            subtitle="نوع العرض، التصنيف، التوصيل والوسوم"
+            subtitle="التصنيف، التوصيل والوسوم"
             open={advancedOpen}
             onToggle={() => setAdvancedOpen((v) => !v)}
           >
@@ -1000,16 +1016,6 @@ export default function AddProductsOffers() {
               onChange={(e) => setOffer({ ...offer, title: e.target.value })}
               placeholder="يُملأ تلقائياً من العنصر"
             />
-            <label className="field-label">نوع العرض</label>
-            <select
-              value={effectiveOfferType}
-              onChange={(e) => setOffer({ ...offer, offerType: e.target.value, originalPrice: '', value: '', finalPrice: '' })}
-            >
-              {OFFER_TYPE_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
-              ))}
-            </select>
-            <div className="type-fields">{renderOfferFields()}</div>
             <ItemCategorySelect
               value={offer.storeItemCategoryId}
               onChange={(id) => setOffer({ ...offer, storeItemCategoryId: id || '' })}
@@ -1056,7 +1062,7 @@ export default function AddProductsOffers() {
         <button type="button" className="link-btn" onClick={() => navigate(`${baseRoute}/drafts`)}>
           المسودات ←
         </button>
-        <button type="button" className="link-btn" onClick={() => navigate(`${baseRoute}/my-store`)}>
+        <button type="button" className="link-btn" onClick={goToMyStoreSection}>
           متجري ←
         </button>
       </div>
