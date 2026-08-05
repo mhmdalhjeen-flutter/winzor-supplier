@@ -15,7 +15,7 @@ export const DELIVERY_METHOD_LABELS = {
   nearby: 'أنا قريب من المتجر',
   nearby_store: 'أنا قريب من المتجر',
   pickup: 'سأستلم الطلب بنفسي',
-  delivery: 'التوصيل عبر الدليفري',
+  delivery: 'شركة توصيل',
 };
 
 export const PAYMENT_METHOD_LABELS = {
@@ -28,6 +28,23 @@ export const PAYMENT_METHOD_LABELS = {
   cash: 'الدفع نقداً',
   transfer: 'تحويل بنكي',
 };
+
+/** Customer pickup methods (self / nearby) vs delivery company. */
+export function isCustomerPickupMethod(method) {
+  const key = String(method || '').trim().toLowerCase();
+  return key === 'pickup' || key === 'nearby' || key === 'nearby_store';
+}
+
+export function getDeliverActionLabel(method) {
+  return isCustomerPickupMethod(method) ? 'تم التسليم للزبون' : 'تم التسليم';
+}
+
+export function getFulfillmentBadge(method) {
+  if (isCustomerPickupMethod(method)) {
+    return { label: 'الزبون', tone: 'customer' };
+  }
+  return { label: 'الدلفري', tone: 'delivery' };
+}
 
 export function getStoreOrderStatusMeta(status) {
   return STORE_ORDER_STATUS[status] || STORE_ORDER_STATUS.pending;
@@ -126,8 +143,8 @@ export const ORDER_FILTER_GROUPS = {
   },
   [ORDER_FILTER_KEYS.DELIVERED]: {
     key: ORDER_FILTER_KEYS.DELIVERED,
-    label: 'مُسلّمة للدليفري',
-    shortLabel: 'مُسلّمة',
+    label: 'مكتملة',
+    shortLabel: 'مكتملة',
     statuses: ['delivered_to_driver', 'delivered_to_customer', 'delivered', 'completed_off_platform'],
   },
   [ORDER_FILTER_KEYS.REJECTED]: {

@@ -7,41 +7,10 @@ import { getNotifications } from '../services/notifications.service';
 import { queryKeys } from './queryClient';
 import { unwrapList } from '../utils/unwrapList';
 import { cleanupNotifications } from '../utils/notificationCleanup';
+import { fetchDashboardStats } from './dashboardStats';
 
 function isAuthenticated() {
   return Boolean(localStorage.getItem('token'));
-}
-
-/** Same shape as DashboardHome dashboardStats queryFn. */
-async function fetchDashboardStats() {
-  const [productsRes, ordersRes, chatsRes] = await Promise.allSettled([
-    api.get('/products/my'),
-    api.get('/orders/store'),
-    api.get('/chats/unread-count'),
-  ]);
-
-  const products = productsRes.status === 'fulfilled'
-    ? (productsRes.value.data.products || productsRes.value.data || []).length
-    : 0;
-
-  const orders = ordersRes.status === 'fulfilled'
-    ? (ordersRes.value.data.orders || [])
-    : [];
-
-  const pendingOrders = orders.filter((o) => o.status === 'pending').length;
-
-  const unreadMsgs = chatsRes.status === 'fulfilled'
-    ? (chatsRes.value.data.count || 0)
-    : 0;
-
-  const cardsCount = ordersRes.status === 'fulfilled'
-    ? (ordersRes.value.data.cards ?? 0)
-    : 0;
-  const bypassCards = ordersRes.status === 'fulfilled'
-    ? (ordersRes.value.data.bypassCards ?? false)
-    : false;
-
-  return { products, pendingOrders, messages: unreadMsgs, cards: cardsCount, bypassCards };
 }
 
 /**

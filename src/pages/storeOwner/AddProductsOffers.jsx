@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { useQueryClient, useQuery } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import api from '../../services/api';
 import MediaUploader from '../../components/MediaUploader';
 import TagsInput from '../../components/TagsInput';
@@ -13,11 +13,9 @@ import { DEFAULT_CURRENCY, formatPriceWithUnit } from '../../utils/currency';
 import { parsePriceUnit, resolvePriceUnit } from '../../utils/priceUnit';
 import { PWA_TAB_PARAM } from '../../pwa/pwaShortcutActions';
 import { invalidateCatalog } from '../../utils/catalogRefresh';
-import { unwrapList } from '../../utils/unwrapList';
 import { queryKeys } from '../../lib/queryClient';
 import { enqueuePublishItem, getPublishItem, updatePublishItem, resolveQueueBlob } from '../../lib/offlinePublishQueue';
 import ItemCategorySelect from '../../components/ItemCategorySelect';
-import RelatedItemSelect from '../../components/RelatedItemSelect';
 import PurchaseModeSelect from '../../components/PurchaseModeSelect';
 import AvailabilitySwitch from '../../components/AvailabilitySwitch';
 import NumericInput from '../../components/NumericInput';
@@ -93,6 +91,7 @@ const EMPTY_OFFER = {
   storeItemCategoryId: '',
   relatedProductId: '',
   isActive: true,
+  purchaseMode: 'both',
 };
 
 function loadDraft(key, fallback) {
@@ -300,6 +299,7 @@ export default function AddProductsOffers() {
             storeItemCategoryId: item.storeItemCategory?._id || item.storeItemCategory || '',
             relatedProductId: item.relatedProduct?._id || item.relatedProduct || '',
             isActive: item.isActive !== false,
+            purchaseMode: item.purchaseMode || 'both',
           });
         } catch {
           showNotice('تعذّر تحميل العرض', 'error');
@@ -331,6 +331,7 @@ export default function AddProductsOffers() {
             description: p.description || '',
             freeDelivery: p.freeDelivery ? 'yes' : 'no',
             isWholesale: p.isWholesale || false,
+            purchaseMode: p.purchaseMode || 'both',
           });
         } else {
           setTab('offer');
@@ -348,6 +349,7 @@ export default function AddProductsOffers() {
             description: o.description || '',
             freeDelivery: o.freeDelivery ? 'yes' : 'no',
             expiresAt: isoToDateInput(o.expiresAt),
+            purchaseMode: o.purchaseMode || 'both',
           });
         }
         const blob = await resolveQueueBlob(item.imageBlob);
@@ -588,6 +590,7 @@ export default function AddProductsOffers() {
       storeItemCategoryId: offer.storeItemCategoryId || undefined,
       relatedProductId: offer.relatedProductId || undefined,
       isActive: offer.isActive !== false,
+      purchaseMode: offer.purchaseMode || 'quantity',
     };
 
     if (editOfferId) {
@@ -648,29 +651,6 @@ export default function AddProductsOffers() {
     e.preventDefault();
     if (tab === 'product') handleProductPublish();
     else handleOfferPublish();
-  };
-
-  const { data: storeItems = [] } = useQuery({
-    queryKey: queryKeys.myProducts,
-    queryFn: async () => {
-      const { data } = await api.get('/products/my?all=true');
-      return unwrapList(data, ['products']);
-    },
-    staleTime: 60 * 1000,
-    enabled: tab === 'offer',
-  });
-
-  const handleRelatedItemChange = (id) => {
-    const item = storeItems.find((i) => i._id === id);
-    setOffer((prev) => ({
-      ...prev,
-      relatedProductId: id || '',
-      title: item?.name || prev.title,
-      originalPrice: item?.price != null ? String(item.price) : prev.originalPrice,
-      image: prev.image || item?.image || '',
-      currency: item?.currency || prev.currency,
-      offerType: prev.offerType || 'fixed_price',
-    }));
   };
 
   const renderOfferFields = () => {
@@ -835,29 +815,26 @@ export default function AddProductsOffers() {
   const renderPublishSection = () => (
     <section className="create-section create-section--publish">
       <h3 className="create-section__title">{isEditMode ? 'حفظ التعديلات' : 'الحفظ والنشر'}</h3>
-      <p className="create-section__subtitle">{isEditMode ? 'راجع التغييرات ثم احفظ' : 'عاين النتيجة، احفظ مسودة، أو انشر فوراً'}</p>
+      <p className="create-section__subtitle">{isEditMode ? 'راجع التغييرات ثم احفظ' : 'انشر، احفظ مسودة، أو عاين النتيجة'}</p>
 
       <div className="publish-actions">
-        {!isEditMode && (
-          <>
-            <button type="button" className="publish-btn publish-btn--preview" onClick={handleQuickPreview}>
-              معاينة سريعة
-            </button>
-            <button type="button" className="publish-btn publish-btn--draft" onClick={handleSaveDraft} disabled={loading}>
-              حفظ كمسودة
-            </button>
-            <button type="button" className="publish-btn publish-btn--clear" onClick={handleClearForm} disabled={loading}>
-              مسح النموذج
-            </button>
-          </>
-        )}
         <button
           type="submit"
           className="publish-btn publish-btn--now"
           disabled={loading || (!activeData.image?.trim() && !localImageFile)}
         >
-          {loading ? 'جارٍ الحفظ...' : isEditMode ? 'حفظ التعديلات' : 'نشر الآن'}
+          {loading ? 'جارٍ الحفظ...' : isEditMode ? 'حفظ التعديلات' : 'نشر'}
         </button>
+        {!isEditMode && (
+          <>
+            <button type="button" className="publish-btn publish-btn--draft" onClick={handleSaveDraft} disabled={loading}>
+              حفظ كمسودة
+            </button>
+            <button type="button" className="publish-btn publish-btn--preview" onClick={handleQuickPreview}>
+              معاينة
+            </button>
+          </>
+        )}
       </div>
     </section>
   );
@@ -889,9 +866,23 @@ export default function AddProductsOffers() {
           <h2 className="title">{pageTitle}</h2>
           <p className="page-lead">{pageLead}</p>
         </div>
-        <button type="button" className="rules-info-btn" onClick={() => setRulesOpen(true)}>
-          ℹ️ القواعد
-        </button>
+        <div className="form-page-head__actions">
+          <button type="button" className="rules-info-btn" onClick={() => setRulesOpen(true)}>
+            ℹ️ القواعد
+          </button>
+          {!isEditMode && (
+            <button
+              type="button"
+              className="form-clear-fab"
+              onClick={handleClearForm}
+              disabled={loading}
+              title="مسح النموذج"
+              aria-label="مسح النموذج"
+            >
+              مسح
+            </button>
+          )}
+        </div>
       </div>
 
       {!isEditMode && !hideTypeTabs && (
@@ -1069,18 +1060,6 @@ export default function AddProductsOffers() {
               placeholder="اشرح العرض للزبائن..."
               rows={3}
             />
-          </div>
-
-          <CollapsibleSection
-            title="خيارات أخرى"
-            subtitle="تاريخ الانتهاء، التوصيل والوسوم"
-            open={advancedOpen}
-            onToggle={() => setAdvancedOpen((v) => !v)}
-          >
-            <RelatedItemSelect
-              value={offer.relatedProductId}
-              onChange={handleRelatedItemChange}
-            />
 
             <label className="field-label" htmlFor="offer-expiry">تاريخ انتهاء العرض *</label>
             <input
@@ -1095,6 +1074,19 @@ export default function AddProductsOffers() {
             {offer.expiresAt && (
               <p className="expiry-display">ينتهي: {formatExpiryDisplay(offer.expiresAt)}</p>
             )}
+          </div>
+
+          <CollapsibleSection
+            title="خيارات أخرى"
+            subtitle="طريقة الشراء، التوصيل والوسوم"
+            open={advancedOpen}
+            onToggle={() => setAdvancedOpen((v) => !v)}
+          >
+            <PurchaseModeSelect
+              value={offer.purchaseMode}
+              onChange={(mode) => setOffer({ ...offer, purchaseMode: mode })}
+              id="offer-purchase-mode"
+            />
 
             <label className="field-label">التوصيل المجاني</label>
             <div className="radio-row">

@@ -13,6 +13,7 @@ import {
   getOrderLegacyStatus,
   shouldSkipConfirmDisclaimer,
   ORDER_FILTER_KEYS,
+  getDeliverActionLabel,
 } from '../utils/storeOrderLabels';
 import '../styles/Orders.css';
 import '../styles/storeDashboard.css';
@@ -177,7 +178,7 @@ export default function OrderDetails() {
                   disabled={updating}
                   onClick={handleDeliver}
                 >
-                  {updating ? 'جارٍ التحديث...' : 'تم التسليم للدليفري'}
+                  {updating ? 'جارٍ التحديث...' : getDeliverActionLabel(order.deliveryMethod)}
                 </button>
               )}
             </div>

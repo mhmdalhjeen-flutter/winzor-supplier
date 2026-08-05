@@ -3,8 +3,10 @@ import { useQuery } from '@tanstack/react-query';
 import axios from '../services/api';
 import '../styles/dashboard.css';
 import '../styles/Orders.css';
+import '../styles/storeDashboard.css';
 import { unwrapList } from '../utils/unwrapList';
 import LightLoadingHint from '../shared/LightLoadingHint';
+import { getFulfillmentBadge } from '../utils/storeOrderLabels';
 
 const STATUS_OPTIONS = [
     { value: '', label: 'كل الحالات' },
@@ -42,6 +44,7 @@ export default function OrderHistory() {
             return res.data;
         },
         staleTime: 30 * 1000,
+        placeholderData: (prev) => prev,
     });
 
     const orders = unwrapList(data, ['orders']);
@@ -77,13 +80,20 @@ export default function OrderHistory() {
             )}
 
             <div className="orders-list">
-                {orders.map(order => (
+                {orders.map(order => {
+                    const badge = getFulfillmentBadge(order.deliveryMethod);
+                    return (
                     <div key={order._id} className="order-card">
                         <div className="order-header">
-                            <h3>{order.customer?.name || 'زبون'}</h3>
-                            <span style={{ background: '#6366f1', color: '#fff', padding: '4px 10px', borderRadius: 20, fontSize: 12 }}>
-                                {STATUS_MAP[order.status] || order.status}
-                            </span>
+                            <h3>{order.customer?.name || order.customerName || 'زبون'}</h3>
+                            <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+                              <span className={`order-fulfill-badge order-fulfill-badge--${badge.tone}`}>
+                                {badge.label}
+                              </span>
+                              <span style={{ background: '#6366f1', color: '#fff', padding: '4px 10px', borderRadius: 20, fontSize: 12 }}>
+                                  {STATUS_MAP[order.status] || order.status}
+                              </span>
+                            </div>
                         </div>
                         <div className="order-body">
                         <p><strong>🔢 </strong>{order.orderNumber || order._id.slice(-6).toUpperCase()}</p>
@@ -97,15 +107,27 @@ export default function OrderHistory() {
                         </div>
                         <button type="button" className="confirm-btn" onClick={() => setDetail(order)}>عرض التفاصيل</button>
                     </div>
-                ))}
+                    );
+                })}
             </div>
 
             {detail && (
                 <div className="reject-dialog-overlay" onClick={() => setDetail(null)}>
                     <div className="reject-dialog" style={{ maxWidth: 520 }} onClick={(e) => e.stopPropagation()}>
                         <h3>تفاصيل الطلب</h3>
-                        <p><strong>الزبون:</strong> {detail.customer?.name}</p>
+                        <p><strong>الزبون:</strong> {detail.customer?.name || detail.customerName}</p>
                         <p><strong>رقم الطلب:</strong> {detail.orderNumber || detail._id.slice(-6).toUpperCase()}</p>
+                        {(() => {
+                          const badge = getFulfillmentBadge(detail.deliveryMethod);
+                          return (
+                            <p>
+                              <strong>التسليم عبر:</strong>{' '}
+                              <span className={`order-fulfill-badge order-fulfill-badge--${badge.tone}`}>
+                                {badge.label}
+                              </span>
+                            </p>
+                          );
+                        })()}
                         {detail.verificationCode && (
                             <p style={{ background: '#ecfdf5', padding: 10, borderRadius: 8, fontWeight: 'bold', letterSpacing: 2, color: '#059669' }}>
                                 🔐 رمز التحقق: {detail.verificationCode}

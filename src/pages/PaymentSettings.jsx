@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { Loader2 } from 'lucide-react';
+import { Loader2, CheckCircle2, Circle } from 'lucide-react';
 import '../styles/paymentSettings.css';
 import '../styles/AddProductsOffers.css';
 import { queryKeys } from '../lib/queryClient';
@@ -16,6 +16,7 @@ import {
 import {
   PAYMENT_METHOD_TYPES,
   PAYMENT_TYPE_BY_ID,
+  ALWAYS_AVAILABLE_PAYMENT_METHODS,
   DEFAULT_CURRENCY_PREFERENCES,
 } from '../utils/paymentMethodConstants';
 import PaymentAccountCard from '../components/paymentSettings/PaymentAccountCard';
@@ -67,6 +68,14 @@ export default function PaymentSettings() {
     const map = Object.fromEntries(PAYMENT_METHOD_TYPES.map((t) => [t.id, []]));
     methods.forEach((m) => {
       if (map[m.type]) map[m.type].push(m);
+    });
+    return map;
+  }, [methods]);
+
+  const activeByType = useMemo(() => {
+    const map = {};
+    methods.forEach((m) => {
+      if (m.isActive) map[m.type] = true;
     });
     return map;
   }, [methods]);
@@ -171,9 +180,9 @@ export default function PaymentSettings() {
       <header className="payment-settings-page__head">
         <div>
           <Link to="../profile" className="payment-settings-page__back">← العودة للملف الشخصي</Link>
-          <h2 className="title">💳 إعدادات الدفع</h2>
+          <h2 className="title">إعدادات الدفع</h2>
           <p className="payment-settings-page__lead">
-            أضف حسابات الدفع التي ستظهر للزبائن عند إتمام الطلب
+            أدر طرق الدفع التي تظهر للزبائن عند إتمام الطلب — نقداً، تفاهم، أو تحويل رقمي
           </p>
         </div>
       </header>
@@ -182,9 +191,67 @@ export default function PaymentSettings() {
         <div className={message.isError ? 'alert-error' : 'alert-success'}>{message.text}</div>
       )}
 
+      <section className="payment-overview" aria-labelledby="payment-overview-title">
+        <div className="payment-overview__head">
+          <h3 id="payment-overview-title">ملخص طرق الدفع</h3>
+          <p>نظرة سريعة على ما هو متاح للزبائن الآن</p>
+        </div>
+        <div className="payment-overview__grid">
+          {ALWAYS_AVAILABLE_PAYMENT_METHODS.map((method) => (
+            <article key={method.id} className="payment-overview__card payment-overview__card--ready">
+              <span className="payment-overview__icon">{method.icon}</span>
+              <div className="payment-overview__body">
+                <strong>{method.label}</strong>
+                <span>متاحة دائماً</span>
+              </div>
+              <CheckCircle2 size={18} className="payment-overview__check" aria-hidden="true" />
+            </article>
+          ))}
+          {PAYMENT_METHOD_TYPES.map((method) => {
+            const ready = !!activeByType[method.id];
+            return (
+              <article
+                key={method.id}
+                className={`payment-overview__card${ready ? ' payment-overview__card--ready' : ''}`}
+              >
+                <span className="payment-overview__icon">{method.icon}</span>
+                <div className="payment-overview__body">
+                  <strong>{method.label}</strong>
+                  <span>{ready ? 'حساب نشط' : 'بانتظار تفعيل حساب'}</span>
+                </div>
+                {ready ? (
+                  <CheckCircle2 size={18} className="payment-overview__check" aria-hidden="true" />
+                ) : (
+                  <Circle size={18} className="payment-overview__idle" aria-hidden="true" />
+                )}
+              </article>
+            );
+          })}
+        </div>
+      </section>
+
+      <section className="payment-builtin-section" aria-labelledby="payment-builtin-title">
+        <div className="payment-builtin-section__head">
+          <h3 id="payment-builtin-title">طرق الدفع الأساسية</h3>
+          <p>متاحة للزبائن تلقائياً دون إعداد حساب</p>
+        </div>
+        <div className="payment-builtin-section__list">
+          {ALWAYS_AVAILABLE_PAYMENT_METHODS.map((method) => (
+            <article key={method.id} className="payment-builtin-card">
+              <div className="payment-builtin-card__icon">{method.icon}</div>
+              <div>
+                <h4>{method.label}</h4>
+                <p>{method.description}</p>
+              </div>
+              <span className="payment-builtin-card__badge">مفعّلة</span>
+            </article>
+          ))}
+        </div>
+      </section>
+
       {activeDigitalCount === 0 && !isLoading && (
         <div className="payment-settings-page__notice">
-          <p>لا يوجد حساب دفع رقمي نشط. فعّل حساباً واحداً على الأقل ليظهر للزبائن.</p>
+          <p>لا يوجد حساب دفع رقمي نشط. أضف وفعّل حساباً واحداً على الأقل (بنك فلسطين / PalPay / Jawwal Pay) ليظهر للزبائن عند التحويل.</p>
         </div>
       )}
 
@@ -194,38 +261,47 @@ export default function PaymentSettings() {
         </div>
       )}
 
-      {!isLoading && PAYMENT_METHOD_TYPES.map((typeMeta) => (
-        <section key={typeMeta.id} className="payment-type-section">
-          <div className="payment-type-section__head">
-            <div>
-              <h3>{typeMeta.icon} {typeMeta.label}</h3>
-              <p>{typeMeta.description}</p>
-            </div>
-            <button type="button" className="payment-type-section__add" onClick={() => openAdd(typeMeta.id)}>
-              + إضافة حساب
-            </button>
+      {!isLoading && (
+        <div className="payment-digital-block">
+          <div className="payment-digital-block__head">
+            <h3>حسابات الدفع الرقمي</h3>
+            <p>حساب نشط واحد لكل نوع — يمكن إضافة عدة حسابات وتفعيل المطلوب</p>
           </div>
 
-          <div className="payment-type-section__cards">
-            {(grouped[typeMeta.id] || []).length === 0 && (
-              <div className="payment-type-section__empty">
-                لا توجد حسابات — أضف حساب {typeMeta.label}
+          {PAYMENT_METHOD_TYPES.map((typeMeta) => (
+            <section key={typeMeta.id} className="payment-type-section">
+              <div className="payment-type-section__head">
+                <div>
+                  <h3>{typeMeta.icon} {typeMeta.label}</h3>
+                  <p>{typeMeta.description}</p>
+                </div>
+                <button type="button" className="payment-type-section__add" onClick={() => openAdd(typeMeta.id)}>
+                  + إضافة حساب
+                </button>
               </div>
-            )}
-            {(grouped[typeMeta.id] || []).map((account) => (
-              <PaymentAccountCard
-                key={account._id}
-                account={account}
-                typeMeta={PAYMENT_TYPE_BY_ID[account.type] || typeMeta}
-                busy={busyId === account._id}
-                onEdit={openEdit}
-                onDelete={handleDelete}
-                onToggleActive={handleToggleActive}
-              />
-            ))}
-          </div>
-        </section>
-      ))}
+
+              <div className="payment-type-section__cards">
+                {(grouped[typeMeta.id] || []).length === 0 && (
+                  <div className="payment-type-section__empty">
+                    لا توجد حسابات — أضف حساب {typeMeta.label} ليظهر للزبائن
+                  </div>
+                )}
+                {(grouped[typeMeta.id] || []).map((account) => (
+                  <PaymentAccountCard
+                    key={account._id}
+                    account={account}
+                    typeMeta={PAYMENT_TYPE_BY_ID[account.type] || typeMeta}
+                    busy={busyId === account._id}
+                    onEdit={openEdit}
+                    onDelete={handleDelete}
+                    onToggleActive={handleToggleActive}
+                  />
+                ))}
+              </div>
+            </section>
+          ))}
+        </div>
+      )}
 
       <CurrencyPreferencesSection
         preferences={currencyPrefs}

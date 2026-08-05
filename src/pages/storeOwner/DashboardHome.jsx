@@ -1,11 +1,12 @@
 import { useMemo, useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { RefreshCw } from 'lucide-react';
 import axios from '../../services/api';
 import { getMyStore } from '../../services/store.service';
 import { getStoredUser } from '../../utils/safeStorage';
 import { queryKeys } from '../../lib/queryClient';
-import { unwrapList } from '../../utils/unwrapList';
+import { fetchDashboardStats } from '../../lib/dashboardStats';
 import DashboardStatCards from '../../components/dashboard/DashboardStatCards';
 import OrderQuickNav from '../../components/dashboard/OrderQuickNav';
 import OrderSummaryCard from '../../components/orders/OrderSummaryCard';
@@ -15,6 +16,7 @@ import {
   ORDER_FILTER_GROUPS,
   orderMatchesFilter,
   countOrdersByFilter,
+  getDeliverActionLabel,
 } from '../../utils/storeOrderLabels';
 import '../../styles/dashboard.css';
 import '../../styles/storeDashboard.css';
@@ -30,6 +32,7 @@ export default function DashboardHome() {
   const [activeFilter, setActiveFilter] = useState(ORDER_FILTER_KEYS.PENDING);
   const [deliveringId, setDeliveringId] = useState(null);
   const [toast, setToast] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     if (location.state?.orderFilter) {
@@ -38,7 +41,7 @@ export default function DashboardHome() {
     }
   }, [location.state?.orderFilter, location.pathname, navigate]);
 
-  const { data: storeResponse } = useQuery({
+  const { data: storeResponse, isFetching: storeFetching } = useQuery({
     queryKey: queryKeys.myStore,
     queryFn: async () => {
       const { data } = await getMyStore();
@@ -46,36 +49,23 @@ export default function DashboardHome() {
     },
     enabled: !isSupplier,
     staleTime: 5 * 60 * 1000,
+    placeholderData: (prev) => prev,
   });
 
   const store = storeResponse?.store;
 
-  const { data: dashboardData, isLoading: statsLoading } = useQuery({
+  const {
+    data: dashboardData,
+    isLoading: statsLoading,
+    isFetching: statsFetching,
+    dataUpdatedAt,
+  } = useQuery({
     queryKey: queryKeys.dashboardStats,
-    queryFn: async () => {
-      const [ordersRes, historyRes] = await Promise.allSettled([
-        axios.get('/orders/store'),
-        axios.get('/orders/store/history'),
-      ]);
-
-      const activePayload = ordersRes.status === 'fulfilled' ? ordersRes.value.data : {};
-      const activeOrders = unwrapList(activePayload, ['orders']);
-      const historyOrders = historyRes.status === 'fulfilled'
-        ? unwrapList(historyRes.value.data, ['orders'])
-        : [];
-
-      const cards = activePayload.cards ?? 0;
-      const bypassCards = activePayload.bypassCards ?? false;
-
-      const allOrdersMap = new Map();
-      [...activeOrders, ...historyOrders].forEach((o) => {
-        if (o?._id) allOrdersMap.set(o._id, o);
-      });
-      const allOrders = Array.from(allOrdersMap.values());
-
-      return { allOrders, cards, bypassCards };
-    },
-    staleTime: 30 * 1000,
+    queryFn: fetchDashboardStats,
+    staleTime: 60 * 1000,
+    gcTime: 24 * 60 * 60 * 1000,
+    placeholderData: (prev) => prev,
+    refetchOnMount: 'always',
   });
 
   const allOrders = dashboardData?.allOrders ?? [];
@@ -83,6 +73,7 @@ export default function DashboardHome() {
   const bypassCards = dashboardData?.bypassCards ?? false;
   const customersCount = store?.customersCount ?? 0;
   const pendingCount = countOrdersByFilter(allOrders, ORDER_FILTER_KEYS.PENDING);
+  const hasCachedOrders = allOrders.length > 0 || dataUpdatedAt > 0;
 
   const filterCounts = useMemo(() => ({
     [ORDER_FILTER_KEYS.PENDING]: countOrdersByFilter(allOrders, ORDER_FILTER_KEYS.PENDING),
@@ -101,6 +92,27 @@ export default function DashboardHome() {
     setTimeout(() => setToast(''), 3000);
   };
 
+  const handleRefresh = async () => {
+    if (refreshing) return;
+    setRefreshing(true);
+    try {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: queryKeys.dashboardStats }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.myStore }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.storeOrders }),
+        queryClient.invalidateQueries({ queryKey: ['storeOrderHistory'] }),
+      ]);
+      await Promise.all([
+        queryClient.refetchQueries({ queryKey: queryKeys.dashboardStats, type: 'active' }),
+        !isSupplier
+          ? queryClient.refetchQueries({ queryKey: queryKeys.myStore, type: 'active' })
+          : Promise.resolve(),
+      ]);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   const openOrder = (order) => {
     navigate(`${baseRoute}/orders/${order._id}`);
   };
@@ -114,7 +126,7 @@ export default function DashboardHome() {
       queryClient.invalidateQueries({ queryKey: queryKeys.dashboardStats });
       queryClient.invalidateQueries({ queryKey: queryKeys.storeOrders });
       queryClient.invalidateQueries({ queryKey: ['storeOrderHistory'] });
-      showToast(res.data.message || 'تم تسليم الطلب للدليفري');
+      showToast(res.data.message || getDeliverActionLabel(order.deliveryMethod));
       setActiveFilter(ORDER_FILTER_KEYS.DELIVERED);
     } catch (err) {
       showToast(err.response?.data?.message || 'تعذّر تحديث الحالة');
@@ -124,6 +136,8 @@ export default function DashboardHome() {
   };
 
   const activeGroup = ORDER_FILTER_GROUPS[activeFilter];
+  const showInitialLoading = statsLoading && !hasCachedOrders;
+  const isSilentRefresh = (statsFetching || storeFetching || refreshing) && hasCachedOrders;
 
   return (
     <div className="store-dashboard" dir="rtl">
@@ -140,11 +154,33 @@ export default function DashboardHome() {
             <h2 className="title dashboard-home-store__name">{store.name}</h2>
             <p className="dashboard-home-store__subtitle">لوحة التحكم — إدارة الطلبات</p>
           </div>
+          <button
+            type="button"
+            className={`dashboard-refresh-btn${refreshing || isSilentRefresh ? ' is-spinning' : ''}`}
+            onClick={handleRefresh}
+            disabled={refreshing}
+            aria-label="تحديث البيانات"
+            title="تحديث"
+          >
+            <RefreshCw size={18} strokeWidth={2.4} />
+          </button>
         </div>
       ) : (
-        <header className="store-dashboard__header">
-          <h2 className="title">لوحة التحكم</h2>
-          <p className="store-dashboard__subtitle">نظرة عامة على أهم معلومات متجرك</p>
+        <header className="store-dashboard__header store-dashboard__header--with-refresh">
+          <div>
+            <h2 className="title">لوحة التحكم</h2>
+            <p className="store-dashboard__subtitle">نظرة عامة على أهم معلومات متجرك</p>
+          </div>
+          <button
+            type="button"
+            className={`dashboard-refresh-btn${refreshing || isSilentRefresh ? ' is-spinning' : ''}`}
+            onClick={handleRefresh}
+            disabled={refreshing}
+            aria-label="تحديث البيانات"
+            title="تحديث"
+          >
+            <RefreshCw size={18} strokeWidth={2.4} />
+          </button>
         </header>
       )}
 
@@ -153,7 +189,7 @@ export default function DashboardHome() {
         pendingCount={pendingCount}
         cards={cards}
         bypassCards={bypassCards}
-        loading={statsLoading}
+        loading={showInitialLoading}
       />
 
       <OrderQuickNav
@@ -172,11 +208,11 @@ export default function DashboardHome() {
 
         {toast && <div className="store-dash-toast">{toast}</div>}
 
-        {statsLoading && filteredOrders.length === 0 && (
+        {showInitialLoading && (
           <LightLoadingHint label="جاري تحميل الطلبات..." />
         )}
 
-        {!statsLoading && filteredOrders.length === 0 && (
+        {!showInitialLoading && filteredOrders.length === 0 && (
           <div className="store-dash-empty">
             <div className="store-dash-empty__icon">📭</div>
             <p>لا توجد طلبات في هذا القسم</p>

@@ -8,14 +8,8 @@ const DEFAULTS = {
     storeCompetitions: true,
     marketplace: true,
     draws: true,
-    wheel: true,
   },
   referralRewardPoints: 3,
-  wheel: {
-    enabled: true,
-    spinCost: 5,
-    placements: { header: true, userCenter: true, inventory: true },
-  },
   verification: {
     enforced: false,
     emailAvailable: false,

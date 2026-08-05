@@ -8,6 +8,8 @@ import {
   getConfirmationNumber,
   getDeliveryDate,
   formatOrderDateShort,
+  getDeliverActionLabel,
+  getFulfillmentBadge,
 } from '../../utils/storeOrderLabels';
 
 export default function OrderSummaryCard({
@@ -23,6 +25,7 @@ export default function OrderSummaryCard({
   const phone = getCustomerDisplayPhone(order);
   const orderNumber = getOrderDisplayNumber(order);
   const confirmationNumber = getConfirmationNumber(order);
+  const fulfillBadge = getFulfillmentBadge(order.deliveryMethod);
 
   const handleClick = () => onOpen?.(order);
   const showDeliverAction = filterKey === ORDER_FILTER_KEYS.CONFIRMED
@@ -83,9 +86,15 @@ export default function OrderSummaryCard({
 
         {filterKey === ORDER_FILTER_KEYS.DELIVERED && (
           <>
-            <div className="order-summary-card__row">
+            <div className="order-summary-card__row order-summary-card__row--badge">
               <span className="order-summary-card__label">الزبون</span>
               <strong>{customerName}</strong>
+              <span
+                className={`order-fulfill-badge order-fulfill-badge--${fulfillBadge.tone}`}
+                title={fulfillBadge.label}
+              >
+                {fulfillBadge.label}
+              </span>
             </div>
             <div className="order-summary-card__row">
               <span className="order-summary-card__label">رقم التأكيد</span>
@@ -131,7 +140,7 @@ export default function OrderSummaryCard({
             onDeliver?.(order);
           }}
         >
-          {busy ? 'جارٍ التحديث...' : 'تم التسليم للدليفري'}
+          {busy ? 'جارٍ التحديث...' : getDeliverActionLabel(order.deliveryMethod)}
         </button>
       )}
 

@@ -20,6 +20,22 @@ export const PAYMENT_METHOD_TYPES = [
   },
 ];
 
+/** Non-account methods always available to customers at checkout. */
+export const ALWAYS_AVAILABLE_PAYMENT_METHODS = [
+  {
+    id: 'cash_on_delivery',
+    label: 'الدفع عند التوصيل',
+    icon: '💵',
+    description: 'الزبون يدفع نقداً عند استلام الطلب',
+  },
+  {
+    id: 'seller_agreement',
+    label: 'التفاهم مع البائع',
+    icon: '🤝',
+    description: 'اتفاق مباشر بين الزبون والمتجر على طريقة الدفع',
+  },
+];
+
 export const PAYMENT_TYPE_BY_ID = Object.fromEntries(
   PAYMENT_METHOD_TYPES.map((t) => [t.id, t]),
 );
