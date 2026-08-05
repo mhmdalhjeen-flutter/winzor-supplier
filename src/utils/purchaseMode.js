@@ -1,8 +1,8 @@
 export const PURCHASE_MODES = Object.freeze(['quantity', 'price', 'both']);
 
 export function normalizePurchaseMode(value) {
-  const v = String(value || 'quantity').toLowerCase().trim();
-  return PURCHASE_MODES.includes(v) ? v : 'quantity';
+  const v = String(value || 'both').toLowerCase().trim();
+  return PURCHASE_MODES.includes(v) ? v : 'both';
 }
 
 export function purchaseModeLabel(mode) {

@@ -48,7 +48,9 @@ export default function DashboardLayout() {
   useEffect(() => {
     if (!storeQueryData) return;
     setSuggestedDefaults(storeQueryData.suggestedDefaults);
-    if (storeQueryData.needsWelcome) setWelcomeOpen(true);
+    const s = storeQueryData.store;
+    const missingBranding = s && (!String(s.logo || '').trim() || !String(s.coverImage || '').trim());
+    if (storeQueryData.needsWelcome && missingBranding) setWelcomeOpen(true);
   }, [storeQueryData]);
 
   useEffect(() => {

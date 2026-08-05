@@ -1,4 +1,4 @@
-import { Phone, Pencil } from "lucide-react";
+import { Phone, Pencil, Camera } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -17,6 +17,10 @@ import {
 } from "../utils/phoneValidation";
 import ItemCategoriesSection from "../components/ItemCategoriesSection";
 import useStoreOwnerPermissions from "../hooks/useStoreOwnerPermissions";
+
+function hasBrandingImage(value) {
+  return typeof value === "string" && value.trim().length > 0;
+}
 
 export default function Profile() {
   const queryClient = useQueryClient();
@@ -53,13 +57,12 @@ export default function Profile() {
   });
 
   const store = storeResponse?.store;
-  const displayName = store?.name || user.name || (isSupplier ? "المستودع" : "المتجر");
-  const displayPhone = store?.phone || user.phone || user.email || "";
-  const avatarContent = store?.logo ? (
-    <img src={store.logo} alt="" className="profile-header-card__avatar-img" />
-  ) : (
-    (displayName?.charAt(0) || user.name?.charAt(0) || "?").toUpperCase()
-  );
+  const displayLogo = storeForm.logo || store?.logo || "";
+  const displayCover = storeForm.coverImage || store?.coverImage || "";
+  const hasLogo = hasBrandingImage(displayLogo);
+  const hasCover = hasBrandingImage(displayCover);
+  const displayName = storeForm.name || store?.name || user.name || (isSupplier ? "المستودع" : "المتجر");
+  const displayPhone = storeForm.phone || store?.phone || user.phone || user.email || "";
 
   const showMsg = (text, isError = false) => {
     setMessage({ text, isError });
@@ -152,17 +155,79 @@ export default function Profile() {
 
   return (
     <div className="profile-page">
-      <h2 className="title">👤 الملف الشخصي</h2>
-
       {message.text && (
         <div className={message.isError ? "alert-error" : "alert-success"}>{message.text}</div>
       )}
 
+      {store && (
+        <section id="store-branding" className="profile-hero">
+          <div
+            className="profile-hero__cover"
+            style={{
+              backgroundImage: hasCover
+                ? `url(${displayCover})`
+                : "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+            }}
+          />
+          <div className="profile-hero__body">
+            <div className="profile-hero__logo-wrap">
+              {hasLogo ? (
+                <img src={displayLogo} alt="" className="profile-hero__logo" />
+              ) : (
+                <div className="profile-hero__logo profile-hero__logo--fallback">
+                  {displayName?.charAt(0) || "🏪"}
+                </div>
+              )}
+            </div>
+            <div className="profile-hero__info">
+              <h2 className="profile-hero__name">{displayName}</h2>
+              {store.category && (
+                <span className="profile-hero__category">{store.category}</span>
+              )}
+              {displayPhone && (
+                <p className="profile-hero__phone" dir="ltr">
+                  <Phone size={14} strokeWidth={2.2} aria-hidden />
+                  <span>{displayPhone}</span>
+                </p>
+              )}
+            </div>
+            {!isEditingStore && (
+              <button
+                type="button"
+                className="profile-hero__edit-btn"
+                onClick={() => setIsEditingStore(true)}
+              >
+                <Pencil size={15} strokeWidth={2.2} />
+                تعديل المتجر
+              </button>
+            )}
+          </div>
+        </section>
+      )}
+
+      {!isSupplier && store && (!hasLogo || !hasCover) && (
+        <div className="profile-branding-alert">
+          <Camera size={18} strokeWidth={2.2} aria-hidden />
+          <div>
+            <strong>أكمل هوية متجرك</strong>
+            <p>
+              {!hasLogo && !hasCover
+                ? "أضف شعاراً وغلافاً لمتجرك ليظهر بشكل احترافي."
+                : !hasLogo
+                  ? "أضف شعاراً لمتجرك."
+                  : "أضف غلافاً لمتجرك."}
+            </p>
+          </div>
+          {!isEditingStore && (
+            <button type="button" className="profile-branding-alert__btn" onClick={() => setIsEditingStore(true)}>
+              رفع الآن
+            </button>
+          )}
+        </div>
+      )}
+
       <div className="profile-container">
         <div className="profile-header-card">
-          <div className="profile-header-card__avatar" aria-hidden>
-            {avatarContent}
-          </div>
           <div className="profile-header-card__body">
             {isEditingUser ? (
               <form className="profile-header-card__edit-form" onSubmit={saveUser}>
@@ -182,13 +247,13 @@ export default function Profile() {
             ) : (
               <>
                 <div className="profile-header-card__title-row">
-                  <h3 className="profile-header-card__name">{displayName}</h3>
+                  <h3 className="profile-header-card__name">{user.name || "حسابي"}</h3>
                   <span className="profile-header-card__role">{isSupplier ? "تاجر معتمد" : "صاحب محل"}</span>
                 </div>
-                {displayPhone && (
+                {(user.phone || user.email) && (
                   <p className="profile-header-card__phone" dir="ltr">
                     <Phone size={14} strokeWidth={2.2} aria-hidden />
-                    <span>{displayPhone}</span>
+                    <span>{user.phone || user.email}</span>
                   </p>
                 )}
               </>
@@ -231,39 +296,9 @@ export default function Profile() {
             <ItemCategoriesSection embedded />
           </CollapsibleSection>
         )}
-      </div>
 
-      {store && (
-        <section id="store-branding" className="profile-store-section">
-          <div className="profile-cover-wrap">
-            <div
-              className="profile-cover"
-              style={{
-                backgroundImage: storeForm.coverImage
-                  ? `url(${storeForm.coverImage})`
-                  : "linear-gradient(135deg,#667eea,#764ba2)",
-              }}
-            />
-            {storeForm.logo ? (
-              <img src={storeForm.logo} alt="" className="profile-store-logo" />
-            ) : (
-              <div className="profile-store-logo fallback">{store.name?.charAt(0) || "🏪"}</div>
-            )}
-          </div>
-
+        {store && (
           <div className="profile-details-form">
-            <div className="section-head">
-              <div>
-                <h3>{storeForm.name || store.name}</h3>
-                <p className="muted-text">نوع النشاط: {store.category}</p>
-              </div>
-              {!isEditingStore && (
-                <button type="button" className="edit-profile-btn" onClick={() => setIsEditingStore(true)}>
-                  تعديل المتجر
-                </button>
-              )}
-            </div>
-
             {isEditingStore ? (
               <form onSubmit={saveStore} className="store-edit-form">
                 <ImagePicker
@@ -324,7 +359,7 @@ export default function Profile() {
 
                 <div className="form-group">
                   <label>نوع النشاط</label>
-                  <input value={store.category || ''} disabled className="input-readonly" />
+                  <input value={store.category || ""} disabled className="input-readonly" />
                 </div>
 
                 <div className="form-group">
@@ -365,15 +400,19 @@ export default function Profile() {
                   {storeForm.phone && <span>📞 {storeForm.phone}</span>}
                   {storeForm.whatsapp && <span>💬 واتساب: {storeForm.whatsapp}</span>}
                   {storeForm.address && <span>📍 {storeForm.address}</span>}
-                  {storeForm.region && <span>🗺️ {storeForm.region}{storeForm.subRegion ? ` — ${storeForm.subRegion}` : ''}</span>}
+                  {storeForm.region && (
+                    <span>
+                      🗺️ {storeForm.region}
+                      {storeForm.subRegion ? ` — ${storeForm.subRegion}` : ""}
+                    </span>
+                  )}
                   {store.category && <span>🏷️ {store.category}</span>}
                 </div>
-                <p className="muted-text">يمكنك تعديل الشعار والغلاف والوصف وبيانات التواصل في أي وقت.</p>
               </div>
             )}
           </div>
-        </section>
-      )}
+        )}
+      </div>
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { PackagePlus, Tag, Store, Ticket } from 'lucide-react';
+import { Store, Ticket } from 'lucide-react';
 
 function QuickActionCard({ icon: Icon, title, description, tone, onClick }) {
   return (
@@ -17,8 +17,6 @@ function QuickActionCard({ icon: Icon, title, description, tone, onClick }) {
 export default function StoreQuickActions({
   isSupplier = false,
   showBuyCodes = true,
-  onAddProduct,
-  onAddOffer,
   onMyStore,
   onBuyCodes,
 }) {
@@ -26,22 +24,6 @@ export default function StoreQuickActions({
   const storeDesc = isSupplier ? 'إدارة المستودع والملف' : 'افتح ملف المتجر وإدارته';
 
   const items = [
-    {
-      id: 'product',
-      icon: PackagePlus,
-      title: 'إضافة عنصر',
-      description: 'أنشئ عنصراً جديداً للمتجر',
-      tone: 'blue',
-      onClick: onAddProduct,
-    },
-    {
-      id: 'offer',
-      icon: Tag,
-      title: 'إضافة عرض',
-      description: 'انشر عرضاً جديداً لجذب الزبائن',
-      tone: 'green',
-      onClick: onAddOffer,
-    },
     {
       id: 'store',
       icon: Store,

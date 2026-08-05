@@ -42,8 +42,6 @@ const OFFER_RULES = [
   'أكمل حقول نوع العرض لحساب السعر النهائي.',
 ];
 
-const VARIANT_PRESETS = ['اللون', 'المقاس', 'السعة', 'النوع'];
-
 function createVariantId() {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
     return crypto.randomUUID();
@@ -73,7 +71,7 @@ const EMPTY_PRODUCT = {
   storeItemCategoryId: '',
   relatedProductId: '',
   isActive: true,
-  purchaseMode: 'quantity',
+  purchaseMode: 'both',
 };
 
 const EMPTY_OFFER = {
@@ -174,13 +172,44 @@ export default function AddProductsOffers() {
   const [product, setProduct] = useState(EMPTY_PRODUCT);
   const [offer, setOffer] = useState({ ...EMPTY_OFFER, offerType: 'fixed_price' });
   const [localImageFile, setLocalImageFile] = useState(null);
-  const [expandedVariants, setExpandedVariants] = useState({});
   const [pricingPreview, setPricingPreview] = useState(null);
   const [pendingItemId, setPendingItemId] = useState(null);
+  const [variantDraft, setVariantDraft] = useState({ name: '', value: '' });
+  const [showVariantForm, setShowVariantForm] = useState(true);
+
+  const dedicatedTab = tabParam === 'product' || tabParam === 'offer';
+  const hideTypeTabs = !isEditMode && dedicatedTab;
 
   useEffect(() => {
     if (isEditMode) setAdvancedOpen(true);
   }, [isEditMode]);
+
+  useEffect(() => {
+    if (tabParam === 'offer' || tabParam === 'product') {
+      setTab(tabParam);
+    }
+  }, [tabParam]);
+
+  useEffect(() => {
+    if (isEditMode || isPendingEdit || draftIdParam || pendingId) return;
+    const key = tab === 'product' ? DRAFT_PRODUCT_KEY : DRAFT_OFFER_KEY;
+    const fallback = tab === 'product' ? EMPTY_PRODUCT : { ...EMPTY_OFFER, offerType: 'fixed_price' };
+    const data = loadDraft(key, fallback);
+    if (tab === 'product') {
+      if (data.variants?.length) data.variants = withVariantIds(data.variants);
+      setProduct(data);
+    } else {
+      if (data.variants?.length) data.variants = withVariantIds(data.variants);
+      setOffer(data);
+    }
+    if (data.image) setMediaResetKey((k) => k + 1);
+  }, [tab, isEditMode, isPendingEdit, draftIdParam, pendingId]);
+
+  useEffect(() => {
+    if (isEditMode || isPendingEdit || draftIdParam || pendingId) return;
+    const key = tab === 'product' ? DRAFT_PRODUCT_KEY : DRAFT_OFFER_KEY;
+    saveDraft(key, tab === 'product' ? product : offer);
+  }, [product, offer, tab, isEditMode, isPendingEdit, draftIdParam, pendingId]);
 
   useEffect(() => {
     if (!draftIdParam || isEditMode || isPendingEdit) return;
@@ -391,24 +420,6 @@ export default function AddProductsOffers() {
     setActiveData((prev) => ({ ...prev, ...patch }));
   };
 
-  const addVariant = (name) => {
-    setActiveData((prev) => {
-      if (prev.variants.some((v) => v.name === name)) return prev;
-      return {
-        ...prev,
-        variantsEnabled: true,
-        variants: [...prev.variants, { id: createVariantId(), name, values: '' }],
-      };
-    });
-  };
-
-  const updateVariant = (index, patch) => {
-    setActiveData((prev) => ({
-      ...prev,
-      variants: prev.variants.map((v, i) => (i === index ? { ...v, ...patch } : v)),
-    }));
-  };
-
   const removeVariant = (index) => {
     setActiveData((prev) => ({
       ...prev,
@@ -422,6 +433,20 @@ export default function AddProductsOffers() {
       setCurrentDraftId(null);
     }
     clearDraft(tab === 'product' ? DRAFT_PRODUCT_KEY : DRAFT_OFFER_KEY);
+  };
+
+  const handleClearForm = () => {
+    clearCurrentDraft();
+    setLocalImageFile(null);
+    setVariantDraft({ name: '', value: '' });
+    setShowVariantForm(true);
+    setMediaResetKey((k) => k + 1);
+    if (tab === 'product') {
+      setProduct({ ...EMPTY_PRODUCT });
+    } else {
+      setOffer({ ...EMPTY_OFFER, offerType: 'fixed_price' });
+    }
+    showNotice('تم مسح النموذج', 'info');
   };
 
   const handleSaveDraft = () => {
@@ -523,9 +548,9 @@ export default function AddProductsOffers() {
   };
 
   const handleOfferPublish = async () => {
-    const offerTitle = offer.title.trim() || (offer.relatedProductId ? 'عرض' : '');
-    if (!offerTitle && !offer.relatedProductId) {
-      showNotice('اختر العنصر أو أدخل اسم العرض', 'error');
+    const offerTitle = offer.title.trim();
+    if (!offerTitle) {
+      showNotice('اسم العنصر مطلوب', 'error');
       return;
     }
     if (!offer.image && !localImageFile) {
@@ -705,8 +730,28 @@ export default function AddProductsOffers() {
     return '—';
   })();
 
-  const toggleVariantExpanded = (index) => {
-    setExpandedVariants((prev) => ({ ...prev, [index]: !prev[index] }));
+  const saveVariantDraft = () => {
+    const name = variantDraft.name.trim();
+    const value = variantDraft.value.trim();
+    if (!name || !value) {
+      showNotice('أدخل اسم المتغير وقيمته', 'error');
+      return;
+    }
+    if (activeData.variants.some((v) => v.name === name)) {
+      showNotice('يوجد متغير بنفس الاسم', 'error');
+      return;
+    }
+    setActiveData((prev) => ({
+      ...prev,
+      variantsEnabled: true,
+      variants: [...prev.variants, { id: createVariantId(), name, values: value }],
+    }));
+    setVariantDraft({ name: '', value: '' });
+    setShowVariantForm(false);
+  };
+
+  const clearVariantDraft = () => {
+    setVariantDraft({ name: '', value: '' });
   };
 
   const renderInventorySection = () => (
@@ -714,7 +759,7 @@ export default function AddProductsOffers() {
       <div className="variants-section__header">
         <div>
           <p className="variants-section__title">متغيرات العنصر</p>
-          <p className="variants-section__desc">فعّل المتغيرات لإضافة خيارات متعددة</p>
+          <p className="variants-section__desc">أضف خيارات مثل اللون أو المقاس</p>
         </div>
         <label className="switch">
           <input
@@ -728,52 +773,59 @@ export default function AddProductsOffers() {
       </div>
       {activeData.variantsEnabled && (
         <div className="variants-section__body">
-          <div className="variant-presets-card">
-            <p className="variant-presets-card__label">إضافة سريعة</p>
-            <div className="variant-presets">
-              {VARIANT_PRESETS.map((name) => (
-                <button
-                  key={name}
-                  type="button"
-                  className="variant-preset"
-                  onClick={() => addVariant(name)}
-                  disabled={activeData.variants.some((v) => v.name === name)}
-                >
-                  + {name}
-                </button>
+          {activeData.variants.length > 0 && (
+            <div className="variant-chips">
+              {activeData.variants.map((variant, index) => (
+                <div key={variant.id ?? `variant-${index}`} className="variant-chip">
+                  <span className="variant-chip__label">{variant.name}</span>
+                  <span className="variant-chip__value">{variant.values}</span>
+                  <button
+                    type="button"
+                    className="variant-chip__remove"
+                    onClick={() => removeVariant(index)}
+                    aria-label={`حذف ${variant.name}`}
+                  >
+                    ×
+                  </button>
+                </div>
               ))}
             </div>
-          </div>
-          {activeData.variants.length === 0 ? (
-            <div className="variants-empty-card">
-              <p>لا توجد متغيرات بعد</p>
-              <button type="button" className="ghost-btn" onClick={() => addVariant(`متغير ${activeData.variants.length + 1}`)}>
-                + إضافة متغير
-              </button>
+          )}
+
+          {(showVariantForm || activeData.variants.length === 0) ? (
+            <div className="variant-editor">
+              <label className="field-label">اسم المتغير</label>
+              <input
+                value={variantDraft.name}
+                onChange={(e) => setVariantDraft((prev) => ({ ...prev, name: e.target.value }))}
+                placeholder="مثال: اللون"
+              />
+              <label className="field-label">قيمة المتغير</label>
+              <input
+                value={variantDraft.value}
+                onChange={(e) => setVariantDraft((prev) => ({ ...prev, value: e.target.value }))}
+                placeholder="مثال: أحمر"
+              />
+              <div className="variant-editor__actions">
+                <button type="button" className="variant-editor__save" onClick={saveVariantDraft}>
+                  حفظ المتغير
+                </button>
+                <button type="button" className="variant-editor__delete" onClick={clearVariantDraft}>
+                  حذف
+                </button>
+              </div>
             </div>
           ) : (
-            <div className="variants-list">
-              {activeData.variants.map((variant, index) => {
-                const isOpen = expandedVariants[index] !== false;
-                return (
-                  <div key={variant.id ?? `variant-${index}`} className="variant-card">
-                    <button type="button" className="variant-card__head" onClick={() => toggleVariantExpanded(index)}>
-                      <span className="variant-card__name">{variant.name || `متغير ${index + 1}`}</span>
-                      <span className="variant-card__chevron">{isOpen ? '▾' : '◂'}</span>
-                    </button>
-                    {isOpen && (
-                      <div className="variant-card__body">
-                        <label className="field-label">اسم المتغير</label>
-                        <input value={variant.name} onChange={(e) => updateVariant(index, { name: e.target.value })} placeholder="مثال: اللون" />
-                        <label className="field-label">القيم</label>
-                        <input value={variant.values} onChange={(e) => updateVariant(index, { values: e.target.value })} placeholder="أحمر، أزرق..." />
-                        <button type="button" className="variant-remove" onClick={() => removeVariant(index)}>حذف المتغير</button>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+            <button
+              type="button"
+              className="variant-add-more"
+              onClick={() => {
+                setShowVariantForm(true);
+                setVariantDraft({ name: '', value: '' });
+              }}
+            >
+              + إضافة متغير آخر
+            </button>
           )}
         </div>
       )}
@@ -794,6 +846,9 @@ export default function AddProductsOffers() {
             <button type="button" className="publish-btn publish-btn--draft" onClick={handleSaveDraft} disabled={loading}>
               حفظ كمسودة
             </button>
+            <button type="button" className="publish-btn publish-btn--clear" onClick={handleClearForm} disabled={loading}>
+              مسح النموذج
+            </button>
           </>
         )}
         <button
@@ -807,6 +862,18 @@ export default function AddProductsOffers() {
     </section>
   );
 
+  const pageTitle = isEditMode
+    ? (tab === 'product' ? 'تعديل العنصر' : 'تعديل العرض')
+    : hideTypeTabs
+      ? (tab === 'product' ? 'إضافة عنصر' : 'إضافة عرض')
+      : 'إنشاء منشور للمتجر';
+
+  const pageLead = isEditMode
+    ? 'حدّث التفاصيل واحفظ التغييرات'
+    : hideTypeTabs
+      ? (tab === 'product' ? 'أضف عنصراً جديداً إلى متجرك' : 'أنشئ عرضاً جديداً لجذب الزبائن')
+      : 'أضف عنصراً أو عرضاً بنفس سهولة نشر قصة';
+
   return (
     <div className={`form-page create-story-page${isEditMode ? ' create-story-page--edit' : ''}`}>
       <FormNoticeToast notice={notice} onClose={clearNotice} />
@@ -819,15 +886,15 @@ export default function AddProductsOffers() {
 
       <div className="form-page-head">
         <div>
-          <h2 className="title">{isEditMode ? (tab === 'product' ? 'تعديل العنصر' : 'تعديل العرض') : 'إنشاء منشور للمتجر'}</h2>
-          <p className="page-lead">{isEditMode ? 'حدّث التفاصيل واحفظ التغييرات' : 'أضف عنصراً أو عرضاً بنفس سهولة نشر قصة'}</p>
+          <h2 className="title">{pageTitle}</h2>
+          <p className="page-lead">{pageLead}</p>
         </div>
         <button type="button" className="rules-info-btn" onClick={() => setRulesOpen(true)}>
           ℹ️ القواعد
         </button>
       </div>
 
-      {!isEditMode && (
+      {!isEditMode && !hideTypeTabs && (
       <div className="tabs">
         <button type="button" className={tab === 'product' ? 'active' : ''} onClick={() => { setTab('product'); setLocalImageFile(null); }}>
           إضافة عنصر
@@ -899,7 +966,7 @@ export default function AddProductsOffers() {
           </div>
 
           <CollapsibleSection
-            title="إعدادات إضافية"
+            title="خيارات أخرى"
             subtitle="طريقة الشراء، التوصيل، المتغيرات والوسوم"
             open={advancedOpen}
             onToggle={() => setAdvancedOpen((v) => !v)}
@@ -955,12 +1022,26 @@ export default function AddProductsOffers() {
           </div>
 
           <div className="form-card">
-            <h3 className="form-card__title">المعلومات الأساسية</h3>
-
-            <RelatedItemSelect
-              value={offer.relatedProductId}
-              onChange={handleRelatedItemChange}
+            <label className="field-label">اسم العنصر *</label>
+            <input
+              value={offer.title}
+              onChange={(e) => setOffer({ ...offer, title: e.target.value })}
+              placeholder="مثال: حلويات مشكلة"
               required
+            />
+
+            <ItemCategorySelect
+              value={offer.storeItemCategoryId}
+              onChange={(id) => setOffer({ ...offer, storeItemCategoryId: id || '' })}
+              id="offer-category"
+            />
+
+            <PriceUnitInput
+              idPrefix="offer-price-unit"
+              unitType={offer.priceUnitType}
+              customUnit={offer.priceUnitCustom}
+              onUnitTypeChange={(value) => setOffer({ ...offer, priceUnitType: value, priceUnitCustom: value === 'other' ? offer.priceUnitCustom : '' })}
+              onCustomUnitChange={(value) => setOffer({ ...offer, priceUnitCustom: value })}
             />
 
             <label className="field-label">نوع العرض</label>
@@ -988,6 +1069,18 @@ export default function AddProductsOffers() {
               placeholder="اشرح العرض للزبائن..."
               rows={3}
             />
+          </div>
+
+          <CollapsibleSection
+            title="خيارات أخرى"
+            subtitle="تاريخ الانتهاء، التوصيل والوسوم"
+            open={advancedOpen}
+            onToggle={() => setAdvancedOpen((v) => !v)}
+          >
+            <RelatedItemSelect
+              value={offer.relatedProductId}
+              onChange={handleRelatedItemChange}
+            />
 
             <label className="field-label" htmlFor="offer-expiry">تاريخ انتهاء العرض *</label>
             <input
@@ -1002,32 +1095,7 @@ export default function AddProductsOffers() {
             {offer.expiresAt && (
               <p className="expiry-display">ينتهي: {formatExpiryDisplay(offer.expiresAt)}</p>
             )}
-          </div>
 
-          <CollapsibleSection
-            title="إعدادات إضافية"
-            subtitle="التصنيف، التوصيل والوسوم"
-            open={advancedOpen}
-            onToggle={() => setAdvancedOpen((v) => !v)}
-          >
-            <label className="field-label">اسم العرض</label>
-            <input
-              value={offer.title}
-              onChange={(e) => setOffer({ ...offer, title: e.target.value })}
-              placeholder="يُملأ تلقائياً من العنصر"
-            />
-            <ItemCategorySelect
-              value={offer.storeItemCategoryId}
-              onChange={(id) => setOffer({ ...offer, storeItemCategoryId: id || '' })}
-              id="offer-category"
-            />
-            <PriceUnitInput
-              idPrefix="offer-price-unit"
-              unitType={offer.priceUnitType}
-              customUnit={offer.priceUnitCustom}
-              onUnitTypeChange={(value) => setOffer({ ...offer, priceUnitType: value, priceUnitCustom: value === 'other' ? offer.priceUnitCustom : '' })}
-              onCustomUnitChange={(value) => setOffer({ ...offer, priceUnitCustom: value })}
-            />
             <label className="field-label">التوصيل المجاني</label>
             <div className="radio-row">
               <label>

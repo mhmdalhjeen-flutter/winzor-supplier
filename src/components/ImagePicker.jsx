@@ -32,23 +32,28 @@ export default function ImagePicker({ label, value, onChange, onError, required 
         {required && <span className="req"> *</span>}
       </label>
 
-      {value && (
+      {value ? (
         <div className="image-preview-wrap">
           <img src={value} alt="" className="image-preview" />
-          <button type="button" className="image-remove" onClick={() => onChange('')} disabled={uploading}>
-            إزالة
+          <div className="image-source-tabs image-source-tabs--compact">
+            <button type="button" onClick={() => cameraRef.current?.click()} disabled={uploading}>
+              📷 استبدال
+            </button>
+            <button type="button" className="image-remove" onClick={() => onChange('')} disabled={uploading}>
+              إزالة
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="image-source-tabs">
+          <button type="button" onClick={() => cameraRef.current?.click()} disabled={uploading}>
+            📷 الكاميرا
+          </button>
+          <button type="button" onClick={() => fileRef.current?.click()} disabled={uploading}>
+            📁 الجهاز
           </button>
         </div>
       )}
-
-      <div className="image-source-tabs">
-        <button type="button" onClick={() => cameraRef.current?.click()} disabled={uploading}>
-          📷 الكاميرا
-        </button>
-        <button type="button" onClick={() => fileRef.current?.click()} disabled={uploading}>
-          📁 الجهاز
-        </button>
-      </div>
 
       {uploading && <p className="image-uploading">جاري رفع الصورة...</p>}
 
