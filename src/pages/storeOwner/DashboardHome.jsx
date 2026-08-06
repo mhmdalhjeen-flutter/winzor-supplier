@@ -17,6 +17,7 @@ import {
   orderMatchesFilter,
   countOrdersByFilter,
   getDeliverActionLabel,
+  getDeliverTargetStatus,
 } from '../../utils/storeOrderLabels';
 import '../../styles/dashboard.css';
 import '../../styles/storeDashboard.css';
@@ -120,12 +121,16 @@ export default function DashboardHome() {
   const handleDeliver = async (order) => {
     setDeliveringId(order._id);
     try {
+      const targetStatus = getDeliverTargetStatus(order.deliveryMethod);
       const res = await axios.patch(`/orders/${order._id}/status`, {
-        status: 'delivered_to_driver',
+        status: targetStatus,
       });
-      queryClient.invalidateQueries({ queryKey: queryKeys.dashboardStats });
-      queryClient.invalidateQueries({ queryKey: queryKeys.storeOrders });
-      queryClient.invalidateQueries({ queryKey: ['storeOrderHistory'] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: queryKeys.dashboardStats }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.storeOrders }),
+        queryClient.invalidateQueries({ queryKey: ['storeOrderHistory'] }),
+      ]);
+      await queryClient.refetchQueries({ queryKey: queryKeys.dashboardStats, type: 'active' });
       showToast(res.data.message || getDeliverActionLabel(order.deliveryMethod));
       setActiveFilter(ORDER_FILTER_KEYS.DELIVERED);
     } catch (err) {

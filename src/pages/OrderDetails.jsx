@@ -14,6 +14,10 @@ import {
   shouldSkipConfirmDisclaimer,
   ORDER_FILTER_KEYS,
   getDeliverActionLabel,
+  getDeliverTargetStatus,
+  isConfirmedWaitingStatus,
+  canStoreCompleteHandoff,
+  isCustomerPickupMethod,
 } from '../utils/storeOrderLabels';
 import '../styles/Orders.css';
 import '../styles/storeDashboard.css';
@@ -43,7 +47,12 @@ export default function OrderDetails() {
 
   const legacyStatus = order ? getOrderLegacyStatus(order) : null;
   const isPending = legacyStatus === 'pending';
-  const isConfirmedWaiting = ['store_accepted', 'confirmed', 'preparing'].includes(legacyStatus);
+  const isConfirmedWaiting = legacyStatus ? isConfirmedWaitingStatus(legacyStatus) : false;
+  const handoffReady = order ? canStoreCompleteHandoff(order) : false;
+  const waitingForDriver = order
+    && !isCustomerPickupMethod(order.deliveryMethod)
+    && isConfirmedWaiting
+    && !handoffReady;
   const showActions = isPending;
   const showDeliverAction = isConfirmedWaiting;
 
@@ -52,11 +61,14 @@ export default function OrderDetails() {
     setTimeout(() => setToast(''), 3000);
   };
 
-  const invalidateOrders = () => {
-    queryClient.invalidateQueries({ queryKey: queryKeys.storeOrders });
-    queryClient.invalidateQueries({ queryKey: queryKeys.dashboardStats });
-    queryClient.invalidateQueries({ queryKey: ['storeOrderHistory'] });
-    queryClient.invalidateQueries({ queryKey: ['orderDetail', orderId] });
+  const invalidateOrders = async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: queryKeys.storeOrders }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.dashboardStats }),
+      queryClient.invalidateQueries({ queryKey: ['storeOrderHistory'] }),
+      queryClient.invalidateQueries({ queryKey: ['orderDetail', orderId] }),
+    ]);
+    await queryClient.refetchQueries({ queryKey: queryKeys.dashboardStats, type: 'active' });
   };
 
   const changeStatus = async (newStatus, extra = {}) => {
@@ -66,13 +78,19 @@ export default function OrderDetails() {
         status: newStatus,
         ...extra,
       });
-      invalidateOrders();
+      await invalidateOrders();
       showToast(res.data.message || 'تم تحديث حالة الطلب');
 
       let orderFilter = null;
       if (newStatus === 'store_accepted') orderFilter = ORDER_FILTER_KEYS.CONFIRMED;
       else if (newStatus === 'rejected') orderFilter = ORDER_FILTER_KEYS.REJECTED;
-      else if (newStatus === 'delivered_to_driver') orderFilter = ORDER_FILTER_KEYS.DELIVERED;
+      else if (
+        newStatus === 'delivered_to_driver'
+        || newStatus === 'delivered_to_customer'
+        || newStatus === 'delivery_handover_complete'
+      ) {
+        orderFilter = ORDER_FILTER_KEYS.DELIVERED;
+      }
 
       navigate(baseRoute, { replace: true, state: orderFilter ? { orderFilter } : {} });
     } catch (err) {
@@ -101,7 +119,13 @@ export default function OrderDetails() {
   };
 
   const handleDeliver = () => {
-    changeStatus('delivered_to_driver');
+    if (!order || !handoffReady) {
+      if (waitingForDriver) {
+        showToast('بانتظار تعيين السائق من شركة التوصيل');
+      }
+      return;
+    }
+    changeStatus(getDeliverTargetStatus(order.deliveryMethod));
   };
 
   const loadError = error?.response?.data?.message || 'تعذّر تحميل تفاصيل الطلب';
@@ -172,14 +196,19 @@ export default function OrderDetails() {
                 </>
               )}
               {showDeliverAction && (
-                <button
-                  type="button"
-                  className="order-details-page__btn order-details-page__btn--primary"
-                  disabled={updating}
-                  onClick={handleDeliver}
-                >
-                  {updating ? 'جارٍ التحديث...' : getDeliverActionLabel(order.deliveryMethod)}
-                </button>
+                <>
+                  {waitingForDriver && (
+                    <p className="order-details-page__hint">بانتظار تعيين السائق من شركة التوصيل</p>
+                  )}
+                  <button
+                    type="button"
+                    className="order-details-page__btn order-details-page__btn--primary"
+                    disabled={updating || !handoffReady}
+                    onClick={handleDeliver}
+                  >
+                    {updating ? 'جارٍ التحديث...' : getDeliverActionLabel(order.deliveryMethod)}
+                  </button>
+                </>
               )}
             </div>
           )}

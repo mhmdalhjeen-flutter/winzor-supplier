@@ -340,6 +340,19 @@
   border-top: 1px dashed #e2e8f0;
 }
 
+.order-summary-card__hint {
+  margin: 2px 0 0;
+  font-size: 11px;
+  font-weight: 700;
+  color: #b45309;
+  line-height: 1.35;
+}
+
+.order-summary-card__status--confirmed {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
 .order-summary-card__deliver-btn {
   flex-shrink: 0;
   border: none;
@@ -648,6 +661,14 @@
   z-index: 100;
   max-width: 640px;
   margin: 0 auto;
+}
+
+.order-details-page__hint {
+  margin: 0;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: #b45309;
 }
 
 .order-details-page__btn {

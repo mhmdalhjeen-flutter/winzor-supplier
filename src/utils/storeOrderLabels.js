@@ -3,13 +3,25 @@ export const STORE_ORDER_STATUS = {
   store_accepted: { label: 'تم التأكيد', tone: 'confirmed' },
   confirmed: { label: 'تم التأكيد', tone: 'confirmed' },
   preparing: { label: 'تم التأكيد', tone: 'confirmed' },
-  delivered_to_driver: { label: 'تم التأكيد', tone: 'confirmed' },
+  ready_for_delivery_pickup: { label: 'جاهز للتسليم — شركة التوصيل', tone: 'confirmed' },
+  ready_for_driver_pickup: { label: 'جاهز لاستلام السائق', tone: 'confirmed' },
+  delivered_to_driver: { label: 'تم التسليم للدلفري', tone: 'completed' },
+  delivery_handover_complete: { label: 'تم التسليم للدلفري', tone: 'completed' },
   rejected: { label: 'مرفوض', tone: 'rejected' },
   cancelled: { label: 'ملغى', tone: 'rejected' },
   delivered_to_customer: { label: 'مكتمل', tone: 'completed' },
   delivered: { label: 'مكتمل', tone: 'completed' },
   completed_off_platform: { label: 'مكتمل', tone: 'completed' },
 };
+
+/** Statuses where the store still owes a handoff (pickup or driver). */
+export const CONFIRMED_WAITING_STATUSES = [
+  'store_accepted',
+  'confirmed',
+  'preparing',
+  'ready_for_delivery_pickup',
+  'ready_for_driver_pickup',
+];
 
 export const DELIVERY_METHOD_LABELS = {
   nearby: 'أنا قريب من المتجر',
@@ -36,7 +48,43 @@ export function isCustomerPickupMethod(method) {
 }
 
 export function getDeliverActionLabel(method) {
-  return isCustomerPickupMethod(method) ? 'تم التسليم للزبون' : 'تم التسليم';
+  return isCustomerPickupMethod(method) ? 'تم التسليم للزبون' : 'تم التسليم للدلفري';
+}
+
+/** Target status when the store completes its handoff action. */
+export function getDeliverTargetStatus(method) {
+  return isCustomerPickupMethod(method) ? 'delivered_to_customer' : 'delivered_to_driver';
+}
+
+export function isConfirmedWaitingStatus(status) {
+  return CONFIRMED_WAITING_STATUSES.includes(status);
+}
+
+/** Whether the store may press the handoff button now. */
+export function canStoreCompleteHandoff(order) {
+  const status = getOrderLegacyStatus(order);
+  if (!isConfirmedWaitingStatus(status)) return false;
+  if (isCustomerPickupMethod(order.deliveryMethod)) {
+    return ['store_accepted', 'confirmed', 'preparing'].includes(status);
+  }
+  // Company delivery: handoff only after a driver is assigned.
+  if (status !== 'ready_for_driver_pickup') return false;
+  if (typeof order.canHandToDriver === 'boolean') return order.canHandToDriver;
+  return true;
+}
+
+export function getStoreConfirmationTime(order) {
+  if (order?.confirmedAt) return order.confirmedAt;
+  const timeline = order?.statusTimeline || [];
+  const entry = [...timeline].reverse().find((e) =>
+    ['store_accepted', 'ready_for_delivery_pickup', 'confirmed', 'preparing'].includes(e.status),
+  );
+  return entry?.at || order?.updatedAt || order?.createdAt;
+}
+
+export function getStoreOrderCurrentStatusLabel(order) {
+  if (order?.storeStatusLabel) return order.storeStatusLabel;
+  return getStoreOrderStatusMeta(getOrderLegacyStatus(order)).label;
 }
 
 export function getFulfillmentBadge(method) {
@@ -137,15 +185,21 @@ export const ORDER_FILTER_GROUPS = {
   },
   [ORDER_FILTER_KEYS.CONFIRMED]: {
     key: ORDER_FILTER_KEYS.CONFIRMED,
-    label: 'مؤكدة بانتظار التسليم',
+    label: 'مؤكد - بانتظار التسليم',
     shortLabel: 'بانتظار التسليم',
-    statuses: ['store_accepted', 'confirmed', 'preparing'],
+    statuses: [...CONFIRMED_WAITING_STATUSES],
   },
   [ORDER_FILTER_KEYS.DELIVERED]: {
     key: ORDER_FILTER_KEYS.DELIVERED,
     label: 'مكتملة',
     shortLabel: 'مكتملة',
-    statuses: ['delivered_to_driver', 'delivered_to_customer', 'delivered', 'completed_off_platform'],
+    statuses: [
+      'delivered_to_driver',
+      'delivery_handover_complete',
+      'delivered_to_customer',
+      'delivered',
+      'completed_off_platform',
+    ],
   },
   [ORDER_FILTER_KEYS.REJECTED]: {
     key: ORDER_FILTER_KEYS.REJECTED,
@@ -192,11 +246,19 @@ export function getConfirmationNumber(order) {
 export function getDeliveryDate(order) {
   const timeline = order.statusTimeline || [];
   const deliveredEntry = [...timeline].reverse().find(
-    (e) => ['delivered_to_driver', 'delivered_to_customer', 'delivered'].includes(e.status),
+    (e) => [
+      'delivered_to_driver',
+      'delivery_handover_complete',
+      'delivered_to_customer',
+      'delivered',
+    ].includes(e.status),
   );
   if (deliveredEntry?.at) return deliveredEntry.at;
   if (order.completedAt) return order.completedAt;
-  if (getOrderLegacyStatus(order) === 'delivered_to_driver') return order.updatedAt;
+  const legacy = getOrderLegacyStatus(order);
+  if (legacy === 'delivered_to_driver' || legacy === 'delivery_handover_complete') {
+    return order.updatedAt;
+  }
   return order.updatedAt || order.createdAt;
 }
 

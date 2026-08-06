@@ -10,6 +10,12 @@ import {
   formatOrderDateShort,
   getDeliverActionLabel,
   getFulfillmentBadge,
+  getDeliveryLabel,
+  getStoreConfirmationTime,
+  getStoreOrderCurrentStatusLabel,
+  isConfirmedWaitingStatus,
+  canStoreCompleteHandoff,
+  isCustomerPickupMethod,
 } from '../../utils/storeOrderLabels';
 
 export default function OrderSummaryCard({
@@ -26,10 +32,15 @@ export default function OrderSummaryCard({
   const orderNumber = getOrderDisplayNumber(order);
   const confirmationNumber = getConfirmationNumber(order);
   const fulfillBadge = getFulfillmentBadge(order.deliveryMethod);
+  const companyName = order.deliveryCompanyName || order.deliverySession?.companyName || '';
+  const handoffReady = canStoreCompleteHandoff(order);
+  const waitingForDriver = !isCustomerPickupMethod(order.deliveryMethod)
+    && isConfirmedWaitingStatus(status)
+    && !handoffReady;
 
   const handleClick = () => onOpen?.(order);
   const showDeliverAction = filterKey === ORDER_FILTER_KEYS.CONFIRMED
-    && ['store_accepted', 'confirmed', 'preparing'].includes(status);
+    && isConfirmedWaitingStatus(status);
 
   return (
     <article
@@ -62,24 +73,35 @@ export default function OrderSummaryCard({
         {filterKey === ORDER_FILTER_KEYS.CONFIRMED && (
           <>
             <div className="order-summary-card__row">
+              <span className="order-summary-card__label">رقم الطلب</span>
+              <strong>{orderNumber}</strong>
+            </div>
+            <div className="order-summary-card__row">
               <span className="order-summary-card__label">الزبون</span>
               <strong>{customerName}</strong>
             </div>
             <div className="order-summary-card__row">
-              <span className="order-summary-card__label">رقم التأكيد</span>
-              <strong>{confirmationNumber}</strong>
+              <span className="order-summary-card__label">طريقة التسليم</span>
+              <strong>{getDeliveryLabel(order.deliveryMethod)}</strong>
             </div>
-            {order.deliveryAddress && (
+            <div className="order-summary-card__row">
+              <span className="order-summary-card__label">وقت التأكيد</span>
+              <strong>{formatOrderDateShort(getStoreConfirmationTime(order))}</strong>
+            </div>
+            <div className="order-summary-card__row">
+              <span className="order-summary-card__label">الحالة</span>
+              <span className={`order-summary-card__status order-summary-card__status--${statusMeta.tone}`}>
+                {getStoreOrderCurrentStatusLabel(order)}
+              </span>
+            </div>
+            {companyName && (
               <div className="order-summary-card__row">
-                <span className="order-summary-card__label">العنوان</span>
-                <strong className="order-summary-card__address">{order.deliveryAddress}</strong>
+                <span className="order-summary-card__label">شركة التوصيل</span>
+                <strong>{companyName}</strong>
               </div>
             )}
-            {phone && (
-              <div className="order-summary-card__row">
-                <span className="order-summary-card__label">الهاتف</span>
-                <strong dir="ltr">{phone}</strong>
-              </div>
+            {waitingForDriver && (
+              <p className="order-summary-card__hint">بانتظار تعيين السائق من شركة التوصيل</p>
             )}
           </>
         )}
@@ -134,9 +156,11 @@ export default function OrderSummaryCard({
         <button
           type="button"
           className="order-summary-card__deliver-btn"
-          disabled={busy}
+          disabled={busy || !handoffReady}
+          title={waitingForDriver ? 'بانتظار تعيين السائق من شركة التوصيل' : undefined}
           onClick={(e) => {
             e.stopPropagation();
+            if (!handoffReady) return;
             onDeliver?.(order);
           }}
         >
