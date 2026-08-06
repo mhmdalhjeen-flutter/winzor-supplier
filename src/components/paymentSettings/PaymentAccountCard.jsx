@@ -1,3 +1,5 @@
+import { accountTypeLabel } from '../../utils/paymentMethodConstants';
+
 export default function PaymentAccountCard({
   account,
   typeMeta,
@@ -12,7 +14,11 @@ export default function PaymentAccountCard({
         <div className="payment-account-card__icon">{typeMeta?.icon || '💳'}</div>
         <div className="payment-account-card__titles">
           <h4>{account.accountName}</h4>
-          <span>{typeMeta?.label || account.type}</span>
+          <span>
+            {typeMeta?.label || account.type}
+            {' · '}
+            {accountTypeLabel(account.accountType)}
+          </span>
         </div>
         <span className={`payment-account-card__status${account.isActive ? ' is-active' : ''}`}>
           {account.isActive ? 'نشط' : 'غير نشط'}
@@ -24,15 +30,9 @@ export default function PaymentAccountCard({
           <span>رقم الحساب</span>
           <strong dir="ltr">{account.accountNumber}</strong>
         </div>
-        {account.iban && (
-          <div className="payment-account-card__row">
-            <span>IBAN</span>
-            <strong dir="ltr">{account.iban}</strong>
-          </div>
-        )}
-        {account.barcodeImage && (
+        {(account.barcodeImage || account.qrCodeUrl) && (
           <div className="payment-account-card__qr">
-            <img src={account.barcodeImage} alt="QR" />
+            <img src={account.barcodeImage || account.qrCodeUrl} alt="QR" />
           </div>
         )}
       </div>
@@ -41,7 +41,7 @@ export default function PaymentAccountCard({
         <label className="switch payment-account-card__switch" title={account.isActive ? 'إيقاف' : 'تفعيل'}>
           <input
             type="checkbox"
-            checked={account.isActive}
+            checked={!!account.isActive}
             disabled={busy}
             onChange={() => onToggleActive(account)}
           />

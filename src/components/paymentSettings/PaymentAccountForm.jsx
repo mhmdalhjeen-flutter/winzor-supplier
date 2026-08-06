@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import ImagePicker from '../ImagePicker';
+import { ACCOUNT_KINDS } from '../../utils/paymentMethodConstants';
 
 const EMPTY = {
   type: 'bank_palestine',
   accountName: '',
   accountNumber: '',
-  iban: '',
+  accountType: 'merchant',
   barcodeImage: '',
   isActive: true,
 };
@@ -27,6 +28,8 @@ export default function PaymentAccountForm({
       ...EMPTY,
       ...initial,
       type: fixedType || initial?.type || EMPTY.type,
+      accountType: initial?.accountType || 'merchant',
+      barcodeImage: initial?.barcodeImage || initial?.qrCodeUrl || '',
     });
   }, [open, initial, fixedType]);
 
@@ -38,7 +41,7 @@ export default function PaymentAccountForm({
       type: fixedType || form.type,
       accountName: form.accountName.trim(),
       accountNumber: form.accountNumber.trim(),
-      iban: form.iban.trim(),
+      accountType: form.accountType || 'merchant',
       barcodeImage: form.barcodeImage,
       isActive: form.isActive,
     });
@@ -51,22 +54,6 @@ export default function PaymentAccountForm({
         <h3>{initial?._id ? 'تعديل حساب الدفع' : 'إضافة حساب دفع'}</h3>
 
         <form onSubmit={handleSubmit} className="payment-account-form">
-          {!fixedType && (
-            <div className="form-group">
-              <label htmlFor="pay-type">نوع الدفع</label>
-              <select
-                id="pay-type"
-                value={form.type}
-                onChange={(e) => setForm((prev) => ({ ...prev, type: e.target.value }))}
-                required
-              >
-                <option value="bank_palestine">بنك فلسطين</option>
-                <option value="palpay">PalPay</option>
-                <option value="jawwal_pay">Jawwal Pay</option>
-              </select>
-            </div>
-          )}
-
           <div className="form-group">
             <label htmlFor="pay-owner">اسم صاحب الحساب *</label>
             <input
@@ -91,18 +78,24 @@ export default function PaymentAccountForm({
           </div>
 
           <div className="form-group">
-            <label htmlFor="pay-iban">IBAN (اختياري)</label>
-            <input
-              id="pay-iban"
-              value={form.iban}
-              onChange={(e) => setForm((prev) => ({ ...prev, iban: e.target.value }))}
-              dir="ltr"
-              placeholder="PS00..."
-            />
+            <span className="field-label">نوع الحساب *</span>
+            <div className="payment-account-kind" role="radiogroup" aria-label="نوع الحساب">
+              {ACCOUNT_KINDS.map((kind) => (
+                <button
+                  key={kind.id}
+                  type="button"
+                  className={`payment-account-kind__btn${form.accountType === kind.id ? ' is-active' : ''}`}
+                  onClick={() => setForm((prev) => ({ ...prev, accountType: kind.id }))}
+                  aria-pressed={form.accountType === kind.id}
+                >
+                  {kind.label}
+                </button>
+              ))}
+            </div>
           </div>
 
           <ImagePicker
-            label="صورة QR / الباركود"
+            label="صورة QR (اختياري)"
             value={form.barcodeImage}
             onChange={(url) => setForm((prev) => ({ ...prev, barcodeImage: url }))}
             onError={onError}
@@ -117,7 +110,7 @@ export default function PaymentAccountForm({
             <span>تفعيل هذا الحساب فور الحفظ</span>
           </label>
           <p className="payment-account-form__hint">
-            عند التفعيل، سيتم إيقاف الحسابات الأخرى من نفس النوع تلقائياً.
+            عند التفعيل، يُوقف تلقائياً أي حساب نشط آخر من نفس النوع.
           </p>
 
           <div className="form-actions">

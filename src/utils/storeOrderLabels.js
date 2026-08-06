@@ -32,7 +32,7 @@ export const DELIVERY_METHOD_LABELS = {
 
 export const PAYMENT_METHOD_LABELS = {
   cash_on_delivery: 'الدفع عند التوصيل',
-  seller_agreement: 'التفاهم مع البائع',
+  seller_agreement: 'الاتفاق مع المتجر',
   bank_palestine: 'بنك فلسطين',
   bank: 'تحويل بنكي',
   palpay: 'PalPay',
