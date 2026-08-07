@@ -130,14 +130,34 @@ export default function OrderInvoiceView({ order }) {
         </div>
       </section>
 
-      {(order.originalTotal != null || order.additionalPaymentAmount > 0) && (
+      {(order.originalTotal != null
+        || order.additionalPaymentAmount > 0
+        || (Array.isArray(order.paymentTransactions) && order.paymentTransactions.length > 0)
+      ) && (
         <section className="order-invoice__section">
-          <h3 className="order-invoice__section-title">ملخص التعديل</h3>
-          <InvoiceRow label="المبلغ الأصلي المدفوع" value={`${Number(order.originalTotal ?? 0).toFixed(2)} ₪`} />
+          <h3 className="order-invoice__section-title">سجل المدفوعات</h3>
+          <InvoiceRow
+            label="المبلغ الأصلي"
+            value={`${Number(order.originalTotal ?? order.total ?? 0).toFixed(2)} ₪`}
+          />
+          {(order.paymentTransactions || []).map((tx, idx) => (
+            <InvoiceRow
+              key={`tx-${idx}-${tx.paidAt || tx.amount}`}
+              label={tx.type === 'original' ? 'دفعة أصلية' : `دفعة فرق #${idx}`}
+              value={`${Number(tx.amount || 0).toFixed(2)} ₪${tx.method ? ` · ${getPaymentLabel(tx.method)}` : ''}`}
+            />
+          ))}
           {order.additionalPaymentAmount > 0 && (
-            <InvoiceRow label="فرق إضافي مدفوع" value={`${Number(order.additionalPaymentAmount).toFixed(2)} ₪`} />
+            <InvoiceRow
+              label="إجمالي الفروقات"
+              value={`${Number(order.additionalPaymentAmount).toFixed(2)} ₪`}
+            />
           )}
-          <InvoiceRow label="الإجمالي الحالي" value={`${Number(total).toFixed(2)} ₪`} />
+          <InvoiceRow
+            label="إجمالي المدفوع"
+            value={`${Number(order.totalPaid ?? ((order.originalTotal || 0) + (order.additionalPaymentAmount || 0))).toFixed(2)} ₪`}
+          />
+          <InvoiceRow label="إجمالي الطلب الحالي" value={`${Number(total).toFixed(2)} ₪`} />
         </section>
       )}
 

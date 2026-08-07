@@ -6,6 +6,7 @@ import '../styles/paymentSettings.css';
 import '../styles/receivingSettings.css';
 import { queryKeys } from '../lib/queryClient';
 import { getMyStore, updateMyStore } from '../services/store.service';
+import { getStoredUser } from '../utils/safeStorage';
 
 const DEFAULT_RECEIVING = {
   freeNearbyDelivery: { enabled: true },
@@ -33,6 +34,8 @@ const RECEIVING_OPTIONS = [
 
 export default function ReceivingSettings() {
   const queryClient = useQueryClient();
+  const user = getStoredUser({});
+  const baseRoute = user?.role === 'supplier' ? '/supplier' : '/store';
   const [message, setMessage] = useState({ text: '', isError: false });
   const [saving, setSaving] = useState(false);
   const [toggles, setToggles] = useState(DEFAULT_RECEIVING);
@@ -97,7 +100,7 @@ export default function ReceivingSettings() {
     <div className="payment-settings-page receiving-settings-page" dir="rtl">
       <header className="payment-settings-page__head">
         <div>
-          <Link to="../profile" className="payment-settings-page__back">← العودة للملف الشخصي</Link>
+          <Link to={`${baseRoute}/profile`} className="payment-settings-page__back">← العودة للملف الشخصي</Link>
           <h2 className="title">طرق الاستلام</h2>
           <p className="payment-settings-page__lead">
             اختر طرق الاستلام التي يظهرها متجرك للزبائن. شركات التوصيل مستقلة ولا تُدار من هنا.

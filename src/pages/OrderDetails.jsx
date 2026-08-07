@@ -187,6 +187,9 @@ export default function OrderDetails() {
         onConfirm={handleModificationConfirm}
         loading={updating}
         items={order?.items || []}
+        allowAreaTooFar={
+          order?.deliveryMethod === 'nearby' || order?.deliveryMethod === 'nearby_store'
+        }
       />
 
       {isLoading && <LightLoadingHint label="جاري تحميل الطلب..." />}

@@ -24,9 +24,12 @@ import {
 import PaymentAccountCard from '../components/paymentSettings/PaymentAccountCard';
 import PaymentAccountForm from '../components/paymentSettings/PaymentAccountForm';
 import CurrencyPreferencesSection from '../components/paymentSettings/CurrencyPreferencesSection';
+import { getStoredUser } from '../utils/safeStorage';
 
 export default function PaymentSettings() {
   const queryClient = useQueryClient();
+  const user = getStoredUser({});
+  const baseRoute = user?.role === 'supplier' ? '/supplier' : '/store';
   const [message, setMessage] = useState({ text: '', isError: false });
   const [formOpen, setFormOpen] = useState(false);
   const [editingAccount, setEditingAccount] = useState(null);
@@ -206,7 +209,7 @@ export default function PaymentSettings() {
     <div className="payment-settings-page" dir="rtl">
       <header className="payment-settings-page__head">
         <div>
-          <Link to="../profile" className="payment-settings-page__back">← العودة للملف الشخصي</Link>
+          <Link to={`${baseRoute}/profile`} className="payment-settings-page__back">← العودة للملف الشخصي</Link>
           <h2 className="title">إعدادات الدفع</h2>
           <p className="payment-settings-page__lead">
             فعّل طرق الدفع التي تريد إظهارها للزبائن. للطرق الإلكترونية أضف حساباً وفعّل واحداً فقط لكل نوع.

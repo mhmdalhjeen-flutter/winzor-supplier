@@ -23,6 +23,7 @@ export default function RequestModificationDialog({
   onConfirm,
   loading = false,
   items = [],
+  allowAreaTooFar = false,
 }) {
   const [reason, setReason] = useState('');
   const [selectedIndexes, setSelectedIndexes] = useState([]);
@@ -68,7 +69,7 @@ export default function RequestModificationDialog({
         </p>
 
         <div className="mod-reason-list">
-          {REASONS.map((r) => (
+          {REASONS.filter((r) => r.id !== 'area_too_far' || allowAreaTooFar).map((r) => (
             <button
               key={r.id}
               type="button"
