@@ -70,6 +70,72 @@ export default function OrderSummaryCard({
           </>
         )}
 
+        {filterKey === ORDER_FILTER_KEYS.NEEDS_MODIFICATION && (
+          <>
+            <div className="order-summary-card__row">
+              <span className="order-summary-card__label">الزبون</span>
+              <strong>{customerName}</strong>
+            </div>
+            <div className="order-summary-card__row">
+              <span className="order-summary-card__label">رقم الطلب</span>
+              <strong>{orderNumber}</strong>
+            </div>
+            <div className="order-summary-card__row">
+              <span className="order-summary-card__label">الحالة</span>
+              <span className={`order-summary-card__status order-summary-card__status--${statusMeta.tone}`}>
+                {statusMeta.label}
+              </span>
+            </div>
+            {order.modificationRequest?.message && (
+              <p className="order-summary-card__reason">{order.modificationRequest.message}</p>
+            )}
+          </>
+        )}
+
+        {filterKey === ORDER_FILTER_KEYS.NEEDS_MODIFICATION && (
+          <>
+            <div className="order-summary-card__row">
+              <span className="order-summary-card__label">الزبون</span>
+              <strong>{customerName}</strong>
+            </div>
+            <div className="order-summary-card__row">
+              <span className="order-summary-card__label">رقم الطلب</span>
+              <strong>{orderNumber}</strong>
+            </div>
+            <div className="order-summary-card__row">
+              <span className="order-summary-card__label">الحالة</span>
+              <span className="order-summary-card__status order-summary-card__status--modification">
+                بانتظار تعديل الزبون
+              </span>
+            </div>
+            {order.modificationRequest?.message && (
+              <p className="order-summary-card__reason">{order.modificationRequest.message}</p>
+            )}
+          </>
+        )}
+
+        {filterKey === ORDER_FILTER_KEYS.NEEDS_MODIFICATION && (
+          <>
+            <div className="order-summary-card__row">
+              <span className="order-summary-card__label">الزبون</span>
+              <strong>{customerName}</strong>
+            </div>
+            <div className="order-summary-card__row">
+              <span className="order-summary-card__label">رقم الطلب</span>
+              <strong>{orderNumber}</strong>
+            </div>
+            <div className="order-summary-card__row">
+              <span className="order-summary-card__label">الحالة</span>
+              <span className={`order-summary-card__status order-summary-card__status--${statusMeta.tone}`}>
+                بانتظار تعديل الزبون
+              </span>
+            </div>
+            {order.modificationRequest?.message && (
+              <p className="order-summary-card__reason">{order.modificationRequest.message}</p>
+            )}
+          </>
+        )}
+
         {filterKey === ORDER_FILTER_KEYS.CONFIRMED && (
           <>
             <div className="order-summary-card__row">

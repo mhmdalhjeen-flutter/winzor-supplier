@@ -1,0 +1,36 @@
+/* Receiving / fulfillment methods — Store Owner */
+
+.receiving-settings-page .receiving-method-block__icon {
+  color: #1d4ed8;
+  background: #eff6ff;
+  border-color: #bfdbfe;
+}
+
+.receiving-method-block__customer {
+  margin: 8px 0 0 !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  color: #047857 !important;
+  line-height: 1.45 !important;
+}
+
+.receiving-method-block__customer strong {
+  font-weight: 900;
+  color: #065f46;
+}
+
+.receiving-settings-note {
+  margin-top: 4px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+}
+
+.receiving-settings-note p {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: #64748b;
+  line-height: 1.5;
+}

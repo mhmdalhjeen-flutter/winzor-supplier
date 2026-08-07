@@ -1,4 +1,4 @@
-import { ClipboardList, PackageCheck, Truck, XCircle } from 'lucide-react';
+import { ClipboardList, PackageCheck, Truck, XCircle, PenLine } from 'lucide-react';
 import { ORDER_FILTER_KEYS, ORDER_FILTER_GROUPS } from '../../utils/storeOrderLabels';
 
 const NAV_ITEMS = [
@@ -7,6 +7,12 @@ const NAV_ITEMS = [
     Icon: ClipboardList,
     color: '#f59e0b',
     bg: '#fffbeb',
+  },
+  {
+    key: ORDER_FILTER_KEYS.NEEDS_MODIFICATION,
+    Icon: PenLine,
+    color: '#ea580c',
+    bg: '#fff7ed',
   },
   {
     key: ORDER_FILTER_KEYS.CONFIRMED,

@@ -1,5 +1,6 @@
 export const STORE_ORDER_STATUS = {
   pending: { label: 'قيد المراجعة', tone: 'review' },
+  modification_requested: { label: 'يحتاج تعديل', tone: 'modification' },
   store_accepted: { label: 'تم التأكيد', tone: 'confirmed' },
   confirmed: { label: 'تم التأكيد', tone: 'confirmed' },
   preparing: { label: 'تم التأكيد', tone: 'confirmed' },
@@ -24,15 +25,15 @@ export const CONFIRMED_WAITING_STATUSES = [
 ];
 
 export const DELIVERY_METHOD_LABELS = {
-  nearby: 'أنا قريب من المتجر',
-  nearby_store: 'أنا قريب من المتجر',
-  pickup: 'سأستلم الطلب بنفسي',
+  nearby: 'توصيل مجاني | أنا قريب من المتجر',
+  nearby_store: 'توصيل مجاني | أنا قريب من المتجر',
+  pickup: 'استلام الطلب من المتجر',
   delivery: 'شركة توصيل',
 };
 
 export const PAYMENT_METHOD_LABELS = {
   cash_on_delivery: 'الدفع عند التوصيل',
-  seller_agreement: 'الاتفاق مع المتجر',
+  seller_agreement: 'الاتفاق مع البائع',
   bank_palestine: 'بنك فلسطين',
   bank: 'تحويل بنكي',
   palpay: 'PalPay',
@@ -155,6 +156,7 @@ export function formatOrderDateShort(iso) {
 
 const CANONICAL_TO_LEGACY = {
   pending_review: 'pending',
+  needs_modification: 'modification_requested',
   confirmed: 'store_accepted',
   rejected: 'rejected',
   completed: 'delivered_to_customer',
@@ -171,6 +173,7 @@ export function getOrderLegacyStatus(order) {
 
 export const ORDER_FILTER_KEYS = {
   PENDING: 'pending_review',
+  NEEDS_MODIFICATION: 'needs_modification',
   CONFIRMED: 'confirmed_waiting',
   DELIVERED: 'delivered',
   REJECTED: 'rejected',
@@ -182,6 +185,12 @@ export const ORDER_FILTER_GROUPS = {
     label: 'بانتظار المراجعة',
     shortLabel: 'للمراجعة',
     statuses: ['pending'],
+  },
+  [ORDER_FILTER_KEYS.NEEDS_MODIFICATION]: {
+    key: ORDER_FILTER_KEYS.NEEDS_MODIFICATION,
+    label: 'طلبات تحتاج تعديل',
+    shortLabel: 'تحتاج تعديل',
+    statuses: ['modification_requested'],
   },
   [ORDER_FILTER_KEYS.CONFIRMED]: {
     key: ORDER_FILTER_KEYS.CONFIRMED,

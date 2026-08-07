@@ -9,6 +9,7 @@ import LightLoadingHint from '../shared/LightLoadingHint';
 import OrderInvoiceView from '../components/orders/OrderInvoiceView';
 import ConfirmOrderDialog from '../components/orders/ConfirmOrderDialog';
 import RejectOrderDialog from '../components/orders/RejectOrderDialog';
+import RequestModificationDialog from '../components/orders/RequestModificationDialog';
 import {
   getOrderLegacyStatus,
   shouldSkipConfirmDisclaimer,
@@ -34,6 +35,7 @@ export default function OrderDetails() {
   const [toast, setToast] = useState('');
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [showRejectDialog, setShowRejectDialog] = useState(false);
+  const [showModifyDialog, setShowModifyDialog] = useState(false);
 
   const { data: order, isLoading, isError, error } = useQuery({
     queryKey: ['orderDetail', orderId],
@@ -47,6 +49,7 @@ export default function OrderDetails() {
 
   const legacyStatus = order ? getOrderLegacyStatus(order) : null;
   const isPending = legacyStatus === 'pending';
+  const isNeedsModification = legacyStatus === 'modification_requested';
   const isConfirmedWaiting = legacyStatus ? isConfirmedWaitingStatus(legacyStatus) : false;
   const handoffReady = order ? canStoreCompleteHandoff(order) : false;
   const waitingForDriver = order
@@ -118,6 +121,24 @@ export default function OrderDetails() {
     await changeStatus('rejected', { rejectionReason: reason });
   };
 
+  const handleModificationConfirm = async (payload) => {
+    setUpdating(true);
+    try {
+      const res = await axios.post(`/orders/${orderId}/request-modification`, payload);
+      await invalidateOrders();
+      showToast(res.data.message || 'تم إرسال طلب التعديل');
+      setShowModifyDialog(false);
+      navigate(baseRoute, {
+        replace: true,
+        state: { orderFilter: ORDER_FILTER_KEYS.NEEDS_MODIFICATION },
+      });
+    } catch (err) {
+      showToast(err.response?.data?.message || 'تعذّر إرسال طلب التعديل');
+    } finally {
+      setUpdating(false);
+    }
+  };
+
   const handleDeliver = () => {
     if (!order || !handoffReady) {
       if (waitingForDriver) {
@@ -160,6 +181,14 @@ export default function OrderDetails() {
         loading={updating}
       />
 
+      <RequestModificationDialog
+        open={showModifyDialog}
+        onClose={() => setShowModifyDialog(false)}
+        onConfirm={handleModificationConfirm}
+        loading={updating}
+        items={order?.items || []}
+      />
+
       {isLoading && <LightLoadingHint label="جاري تحميل الطلب..." />}
 
       {isError && !isLoading && (
@@ -171,6 +200,13 @@ export default function OrderDetails() {
 
       {!isLoading && !isError && order && (
         <>
+          {isNeedsModification && order.modificationRequest?.message && (
+            <div className="order-details-page__mod-banner">
+              <strong>بانتظار تعديل الزبون</strong>
+              <p>{order.modificationRequest.message}</p>
+            </div>
+          )}
+
           <OrderInvoiceView order={order} />
 
           {(showActions || showDeliverAction) && (
@@ -184,6 +220,14 @@ export default function OrderDetails() {
                     onClick={handleConfirmRequest}
                   >
                     {updating ? 'جارٍ التأكيد...' : 'تأكيد الطلب'}
+                  </button>
+                  <button
+                    type="button"
+                    className="order-details-page__btn order-details-page__btn--modify"
+                    disabled={updating}
+                    onClick={() => setShowModifyDialog(true)}
+                  >
+                    طلب تعديل
                   </button>
                   <button
                     type="button"

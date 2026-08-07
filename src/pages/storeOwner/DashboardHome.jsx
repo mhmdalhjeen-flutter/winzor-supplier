@@ -78,6 +78,7 @@ export default function DashboardHome() {
 
   const filterCounts = useMemo(() => ({
     [ORDER_FILTER_KEYS.PENDING]: countOrdersByFilter(allOrders, ORDER_FILTER_KEYS.PENDING),
+    [ORDER_FILTER_KEYS.NEEDS_MODIFICATION]: countOrdersByFilter(allOrders, ORDER_FILTER_KEYS.NEEDS_MODIFICATION),
     [ORDER_FILTER_KEYS.CONFIRMED]: countOrdersByFilter(allOrders, ORDER_FILTER_KEYS.CONFIRMED),
     [ORDER_FILTER_KEYS.DELIVERED]: countOrdersByFilter(allOrders, ORDER_FILTER_KEYS.DELIVERED),
     [ORDER_FILTER_KEYS.REJECTED]: countOrdersByFilter(allOrders, ORDER_FILTER_KEYS.REJECTED),

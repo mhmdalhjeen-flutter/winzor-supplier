@@ -17,9 +17,9 @@ export const SIMPLE_PAYMENT_METHODS = [
   {
     id: 'seller_agreement',
     settingsKey: 'agreementWithStore',
-    label: 'الاتفاق مع المتجر',
+    label: 'الاتفاق مع البائع',
     icon: '🤝',
-    description: 'اتفاق مخصص مع المتجر (دين، حساب شهري، أو أي ترتيب متفق عليه)',
+    description: 'اتفاق مخصص على طريقة الدفع بين الزبون والمتجر',
     requiresAccount: false,
   },
 ];

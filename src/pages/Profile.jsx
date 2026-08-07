@@ -269,13 +269,22 @@ export default function Profile() {
 
         <div className="profile-settings-links">
           {!isSupplier && isStoreOwner && (
-            <Link to="payment-settings" className="profile-settings-link">
-              <span className="profile-settings-link__icon">💳</span>
-              <span className="profile-settings-link__text">
-                <strong>إعدادات الدفع</strong>
-                <small>حسابات الدفع وتفضيلات العملات</small>
-              </span>
-            </Link>
+            <>
+              <Link to="payment-settings" className="profile-settings-link">
+                <span className="profile-settings-link__icon">💳</span>
+                <span className="profile-settings-link__text">
+                  <strong>إعدادات الدفع</strong>
+                  <small>طرق الدفع والحسابات النشطة</small>
+                </span>
+              </Link>
+              <Link to="receiving-settings" className="profile-settings-link">
+                <span className="profile-settings-link__icon">📦</span>
+                <span className="profile-settings-link__text">
+                  <strong>طرق الاستلام</strong>
+                  <small>التوصيل القريب واستلام الطلب من المتجر</small>
+                </span>
+              </Link>
+            </>
           )}
           <Link to="change-password" className="profile-settings-link">
             <span className="profile-settings-link__icon">🔐</span>

@@ -129,6 +129,33 @@ export default function OrderInvoiceView({ order }) {
           )}
         </div>
       </section>
+
+      {(order.originalTotal != null || order.additionalPaymentAmount > 0) && (
+        <section className="order-invoice__section">
+          <h3 className="order-invoice__section-title">ملخص التعديل</h3>
+          <InvoiceRow label="المبلغ الأصلي المدفوع" value={`${Number(order.originalTotal ?? 0).toFixed(2)} ₪`} />
+          {order.additionalPaymentAmount > 0 && (
+            <InvoiceRow label="فرق إضافي مدفوع" value={`${Number(order.additionalPaymentAmount).toFixed(2)} ₪`} />
+          )}
+          <InvoiceRow label="الإجمالي الحالي" value={`${Number(total).toFixed(2)} ₪`} />
+        </section>
+      )}
+
+      {Array.isArray(order.orderChangeHistory) && order.orderChangeHistory.length > 0 && (
+        <section className="order-invoice__section">
+          <h3 className="order-invoice__section-title">سجل التعديلات</h3>
+          <ul className="order-invoice__history">
+            {[...order.orderChangeHistory].reverse().map((entry, idx) => (
+              <li key={`${entry.at}-${idx}`} className="order-invoice__history-item">
+                <strong>{entry.note || entry.type}</strong>
+                {entry.at && (
+                  <span>{formatOrderDate(entry.at)}</span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
     </div>
   );
 }

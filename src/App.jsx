@@ -34,6 +34,7 @@ const ItemDetails = lazy(() => import("./pages/ItemDetails"));
 const Support = lazy(() => import("./pages/Support"));
 const Profile = lazy(() => import("./pages/Profile"));
 const PaymentSettings = lazy(() => import("./pages/PaymentSettings"));
+const ReceivingSettings = lazy(() => import("./pages/ReceivingSettings"));
 const AddProductOffer = lazy(() => import("./pages/storeOwner/AddProductsOffers"));
 const PendingUploads = lazy(() => import("./pages/storeOwner/PendingUploads"));
 const MemberPrizes = lazy(() => import("./pages/storeOwner/MemberPrizes"));
@@ -85,6 +86,7 @@ function MerchantApp() {
         <Route path="support" element={<LazyPage><Support /></LazyPage>} />
         <Route path="profile" element={<LazyPage><Profile /></LazyPage>} />
         <Route path="payment-settings" element={<LazyPage><PaymentSettings /></LazyPage>} />
+        <Route path="receiving-settings" element={<StoreOnlyRoute><LazyPage><ReceivingSettings /></LazyPage></StoreOnlyRoute>} />
         <Route path="change-password" element={<ChangePassword />} />
         <Route path="add-product-offer" element={<LazyPage><AddProductOffer /></LazyPage>} />
         <Route path="pending-uploads" element={<LazyPage><PendingUploads /></LazyPage>} />
