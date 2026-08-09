@@ -641,6 +641,17 @@
   color: #94a3b8;
 }
 
+.order-invoice__hint {
+  margin: 8px 0 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #fffbeb;
+  font-size: 12px;
+  font-weight: 700;
+  color: #92400e;
+  line-height: 1.45;
+}
+
 /* ===== Order Details Page ===== */
 .order-details-page {
   padding: 0 0 120px;

@@ -1,8 +1,11 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Bell, Clock, AlertCircle, RefreshCw, Tag } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Bell, Clock, AlertCircle, RefreshCw, Tag, PackageCheck } from "lucide-react";
 import { getNotifications, markRead, markAllRead } from "../services/notifications.service";
 import { queryKeys } from "../lib/queryClient";
 import { cleanupNotifications } from "../utils/notificationCleanup";
+import { handleStoreNotificationClick } from "../utils/notificationNavigation";
+import { getStoredUser } from "../utils/safeStorage";
 import LightLoadingHint from "../shared/LightLoadingHint";
 import "../styles/dashboard.css";
 
@@ -12,12 +15,16 @@ function typeMeta(type) {
     case "offer_expired": return { Icon: AlertCircle, tone: "danger" };
     case "offer_renewed": return { Icon: RefreshCw, tone: "info" };
     case "order_rejected": return { Icon: AlertCircle, tone: "danger" };
+    case "order_modification_resolved": return { Icon: PackageCheck, tone: "info" };
     default: return { Icon: Tag, tone: "default" };
   }
 }
 
 export default function Notifications() {
   const qc = useQueryClient();
+  const navigate = useNavigate();
+  const user = getStoredUser({});
+  const baseRoute = user?.role === "supplier" ? "/supplier" : "/store";
 
   const { data: items = [], isLoading, error: queryError } = useQuery({
     queryKey: queryKeys.notifications,
@@ -44,13 +51,15 @@ export default function Notifications() {
   };
 
   const handleClick = async (n) => {
-    if (n.read) return;
-    try {
-      await markRead(n._id);
-      patchItems((prev) => prev.map((x) => (x._id === n._id ? { ...x, read: true } : x)));
-    } catch {
-      /* تجاهل */
+    if (!n.read) {
+      try {
+        await markRead(n._id);
+        patchItems((prev) => prev.map((x) => (x._id === n._id ? { ...x, read: true } : x)));
+      } catch {
+        /* تجاهل */
+      }
     }
+    handleStoreNotificationClick(navigate, baseRoute, n);
   };
 
   return (

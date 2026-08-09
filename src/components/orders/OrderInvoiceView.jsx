@@ -158,6 +158,17 @@ export default function OrderInvoiceView({ order }) {
             value={`${Number(order.totalPaid ?? ((order.originalTotal || 0) + (order.additionalPaymentAmount || 0))).toFixed(2)} ₪`}
           />
           <InvoiceRow label="إجمالي الطلب الحالي" value={`${Number(total).toFixed(2)} ₪`} />
+          {order.hasPaymentSurplus && order.paymentSurplus > 0 && (
+            <InvoiceRow
+              label="فرق المدفوع عن الفاتورة"
+              value={`${Number(order.paymentSurplus).toFixed(2)} ₪`}
+            />
+          )}
+          {order.hasPaymentSurplus && (
+            <p className="order-invoice__hint">
+              لا يوجد استرداد تلقائي — يراجع المتجر المبلغ الزائد عند التأكيد.
+            </p>
+          )}
         </section>
       )}
 

@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Bell, Clock, Tag, AlertCircle, RefreshCw } from "lucide-react";
+import { Bell, Clock, Tag, AlertCircle, RefreshCw, PackageCheck } from "lucide-react";
 import { getNotifications, markRead, markAllRead } from "../services/notifications.service";
 import { queryKeys } from "../lib/queryClient";
 import { cleanupNotifications } from "../utils/notificationCleanup";
+import { handleStoreNotificationClick } from "../utils/notificationNavigation";
 import "../styles/NotificationDropdown.css";
 
 const PREVIEW_LIMIT = 6;
@@ -19,6 +20,8 @@ function typeMeta(type) {
       return { Icon: RefreshCw, tone: "info" };
     case "order_rejected":
       return { Icon: AlertCircle, tone: "danger" };
+    case "order_modification_resolved":
+      return { Icon: PackageCheck, tone: "info" };
     default:
       return { Icon: Tag, tone: "default" };
   }
@@ -83,6 +86,7 @@ export default function NotificationDropdown({ count, baseRoute, onCountChange }
       }
     }
     setOpen(false);
+    handleStoreNotificationClick(navigate, baseRoute, n);
   };
 
   const handleMarkAll = async () => {
