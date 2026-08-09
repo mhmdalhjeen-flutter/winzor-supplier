@@ -39,6 +39,7 @@ export default function PaymentSettings() {
   const [savingToggles, setSavingToggles] = useState(false);
   const [savingCurrency, setSavingCurrency] = useState(false);
   const [toggles, setToggles] = useState(DEFAULT_PAYMENT_TOGGLES);
+  const [methodNotes, setMethodNotes] = useState({});
   const [currencyPrefs, setCurrencyPrefs] = useState(DEFAULT_CURRENCY_PREFERENCES);
 
   const showMsg = (text, isError = false) => {
@@ -69,6 +70,11 @@ export default function PaymentSettings() {
   useEffect(() => {
     if (paymentData?.paymentMethods) {
       setToggles({ ...DEFAULT_PAYMENT_TOGGLES, ...paymentData.paymentMethods });
+      const notes = {};
+      ALL_PAYMENT_METHODS.forEach((method) => {
+        notes[method.settingsKey] = paymentData.paymentMethods[method.settingsKey]?.note || '';
+      });
+      setMethodNotes(notes);
     }
   }, [paymentData?.paymentMethods]);
 
@@ -85,29 +91,66 @@ export default function PaymentSettings() {
     return map;
   }, [methods]);
 
+  const buildTogglePayload = (nextToggles, nextNotes = methodNotes) => {
+    const payload = {};
+    ALL_PAYMENT_METHODS.forEach((method) => {
+      payload[method.settingsKey] = {
+        enabled: nextToggles[method.settingsKey]?.enabled !== false,
+        note: String(nextNotes[method.settingsKey] || '').trim(),
+      };
+    });
+    return payload;
+  };
+
+  const persistPaymentMethods = async (nextToggles, nextNotes = methodNotes) => {
+    const payload = buildTogglePayload(nextToggles, nextNotes);
+    setSavingToggles(true);
+    try {
+      const { data } = await updatePaymentMethodToggles(payload);
+      if (data?.paymentMethods) {
+        setToggles({ ...DEFAULT_PAYMENT_TOGGLES, ...data.paymentMethods });
+        const notes = {};
+        ALL_PAYMENT_METHODS.forEach((method) => {
+          notes[method.settingsKey] = data.paymentMethods[method.settingsKey]?.note || '';
+        });
+        setMethodNotes(notes);
+      }
+      queryClient.setQueryData(queryKeys.storePaymentMethods, (prev) => ({
+        ...(prev || {}),
+        paymentMethods: data?.paymentMethods || payload,
+        methods: data?.methods ?? prev?.methods,
+      }));
+      queryClient.invalidateQueries({ queryKey: queryKeys.myStore });
+    } catch (err) {
+      throw err;
+    } finally {
+      setSavingToggles(false);
+    }
+  };
+
   const handleToggleMethod = async (settingsKey, enabled) => {
     const next = {
       ...toggles,
       [settingsKey]: { enabled },
     };
     setToggles(next);
-    setSavingToggles(true);
     try {
-      const { data } = await updatePaymentMethodToggles(next);
-      if (data?.paymentMethods) {
-        setToggles({ ...DEFAULT_PAYMENT_TOGGLES, ...data.paymentMethods });
-      }
-      queryClient.setQueryData(queryKeys.storePaymentMethods, (prev) => ({
-        ...(prev || {}),
-        paymentMethods: data?.paymentMethods || next,
-        methods: data?.methods ?? prev?.methods,
-      }));
-      queryClient.invalidateQueries({ queryKey: queryKeys.myStore });
+      await persistPaymentMethods(next);
     } catch (err) {
       setToggles(toggles);
       showMsg(err.response?.data?.message || 'تعذّر تحديث طريقة الدفع', true);
-    } finally {
-      setSavingToggles(false);
+    }
+  };
+
+  const handleNoteBlur = async (settingsKey) => {
+    const note = String(methodNotes[settingsKey] || '').trim();
+    const previous = String(paymentData?.paymentMethods?.[settingsKey]?.note || '').trim();
+    if (note === previous) return;
+    try {
+      await persistPaymentMethods(toggles, methodNotes);
+      showMsg('تم حفظ الملاحظة');
+    } catch (err) {
+      showMsg(err.response?.data?.message || 'تعذّر حفظ الملاحظة', true);
     }
   };
 
@@ -253,6 +296,21 @@ export default function PaymentSettings() {
                     <span className="switch__slider" />
                   </label>
                 </div>
+
+                <label className="payment-method-block__note">
+                  <span>ملاحظة للزبون (اختياري)</span>
+                  <textarea
+                    rows={2}
+                    value={methodNotes[method.settingsKey] || ''}
+                    disabled={savingToggles}
+                    placeholder="مثال: يرجى إرسال صورة إشعار التحويل بعد الدفع."
+                    onChange={(e) => setMethodNotes((prev) => ({
+                      ...prev,
+                      [method.settingsKey]: e.target.value,
+                    }))}
+                    onBlur={() => handleNoteBlur(method.settingsKey)}
+                  />
+                </label>
 
                 {method.requiresAccount && enabled && (
                   <div className="payment-method-block__accounts">
