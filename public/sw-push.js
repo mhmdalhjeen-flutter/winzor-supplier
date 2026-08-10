@@ -7,21 +7,25 @@
 const DEFAULT_ICON = '/brand/logo-192.webp';
 const DEFAULT_BADGE = '/brand/logo-64.webp';
 const DEFAULT_TITLE = 'Win Gold';
-const DEFAULT_URL = '/store';
+const DEFAULT_URL = '/store/notifications';
 
 function parsePushPayload(event) {
   if (!event.data) {
-    return { title: DEFAULT_TITLE, body: '', icon: DEFAULT_ICON, data: {} };
+    return { title: DEFAULT_TITLE, body: '', icon: DEFAULT_ICON, url: DEFAULT_URL, data: {} };
   }
 
   try {
     const payload = event.data.json();
     const data = payload.data && typeof payload.data === 'object' ? payload.data : {};
+    const type = payload.type || data.type || '';
     return {
       title: payload.title || DEFAULT_TITLE,
       body: payload.body || '',
       icon: payload.icon || DEFAULT_ICON,
-      data,
+      url: payload.url || data.url || DEFAULT_URL,
+      type,
+      notificationId: payload.notificationId || data.notificationId || '',
+      data: { ...data, type: type || data.type || '' },
     };
   } catch {
     const text = event.data.text ? event.data.text() : '';
@@ -29,6 +33,7 @@ function parsePushPayload(event) {
       title: DEFAULT_TITLE,
       body: text || '',
       icon: DEFAULT_ICON,
+      url: DEFAULT_URL,
       data: {},
     };
   }
@@ -43,25 +48,28 @@ function resolveAppUrl(path) {
 }
 
 function resolveStoreDeepLink(data = {}) {
-  if (data.app !== 'store') {
-    return DEFAULT_URL;
-  }
-
   if (typeof data.url === 'string' && data.url.startsWith('/')) {
     return data.url;
   }
 
-  const { type } = data;
+  const { type, orderId, offerId } = data;
 
   switch (type) {
-    case 'order_point_gift':
+    case 'order_modification_resolved':
     case 'order_rejected':
+    case 'delivery_order_included':
+    case 'delivery_store_update':
+      if (orderId) return `/store/orders/${orderId}`;
       return '/store/orders';
     case 'offer_expired':
     case 'offer_expiring':
     case 'offer_renewed':
+      if (offerId) return `/store/item-details/${offerId}`;
       return '/store/offers';
+    case 'push_test':
+      return '/store/notifications';
     default:
+      if (orderId) return `/store/orders/${orderId}`;
       break;
   }
 
@@ -70,16 +78,51 @@ function resolveStoreDeepLink(data = {}) {
 
 self.addEventListener('push', (event) => {
   const payload = parsePushPayload(event);
+  const deepLink = resolveStoreDeepLink({
+    ...payload.data,
+    url: payload.url || payload.data?.url,
+  });
+  const targetUrl = resolveAppUrl(deepLink);
 
   event.waitUntil(
-    self.registration.showNotification(payload.title, {
-      body: payload.body,
-      icon: payload.icon || DEFAULT_ICON,
-      badge: DEFAULT_BADGE,
-      dir: 'rtl',
-      lang: 'ar',
-      data: payload.data,
-    }),
+    (async () => {
+      await self.registration.showNotification(payload.title, {
+        body: payload.body,
+        icon: payload.icon || DEFAULT_ICON,
+        badge: DEFAULT_BADGE,
+        dir: 'rtl',
+        lang: 'ar',
+        tag: payload.notificationId || payload.data?.notificationId || payload.type || 'wingold-store',
+        renotify: true,
+        data: {
+          ...payload.data,
+          type: payload.type || payload.data?.type || '',
+          notificationId: payload.notificationId || payload.data?.notificationId || '',
+          url: targetUrl,
+        },
+      });
+
+      try {
+        const clientList = await clients.matchAll({
+          type: 'window',
+          includeUncontrolled: true,
+        });
+        clientList.forEach((client) => {
+          client.postMessage({
+            type: 'PUSH_NOTIFICATION',
+            notification: {
+              id: payload.notificationId || payload.data?.notificationId || `push-${Date.now()}`,
+              type: payload.type || payload.data?.type || 'info',
+              title: payload.title,
+              body: payload.body,
+              data: payload.data || {},
+            },
+          });
+        });
+      } catch {
+        /* non-fatal */
+      }
+    })(),
   );
 });
 

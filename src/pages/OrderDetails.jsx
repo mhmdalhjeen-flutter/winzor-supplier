@@ -10,6 +10,7 @@ import OrderInvoiceView from '../components/orders/OrderInvoiceView';
 import ConfirmOrderDialog from '../components/orders/ConfirmOrderDialog';
 import RejectOrderDialog from '../components/orders/RejectOrderDialog';
 import RequestModificationDialog from '../components/orders/RequestModificationDialog';
+import RequestPaymentModificationDialog from '../components/orders/RequestPaymentModificationDialog';
 import {
   getOrderLegacyStatus,
   shouldSkipConfirmDisclaimer,
@@ -19,6 +20,7 @@ import {
   isConfirmedWaitingStatus,
   canStoreCompleteHandoff,
   isCustomerPickupMethod,
+  isDigitalPayment,
 } from '../utils/storeOrderLabels';
 import '../styles/Orders.css';
 import '../styles/storeDashboard.css';
@@ -36,6 +38,7 @@ export default function OrderDetails() {
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [showModifyDialog, setShowModifyDialog] = useState(false);
+  const [showPaymentModifyDialog, setShowPaymentModifyDialog] = useState(false);
 
   const { data: order, isLoading, isError, error } = useQuery({
     queryKey: ['orderDetail', orderId],
@@ -181,6 +184,14 @@ export default function OrderDetails() {
         loading={updating}
       />
 
+      <RequestPaymentModificationDialog
+        open={showPaymentModifyDialog}
+        onClose={() => setShowPaymentModifyDialog(false)}
+        onConfirm={handleModificationConfirm}
+        loading={updating}
+        order={order}
+      />
+
       <RequestModificationDialog
         open={showModifyDialog}
         onClose={() => setShowModifyDialog(false)}
@@ -223,6 +234,16 @@ export default function OrderDetails() {
                     onClick={handleConfirmRequest}
                   >
                     {updating ? 'جارٍ التأكيد...' : 'تأكيد الطلب'}
+                  </button>
+                  <button
+                    type="button"
+                    className="order-details-page__btn order-details-page__btn--modify"
+                    disabled={updating}
+                    onClick={() => setShowPaymentModifyDialog(true)}
+                  >
+                    {isDigitalPayment(order?.paymentMethod)
+                      ? 'مراجعة بيانات الدفع'
+                      : 'طلب تغيير طريقة الدفع'}
                   </button>
                   <button
                     type="button"

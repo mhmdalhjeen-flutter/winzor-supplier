@@ -1,46 +1,82 @@
 import { useEffect, useRef } from 'react';
-import { isPushSupported, subscribeToPush } from '../../pwa/pushNotifications';
+import {
+  isPushSupported,
+  ensurePushSubscriptionSynced,
+  logPushDiagnostic,
+} from '../../pwa/pushNotifications';
+
+const RETRYABLE_REASONS = new Set([
+  'vapid_unavailable',
+  'service_worker_not_ready',
+  'backend_subscribe_failed',
+  'subscribe_failed',
+  'not_authenticated',
+]);
 
 /**
- * Registers Web Push for store/supplier owners after authentication.
- * Does not block rendering — returns null.
+ * Keeps the browser PushSubscription synchronized with MongoDB on every
+ * authenticated session — independent of localStorage flags.
  */
 export default function PushSubscriptionHost() {
-  /** Token string we already attempted subscription for; null after logout. */
-  const lastAttemptedTokenRef = useRef(null);
+  const lastSyncedTokenRef = useRef(null);
 
   useEffect(() => {
-    const trySubscribe = () => {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        lastAttemptedTokenRef.current = null;
+    const token = localStorage.getItem('token');
+    if (!token) {
+      lastSyncedTokenRef.current = null;
+      return undefined;
+    }
+    if (!isPushSupported()) return undefined;
+    if (Notification.permission === 'denied') {
+      logPushDiagnostic('host_skipped_denied', { ok: false, level: 'error' });
+      return undefined;
+    }
+
+    let cancelled = false;
+
+    const run = async () => {
+      if (cancelled) return;
+
+      const result = await ensurePushSubscriptionSynced();
+      if (cancelled) return;
+
+      if (result.ok) {
+        lastSyncedTokenRef.current = token;
         return;
       }
-      if (!isPushSupported()) return;
-      if (Notification.permission === 'denied') return;
-      if (lastAttemptedTokenRef.current === token) return;
 
-      lastAttemptedTokenRef.current = token;
+      logPushDiagnostic('host_sync_incomplete', {
+        ok: false,
+        level: 'error',
+        reason: result.reason,
+      });
 
-      const run = () => {
-        subscribeToPush().catch(() => {});
-      };
-
-      if ('requestIdleCallback' in window) {
-        window.requestIdleCallback(run, { timeout: 4000 });
-      } else {
-        window.setTimeout(run, 1200);
+      if (!RETRYABLE_REASONS.has(result.reason)) {
+        lastSyncedTokenRef.current = token;
       }
     };
 
-    trySubscribe();
-
+    const timeoutId = window.setTimeout(run, 0);
     const intervalId = window.setInterval(() => {
-      trySubscribe();
-    }, 1500);
+      const currentToken = localStorage.getItem('token');
+      if (!currentToken) {
+        lastSyncedTokenRef.current = null;
+        return;
+      }
+      if (lastSyncedTokenRef.current === currentToken) return;
+      run();
+    }, 2000);
+    const onOnline = () => {
+      run();
+    };
+
+    window.addEventListener('online', onOnline);
 
     return () => {
+      cancelled = true;
+      window.clearTimeout(timeoutId);
       window.clearInterval(intervalId);
+      window.removeEventListener('online', onOnline);
     };
   }, []);
 

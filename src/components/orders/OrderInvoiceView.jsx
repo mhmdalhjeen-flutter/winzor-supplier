@@ -10,6 +10,7 @@ import {
   getConfirmationNumber,
   getPaymentProofUrl,
 } from '../../utils/storeOrderLabels';
+
 function InvoiceRow({ label, value, ltr = false }) {
   if (!value && value !== 0) return null;
   return (
@@ -41,6 +42,39 @@ function InvoiceItemRow({ item }) {
   );
 }
 
+function transferOperationLabel(tx, index, differenceCount) {
+  if (tx.type === 'original') return 'التحويل الأصلي';
+  if (tx.type === 'correction') return `تصحيح بيانات الدفع${differenceCount > 1 ? ` #${index}` : ''}`;
+  return `تحويل فرق التعديل${differenceCount > 1 ? ` #${index}` : ''}`;
+}
+
+function buildTransferOperations(order) {
+  const paymentMethod = order.paymentMethod || '';
+  if (!isDigitalPayment(paymentMethod)) return [];
+
+  const txs = Array.isArray(order.paymentTransactions) ? [...order.paymentTransactions] : [];
+  if (!txs.length) {
+    const transfer = order.transferInformation || {};
+    const proof = getPaymentProofUrl(order);
+    if (!proof && !transfer.senderName && !transfer.contactNumber && !transfer.referenceNumber) {
+      return [];
+    }
+    return [{
+      type: 'original',
+      amount: order.originalTotal ?? order.total ?? 0,
+      method: paymentMethod,
+      proof,
+      transferInformation: transfer,
+      paidAt: order.createdAt,
+      note: '',
+    }];
+  }
+
+  return txs
+    .slice()
+    .sort((a, b) => new Date(a.paidAt || 0) - new Date(b.paidAt || 0));
+}
+
 export default function OrderInvoiceView({ order }) {
   const items = order.items || [];
   const productsSubtotal = items.reduce((sum, i) => {
@@ -51,9 +85,9 @@ export default function OrderInvoiceView({ order }) {
     return sum + (i.price || 0) * (i.quantity || 0);
   }, 0);
   const total = order.total ?? order.totalAmount ?? productsSubtotal;
-  const transfer = order.transferInformation || {};
-  const paymentProof = getPaymentProofUrl(order);
   const paymentMethod = order.paymentMethod || '';
+  const transferOperations = buildTransferOperations(order);
+  const differenceOps = transferOperations.filter((tx) => tx.type === 'difference');
 
   return (
     <div className="order-invoice" dir="rtl">
@@ -101,55 +135,9 @@ export default function OrderInvoiceView({ order }) {
         <div className="order-invoice__payment-panel">
           <InvoiceRow label="طريقة الدفع" value={getPaymentLabel(paymentMethod)} />
           <InvoiceRow label="ملاحظات الدفع" value={order.paymentNotes} />
-
-          {isDigitalPayment(paymentMethod) && (
-            <>
-              {(transfer.senderName || order.transferName) && (
-                <InvoiceRow label="اسم المحوّل" value={transfer.senderName || order.transferName} />
-              )}
-              {(transfer.contactNumber || order.transferPhone) && (
-                <InvoiceRow label="رقم التواصل" value={transfer.contactNumber || order.transferPhone} ltr />
-              )}
-              {(transfer.referenceNumber || order.transferNumber) && (
-                <InvoiceRow label="رقم التحويل" value={transfer.referenceNumber || order.transferNumber} ltr />
-              )}
-              {transfer.note && (
-                <InvoiceRow label="ملاحظة التحويل" value={transfer.note} />
-              )}
-            </>
-          )}
-
-          {paymentProof && (
-            <div className="order-invoice__proof">
-              <span className="order-invoice__label">إثبات الدفع</span>
-              <a href={paymentProof} target="_blank" rel="noreferrer" className="order-invoice__proof-link">
-                <img src={paymentProof} alt="إثبات الدفع" />
-              </a>
-            </div>
-          )}
-        </div>
-      </section>
-
-      {(order.originalTotal != null
-        || order.additionalPaymentAmount > 0
-        || (Array.isArray(order.paymentTransactions) && order.paymentTransactions.length > 0)
-      ) && (
-        <section className="order-invoice__section">
-          <h3 className="order-invoice__section-title">سجل المدفوعات</h3>
-          <InvoiceRow
-            label="المبلغ الأصلي"
-            value={`${Number(order.originalTotal ?? order.total ?? 0).toFixed(2)} ₪`}
-          />
-          {(order.paymentTransactions || []).map((tx, idx) => (
-            <InvoiceRow
-              key={`tx-${idx}-${tx.paidAt || tx.amount}`}
-              label={tx.type === 'original' ? 'دفعة أصلية' : `دفعة فرق #${idx}`}
-              value={`${Number(tx.amount || 0).toFixed(2)} ₪${tx.method ? ` · ${getPaymentLabel(tx.method)}` : ''}`}
-            />
-          ))}
           {order.additionalPaymentAmount > 0 && (
             <InvoiceRow
-              label="إجمالي الفروقات"
+              label="إجمالي فروقات التعديل"
               value={`${Number(order.additionalPaymentAmount).toFixed(2)} ₪`}
             />
           )}
@@ -157,20 +145,8 @@ export default function OrderInvoiceView({ order }) {
             label="إجمالي المدفوع"
             value={`${Number(order.totalPaid ?? ((order.originalTotal || 0) + (order.additionalPaymentAmount || 0))).toFixed(2)} ₪`}
           />
-          <InvoiceRow label="إجمالي الطلب الحالي" value={`${Number(total).toFixed(2)} ₪`} />
-          {order.hasPaymentSurplus && order.paymentSurplus > 0 && (
-            <InvoiceRow
-              label="فرق المدفوع عن الفاتورة"
-              value={`${Number(order.paymentSurplus).toFixed(2)} ₪`}
-            />
-          )}
-          {order.hasPaymentSurplus && (
-            <p className="order-invoice__hint">
-              لا يوجد استرداد تلقائي — يراجع المتجر المبلغ الزائد عند التأكيد.
-            </p>
-          )}
-        </section>
-      )}
+        </div>
+      </section>
 
       {Array.isArray(order.orderChangeHistory) && order.orderChangeHistory.length > 0 && (
         <section className="order-invoice__section">
@@ -185,6 +161,58 @@ export default function OrderInvoiceView({ order }) {
               </li>
             ))}
           </ul>
+        </section>
+      )}
+
+      {transferOperations.length > 0 && (
+        <section className="order-invoice__section order-invoice__section--transfers">
+          <h3 className="order-invoice__section-title">بيانات التحويلات</h3>
+          <p className="order-invoice__hint">سجل عمليات الدفع والتحويل — مرتبة زمنياً</p>
+          <ol className="order-invoice__transfer-list">
+            {transferOperations.map((tx, idx) => {
+              const transfer = tx.transferInformation || {};
+              const proof = tx.proof || '';
+              let diffIndex = 0;
+              if (tx.type === 'difference') {
+                diffIndex = transferOperations
+                  .slice(0, idx + 1)
+                  .filter((entry) => entry.type === 'difference').length;
+              }
+              return (
+                <li key={`transfer-${idx}-${tx.paidAt || tx.amount}`} className="order-invoice__transfer-card">
+                  <h4>{transferOperationLabel(tx, diffIndex, differenceOps.length)}</h4>
+                  <InvoiceRow label="المبلغ" value={`${Number(tx.amount || 0).toFixed(2)} ₪`} />
+                  <InvoiceRow label="طريقة الدفع" value={getPaymentLabel(tx.method || paymentMethod)} />
+                  {transfer.senderName && (
+                    <InvoiceRow label="الاسم" value={transfer.senderName} />
+                  )}
+                  {transfer.contactNumber && (
+                    <InvoiceRow label="رقم الحساب/الهاتف" value={transfer.contactNumber} ltr />
+                  )}
+                  {transfer.referenceNumber && (
+                    <InvoiceRow label="رقم العملية" value={transfer.referenceNumber} ltr />
+                  )}
+                  {transfer.note && (
+                    <InvoiceRow label="ملاحظة" value={transfer.note} />
+                  )}
+                  {tx.note && (
+                    <InvoiceRow label="وصف العملية" value={tx.note} />
+                  )}
+                  {tx.paidAt && (
+                    <InvoiceRow label="التاريخ" value={formatOrderDate(tx.paidAt)} />
+                  )}
+                  {proof && (
+                    <div className="order-invoice__proof">
+                      <span className="order-invoice__label">الإشعار/الإيصال</span>
+                      <a href={proof} target="_blank" rel="noreferrer" className="order-invoice__proof-link">
+                        <img src={proof} alt="إيصال التحويل" />
+                      </a>
+                    </div>
+                  )}
+                </li>
+              );
+            })}
+          </ol>
         </section>
       )}
     </div>
