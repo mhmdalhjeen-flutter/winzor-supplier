@@ -22,9 +22,13 @@ import { queryKeys } from "../lib/queryClient";
 export default function DashboardLayout() {
   const user = getStoredUser({});
   const navigate = useNavigate();
+  const location = useLocation();
   const badges = useDashboardBadges();
   const { canInstall, openInstallCard } = usePwaInstall();
   const { permissions: storePages, isStoreOwner } = useStoreOwnerPermissions();
+
+  const isSupplier = user?.role === "supplier";
+  const baseRoute = isSupplier ? "/supplier" : "/store";
 
   const [welcomeOpen, setWelcomeOpen] = useState(false);
   const [suggestedDefaults, setSuggestedDefaults] = useState(null);
@@ -51,10 +55,6 @@ export default function DashboardLayout() {
 
   const storeData = storeQueryData?.store ?? null;
 
-  const location = useLocation();
-
-  const isSupplier = user?.role === "supplier";
-  const baseRoute = isSupplier ? "/supplier" : "/store";
   const isSupportPage = location.pathname === `${baseRoute}/support`;
   const isSubscriptionPage = location.pathname === `${baseRoute}/subscription`;
   const subscriptionAllowedPage = isSupportPage || isSubscriptionPage;
