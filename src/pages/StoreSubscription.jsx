@@ -12,7 +12,7 @@ import {
 import { paymentTypeLabel } from '../utils/subscriptionLabels';
 import { getStoredUser } from '../utils/safeStorage';
 import { queryKeys } from '../lib/queryClient';
-import '../../styles/storeSubscription.css';
+import '../styles/storeSubscription.css';
 
 const EMPTY_TRANSFER = {
   transferName: '',

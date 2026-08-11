@@ -1,4 +1,4 @@
-import '../styles/storeSubscription.css';
+import '../../styles/storeSubscription.css';
 
 export default function SubscriptionPaymentBanner({ subscription, onReviewPayment }) {
   if (!subscription) return null;
