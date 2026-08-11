@@ -3,12 +3,16 @@ import { Outlet, NavLink, useNavigate, useLocation } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Menu, Home } from "lucide-react";
 import "../styles/dashboard.css";
+import "../styles/storeSubscription.css";
 import useDashboardBadges from "../hooks/useDashboardBadges";
 import useStoreOwnerPermissions from "../hooks/useStoreOwnerPermissions";
 import DashboardHeaderActions, { BottomNavBadge } from "../components/DashboardHeaderActions";
 import { BRAND_LOGO_64, BRAND_NAME, BRAND_TAGLINE } from "../utils/brandAssets";
 import StoreWelcomeModal from "../components/StoreWelcomeModal";
 import SubscriptionExpiredGate from "../components/SubscriptionExpiredGate";
+import SubscriptionPaymentRejectedGate from "../components/subscription/SubscriptionPaymentRejectedGate";
+import SubscriptionPaymentBanner from "../components/subscription/SubscriptionPaymentBanner";
+import { getMySubscription } from "../services/subscription.service";
 import { usePwaInstall } from "../context/PwaInstallContext";
 import { getMyStore } from "../services/store.service";
 import { getStoredUser } from "../utils/safeStorage";
@@ -35,6 +39,16 @@ export default function DashboardLayout() {
     staleTime: 5 * 60 * 1000,
   });
 
+  const { data: subscriptionData } = useQuery({
+    queryKey: queryKeys.storeSubscription,
+    queryFn: async () => {
+      const { data } = await getMySubscription();
+      return data;
+    },
+    enabled: !isSupplier && isStoreOwner,
+    staleTime: 30 * 1000,
+  });
+
   const storeData = storeQueryData?.store ?? null;
 
   const location = useLocation();
@@ -42,8 +56,18 @@ export default function DashboardLayout() {
   const isSupplier = user?.role === "supplier";
   const baseRoute = isSupplier ? "/supplier" : "/store";
   const isSupportPage = location.pathname === `${baseRoute}/support`;
-  const subscriptionExpired =
+  const isSubscriptionPage = location.pathname === `${baseRoute}/subscription`;
+  const subscriptionAllowedPage = isSupportPage || isSubscriptionPage;
+
+  const subscriptionManuallyExpired =
     !isSupplier && isStoreOwner && storeData && storeData.subscriptionActive === false && !isSupportPage;
+
+  const subscriptionPaymentRejected =
+    !isSupplier && isStoreOwner
+    && subscriptionData?.paymentRejected
+    && !subscriptionAllowedPage;
+
+  const subscriptionExpired = subscriptionManuallyExpired;
 
   useEffect(() => {
     if (!storeQueryData) return;
@@ -125,9 +149,9 @@ export default function DashboardLayout() {
   );
 
   return (
-    <div className={`dashboard${subscriptionExpired ? " dashboard--subscription-expired" : ""}`}>
+    <div className={`dashboard${subscriptionExpired || subscriptionPaymentRejected ? " dashboard--subscription-expired" : ""}`}>
       <StoreWelcomeModal
-        open={welcomeOpen && !subscriptionExpired}
+        open={welcomeOpen && !subscriptionExpired && !subscriptionPaymentRejected}
         store={storeData}
         suggestedDefaults={suggestedDefaults}
         baseRoute={baseRoute}
@@ -135,7 +159,7 @@ export default function DashboardLayout() {
         onDone={refreshStoreAfterWelcome}
       />
 
-      {!subscriptionExpired && menuOpen && (
+      {!subscriptionExpired && !subscriptionPaymentRejected && menuOpen && (
         <button
           type="button"
           className="sidebar-backdrop"
@@ -144,7 +168,7 @@ export default function DashboardLayout() {
         />
       )}
 
-      {!subscriptionExpired && (
+      {!subscriptionExpired && !subscriptionPaymentRejected && (
         <aside className={`sidebar${menuOpen ? " open" : ""}`}>
           <div className="sidebar-brand">
             {!isSupplier && storeData ? (
@@ -182,7 +206,7 @@ export default function DashboardLayout() {
       )}
 
       <div className="main">
-        {!subscriptionExpired && (
+        {!subscriptionExpired && !subscriptionPaymentRejected && (
           <header className="topbar">
             <div className="topbar-start">
               <button
@@ -225,13 +249,27 @@ export default function DashboardLayout() {
         <div className="content">
           {subscriptionExpired ? (
             <SubscriptionExpiredGate navigate={navigate} baseRoute={baseRoute} />
+          ) : subscriptionPaymentRejected ? (
+            <SubscriptionPaymentRejectedGate
+              navigate={navigate}
+              baseRoute={baseRoute}
+              rejectionReason={subscriptionData?.period?.rejectionReason || subscriptionData?.payment?.rejectionReason}
+            />
           ) : (
-            <Outlet />
+            <>
+              {!isSupplier && isStoreOwner && (
+                <SubscriptionPaymentBanner
+                  subscription={subscriptionData}
+                  onReviewPayment={() => navigate(`${baseRoute}/subscription`)}
+                />
+              )}
+              <Outlet />
+            </>
           )}
         </div>
       </div>
 
-      {!subscriptionExpired && (
+      {!subscriptionExpired && !subscriptionPaymentRejected && (
         <nav className="bottom-nav" aria-label="التنقل السريع">
           <NavLink to={baseRoute} end>
             <span className="nav-icon"><Home size={20} strokeWidth={2.2} /></span>

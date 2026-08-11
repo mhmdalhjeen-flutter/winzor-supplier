@@ -41,6 +41,7 @@ const MemberPrizes = lazy(() => import("./pages/storeOwner/MemberPrizes"));
 const OffersRedirect = lazy(() => import("./pages/OffersRedirect"));
 const Drafts = lazy(() => import("./pages/storeOwner/Drafts"));
 const Notifications = lazy(() => import("./pages/Notifications"));
+const StoreSubscription = lazy(() => import("./pages/StoreSubscription"));
 
 const LazyPage = ({ children }) => (
   <Suspense fallback={<LightLoadingHint />}>{children}</Suspense>
@@ -93,6 +94,7 @@ function MerchantApp() {
         <Route path="drafts" element={<LazyPage><Drafts /></LazyPage>} />
         <Route path="offers" element={<LazyPage><OffersRedirect /></LazyPage>} />
         <Route path="notifications" element={<LazyPage><Notifications /></LazyPage>} />
+        <Route path="subscription" element={<StoreOnlyRoute><LazyPage><StoreSubscription /></LazyPage></StoreOnlyRoute>} />
       </Route>
 
       {/* SUPPLIER ROUTES */}

@@ -7,6 +7,9 @@ import { getMyStore } from '../../services/store.service';
 import { getStoredUser } from '../../utils/safeStorage';
 import { queryKeys } from '../../lib/queryClient';
 import { fetchDashboardStats } from '../../lib/dashboardStats';
+import { getMySubscription } from '../../services/subscription.service';
+import { needsSubscriptionPayment } from '../../utils/subscriptionLabels';
+import '../../styles/storeSubscription.css';
 import DashboardStatCards from '../../components/dashboard/DashboardStatCards';
 import OrderQuickNav from '../../components/dashboard/OrderQuickNav';
 import OrderSummaryCard from '../../components/orders/OrderSummaryCard';
@@ -54,6 +57,18 @@ export default function DashboardHome() {
   });
 
   const store = storeResponse?.store;
+
+  const { data: subscription } = useQuery({
+    queryKey: queryKeys.storeSubscription,
+    queryFn: async () => {
+      const { data } = await getMySubscription();
+      return data;
+    },
+    enabled: !isSupplier,
+    staleTime: 30 * 1000,
+  });
+
+  const showRenewalPrompt = !isSupplier && needsSubscriptionPayment(subscription);
 
   const {
     data: dashboardData,
@@ -147,6 +162,21 @@ export default function DashboardHome() {
 
   return (
     <div className="store-dashboard" dir="rtl">
+      {showRenewalPrompt && (
+        <div className="store-sub-renewal">
+          <div className="store-sub-renewal__text">
+            <h3>شهر جديد باشتراك جديد</h3>
+            <p>جدّد اشتراك متجرك للحصول على كروت هذا الشهر</p>
+          </div>
+          <button
+            type="button"
+            className="store-sub-renewal__btn"
+            onClick={() => navigate(`${baseRoute}/subscription`)}
+          >
+            تجديد الاشتراك
+          </button>
+        </div>
+      )}
       {!isSupplier && store?.name ? (
         <div className="dashboard-home-store">
           {store.logo ? (

@@ -31,4 +31,6 @@ export const queryKeys = {
   storeMyOrders: ["orders", "my"],
   me: ["me"],
   platformSettings: ["platformSettings"],
+  storeSubscription: ["store", "subscription"],
+  subscriptionPaymentMethods: ["store", "subscription", "payment-methods"],
 };

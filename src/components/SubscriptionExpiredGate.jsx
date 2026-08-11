@@ -1,4 +1,5 @@
 import { logout as authLogout } from "../utils/auth";
+import "../styles/storeSubscription.css";
 
 const MESSAGE = "يرجى تجديد الاشتراك للدخول إلى لوحة المتجر";
 
