@@ -139,6 +139,26 @@ function minExpiryDate() {
   return `${yyyy}-${mm}-${dd}`;
 }
 
+const MAX_OFFER_DAYS = 7;
+
+function maxExpiryDate(anchorIso) {
+  const anchor = anchorIso ? new Date(anchorIso) : new Date();
+  const max = new Date(anchor.getTime() + MAX_OFFER_DAYS * 24 * 60 * 60 * 1000);
+  const yyyy = max.getFullYear();
+  const mm = String(max.getMonth() + 1).padStart(2, '0');
+  const dd = String(max.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+function isExpiryWithinMaxDays(dateStr, anchorIso) {
+  if (!dateStr) return false;
+  const exp = new Date(dateOnlyToIso(dateStr));
+  if (Number.isNaN(exp.getTime())) return false;
+  const anchor = anchorIso ? new Date(anchorIso) : new Date();
+  const max = new Date(anchor.getTime() + MAX_OFFER_DAYS * 24 * 60 * 60 * 1000);
+  return exp <= max;
+}
+
 function isoToDateInput(iso) {
   if (!iso) return '';
   const d = new Date(iso);
@@ -175,6 +195,9 @@ export default function AddProductsOffers() {
   const [pendingItemId, setPendingItemId] = useState(null);
   const [variantDraft, setVariantDraft] = useState({ name: '', value: '' });
   const [showVariantForm, setShowVariantForm] = useState(true);
+  const [offerCreatedAt, setOfferCreatedAt] = useState(null);
+
+  const offerExpiryAnchor = editOfferId && offerCreatedAt ? offerCreatedAt : null;
 
   const dedicatedTab = tabParam === 'product' || tabParam === 'offer';
   const hideTypeTabs = !isEditMode && dedicatedTab;
@@ -282,6 +305,7 @@ export default function AddProductsOffers() {
             showNotice('العرض غير موجود', 'error');
             return;
           }
+          setOfferCreatedAt(item.createdAt || null);
           setOffer({
             ...EMPTY_OFFER,
             title: item.title || '',
@@ -571,6 +595,10 @@ export default function AddProductsOffers() {
     const expiresIso = dateOnlyToIso(offer.expiresAt);
     if (!expiresIso || new Date(expiresIso) <= new Date()) {
       showNotice('تاريخ الانتهاء يجب أن يكون في المستقبل', 'error');
+      return;
+    }
+    if (!isExpiryWithinMaxDays(offer.expiresAt, offerExpiryAnchor)) {
+      showNotice(`تاريخ الانتهاء لا يمكن أن يتجاوز ${MAX_OFFER_DAYS} أيام`, 'error');
       return;
     }
 
@@ -1068,6 +1096,7 @@ export default function AddProductsOffers() {
               className="date-field__input"
               value={offer.expiresAt}
               min={minExpiryDate()}
+              max={maxExpiryDate(offerExpiryAnchor)}
               onChange={(e) => setOffer({ ...offer, expiresAt: e.target.value })}
               required
             />

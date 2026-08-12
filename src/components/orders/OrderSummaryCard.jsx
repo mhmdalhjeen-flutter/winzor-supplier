@@ -219,19 +219,24 @@ export default function OrderSummaryCard({
       </div>
 
       {showDeliverAction && (
-        <button
-          type="button"
-          className="order-summary-card__deliver-btn"
-          disabled={busy || !handoffReady}
-          title={waitingForDriver ? 'بانتظار تعيين السائق من شركة التوصيل' : undefined}
-          onClick={(e) => {
-            e.stopPropagation();
-            if (!handoffReady) return;
-            onDeliver?.(order);
-          }}
-        >
-          {busy ? 'جارٍ التحديث...' : getDeliverActionLabel(order.deliveryMethod)}
-        </button>
+        <div className="order-summary-card__actions">
+          {waitingForDriver && (
+            <p className="order-summary-card__hint">بانتظار تعيين السائق من شركة التوصيل</p>
+          )}
+          <button
+            type="button"
+            className="order-summary-card__deliver-btn"
+            disabled={busy || !handoffReady}
+            title={waitingForDriver ? 'بانتظار تعيين السائق من شركة التوصيل' : undefined}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (!handoffReady) return;
+              onDeliver?.(order);
+            }}
+          >
+            {busy ? 'جارٍ التحديث...' : getDeliverActionLabel(order.deliveryMethod)}
+          </button>
+        </div>
       )}
 
       <span className="order-summary-card__chevron" aria-hidden="true">‹</span>
