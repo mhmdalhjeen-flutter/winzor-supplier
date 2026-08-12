@@ -45,7 +45,7 @@ export default function DashboardStatCards({ customersCount, pendingCount, cards
         return (
           <div key={stat.id} className="store-dash-stat-card">
             <div className="store-dash-stat-card__icon" style={{ background: iconBg, color: iconColor }}>
-              <Icon size={22} strokeWidth={2.2} />
+              <Icon size={18} strokeWidth={2.2} />
             </div>
             <div className="store-dash-stat-card__body">
               <span className="store-dash-stat-card__label">{stat.label}</span>
