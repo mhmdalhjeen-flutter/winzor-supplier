@@ -439,6 +439,18 @@
   cursor: pointer;
 }
 
+.store-dash-empty__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 12px;
+}
+
+.store-dash-empty__actions button {
+  margin-top: 0;
+}
+
 .store-dash-toast {
   position: fixed;
   bottom: calc(80px + env(safe-area-inset-bottom, 0px));

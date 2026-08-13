@@ -40,7 +40,7 @@ export default function OrderDetails() {
   const [showModifyDialog, setShowModifyDialog] = useState(false);
   const [showPaymentModifyDialog, setShowPaymentModifyDialog] = useState(false);
 
-  const { data: order, isLoading, isError, error } = useQuery({
+  const { data: order, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['orderDetail', orderId],
     queryFn: async () => {
       const res = await axios.get(`/orders/${orderId}`);
@@ -208,7 +208,10 @@ export default function OrderDetails() {
       {isError && !isLoading && (
         <div className="store-dash-empty">
           <p>{loadError}</p>
-          <button type="button" onClick={() => navigate(baseRoute)}>العودة للرئيسية</button>
+          <div className="store-dash-empty__actions">
+            <button type="button" onClick={() => refetch()}>إعادة المحاولة</button>
+            <button type="button" onClick={() => navigate(baseRoute)}>العودة للرئيسية</button>
+          </div>
         </div>
       )}
 
