@@ -87,6 +87,8 @@ export default function StoreSubscription() {
       if (payment.paymentMethod) {
         setSelectedMethod({ type: payment.paymentMethod });
       }
+    } else if (subscription.awaitingPayment || (subscription.needsPayment && !subscription.paymentRejected)) {
+      setStep('welcome');
     } else if (['active', 'exempted'].includes(subscription.status)) {
       setStep('done');
     } else if (subscription.paymentPending) {

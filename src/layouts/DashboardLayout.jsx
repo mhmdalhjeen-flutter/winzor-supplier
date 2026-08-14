@@ -11,6 +11,7 @@ import { BRAND_LOGO_64, BRAND_NAME, BRAND_TAGLINE } from "../utils/brandAssets";
 import StoreWelcomeModal from "../components/StoreWelcomeModal";
 import SubscriptionExpiredGate from "../components/SubscriptionExpiredGate";
 import SubscriptionPaymentRejectedGate from "../components/subscription/SubscriptionPaymentRejectedGate";
+import SubscriptionPaymentRequiredGate from "../components/subscription/SubscriptionPaymentRequiredGate";
 import SubscriptionPaymentBanner from "../components/subscription/SubscriptionPaymentBanner";
 import { getMySubscription } from "../services/subscription.service";
 import { usePwaInstall } from "../context/PwaInstallContext";
@@ -66,6 +67,14 @@ export default function DashboardLayout() {
     !isSupplier && isStoreOwner
     && subscriptionData?.paymentRejected
     && !subscriptionAllowedPage;
+
+  const subscriptionPaymentRequired =
+    !isSupplier && isStoreOwner
+    && subscriptionData?.needsPayment
+    && !subscriptionData?.paymentRejected
+    && !subscriptionAllowedPage;
+
+  const subscriptionAccessBlocked = subscriptionPaymentRejected || subscriptionPaymentRequired;
 
   const subscriptionExpired = subscriptionManuallyExpired;
 
@@ -148,9 +157,9 @@ export default function DashboardLayout() {
   );
 
   return (
-    <div className={`dashboard${subscriptionExpired || subscriptionPaymentRejected ? " dashboard--subscription-expired" : ""}`}>
+    <div className={`dashboard${subscriptionExpired || subscriptionAccessBlocked ? " dashboard--subscription-expired" : ""}`}>
       <StoreWelcomeModal
-        open={welcomeOpen && !subscriptionExpired && !subscriptionPaymentRejected}
+        open={welcomeOpen && !subscriptionExpired && !subscriptionAccessBlocked}
         store={storeData}
         suggestedDefaults={suggestedDefaults}
         baseRoute={baseRoute}
@@ -158,7 +167,7 @@ export default function DashboardLayout() {
         onDone={refreshStoreAfterWelcome}
       />
 
-      {!subscriptionExpired && !subscriptionPaymentRejected && menuOpen && (
+      {!subscriptionExpired && !subscriptionAccessBlocked && menuOpen && (
         <button
           type="button"
           className="sidebar-backdrop"
@@ -167,7 +176,7 @@ export default function DashboardLayout() {
         />
       )}
 
-      {!subscriptionExpired && !subscriptionPaymentRejected && (
+      {!subscriptionExpired && !subscriptionAccessBlocked && (
         <aside className={`sidebar${menuOpen ? " open" : ""}`}>
           <div className="sidebar-brand">
             {!isSupplier && storeData ? (
@@ -205,7 +214,7 @@ export default function DashboardLayout() {
       )}
 
       <div className="main">
-        {!subscriptionExpired && !subscriptionPaymentRejected && (
+        {!subscriptionExpired && !subscriptionAccessBlocked && (
           <header className="topbar">
             <div className="topbar-start">
               <button
@@ -254,6 +263,12 @@ export default function DashboardLayout() {
               baseRoute={baseRoute}
               rejectionReason={subscriptionData?.period?.rejectionReason || subscriptionData?.payment?.rejectionReason}
             />
+          ) : subscriptionPaymentRequired ? (
+            <SubscriptionPaymentRequiredGate
+              navigate={navigate}
+              baseRoute={baseRoute}
+              monthKey={subscriptionData?.monthKey}
+            />
           ) : (
             <>
               {!isSupplier && isStoreOwner && (
@@ -268,7 +283,7 @@ export default function DashboardLayout() {
         </div>
       </div>
 
-      {!subscriptionExpired && !subscriptionPaymentRejected && (
+      {!subscriptionExpired && !subscriptionAccessBlocked && (
         <nav className="bottom-nav" aria-label="التنقل السريع">
           <NavLink to={baseRoute} end>
             <span className="nav-icon"><Home size={20} strokeWidth={2.2} /></span>

@@ -7,7 +7,7 @@ export default function SubscriptionPaymentBanner({ subscription, onReviewPaymen
     return (
       <div className="sub-pay-banner sub-pay-banner--pending" dir="rtl">
         <span className="sub-pay-banner__dot" aria-hidden />
-        <span>الدفع قيد المراجعة — يمكنك متابعة استخدام المتجر بشكل طبيعي</span>
+        <span>الدفع قيد المراجعة</span>
       </div>
     );
   }
