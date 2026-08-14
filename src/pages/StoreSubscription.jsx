@@ -180,10 +180,18 @@ export default function StoreSubscription() {
       {step === 'welcome' && (
         <section className="store-sub-card store-sub-card--hero">
           <p className="store-sub-greeting">مرحباً {ownerName}</p>
-          <h1>شهر جديد باشتراك جديد</h1>
-          <p className="store-sub-lead">جدّد اشتراك متجرك للحصول على كروت الشهر الحالي.</p>
+          <h1>
+            {subscription?.needsPayment && subscription?.monthLabel
+              ? `اشتراك ${subscription.monthLabel}`
+              : 'شهر جديد باشتراك جديد'}
+          </h1>
+          <p className="store-sub-lead">
+            {subscription?.needsPayment
+              ? 'يرجى إتمام دفع الاشتراك للاستمرار في استخدام المتجر.'
+              : 'جدّد اشتراك متجرك للحصول على كروت الشهر الحالي.'}
+          </p>
           <button type="button" className="store-sub-primary-btn" onClick={() => setStep('methods')}>
-            تجديد الاشتراك
+            {subscription?.needsPayment ? 'متابعة الدفع' : 'تجديد الاشتراك'}
           </button>
         </section>
       )}
