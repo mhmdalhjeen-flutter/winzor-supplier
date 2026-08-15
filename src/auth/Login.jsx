@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { useNavigate, Link, useSearchParams } from "react-router-dom";
 
@@ -13,6 +13,8 @@ import {
   PWA_ACTION_OFFER,
   PWA_ACTION_PRODUCT,
 } from "../pwa/pwaShortcutActions";
+import { useLoginRateLimitCooldown } from "../hooks/useLoginRateLimitCooldown";
+import LoginRateLimitBanner from "../components/auth/LoginRateLimitBanner";
 
 function resolvePostLoginRoute(role) {
   return role === "supplier" ? "/supplier" : "/store";
@@ -29,6 +31,15 @@ export default function Login() {
     identifier: "",
     password: "",
   });
+  const loginInFlight = useRef(false);
+  const {
+    isRateLimited,
+    formattedRemaining,
+    showRetryReady,
+    startFromError,
+    dismissRetryReady,
+  } = useLoginRateLimitCooldown();
+  const busy = loading || isRateLimited;
 
   const finishLoginNavigation = (role) => {
     const pwaAction = searchParams.get("pwaAction");
@@ -57,17 +68,22 @@ export default function Login() {
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
     if (error) setError("");
+    dismissRetryReady();
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (isRateLimited || loginInFlight.current) return;
+
     setError("");
+    dismissRetryReady();
 
     if (!form.identifier || !form.password) {
       setError("يرجى تعبئة جميع الحقول");
       return;
     }
 
+    loginInFlight.current = true;
     setLoading(true);
     try {
       const res = await login({
@@ -85,10 +101,15 @@ export default function Login() {
       finishLoginNavigation(role);
 
     } catch (err) {
+      if (err.response?.status === 429) {
+        startFromError(err);
+        return;
+      }
       const message = err.response?.data?.message
         || (err.code === "ERR_NETWORK" ? "تعذّر الاتصال بالخادم. تحقق من الاتصال أو حاول لاحقاً." : "خطأ في تسجيل الدخول");
       setError(message);
     } finally {
+      loginInFlight.current = false;
       setLoading(false);
     }
   };
@@ -100,7 +121,13 @@ export default function Login() {
         <h2>تسجيل الدخول</h2>
         <p>ادخل رقم الهاتف أو كود التفعيل وكلمة المرور</p>
 
-        {error && (
+        <LoginRateLimitBanner
+          isRateLimited={isRateLimited}
+          formattedRemaining={formattedRemaining}
+          showRetryReady={showRetryReady}
+        />
+
+        {error && !isRateLimited && (
           <div className="hint-box" style={{ background: "#fef2f2", color: "#991b1b" }} role="alert">
             {error}
           </div>
@@ -113,7 +140,7 @@ export default function Login() {
             value={form.identifier}
             onChange={handleChange}
             placeholder="0592222222 أو TR-XXXX"
-            disabled={loading}
+            disabled={busy}
             required
           />
         </div>
@@ -128,7 +155,7 @@ export default function Login() {
               value={form.password}
               onChange={handleChange}
               placeholder="••••••••"
-              disabled={loading}
+              disabled={busy}
               required
             />
 
@@ -142,8 +169,8 @@ export default function Login() {
           <Link to="/forgot-password">نسيت كلمة المرور؟</Link>
         </div>
 
-        <button type="submit" className="primary-btn" disabled={loading}>
-          {loading ? "جاري الدخول..." : "دخول"}
+        <button type="submit" className="primary-btn" disabled={busy}>
+          {loading ? "جاري الدخول..." : isRateLimited ? `انتظر ${formattedRemaining}` : "دخول"}
         </button>
 
         <div className="switch-link">
