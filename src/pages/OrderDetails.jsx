@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowRight } from 'lucide-react';
@@ -39,6 +39,7 @@ export default function OrderDetails() {
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [showModifyDialog, setShowModifyDialog] = useState(false);
   const [showPaymentModifyDialog, setShowPaymentModifyDialog] = useState(false);
+  const statusChangeInFlight = useRef(false);
 
   const { data: order, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['orderDetail', orderId],
@@ -78,6 +79,8 @@ export default function OrderDetails() {
   };
 
   const changeStatus = async (newStatus, extra = {}) => {
+    if (statusChangeInFlight.current) return;
+    statusChangeInFlight.current = true;
     setUpdating(true);
     try {
       const res = await axios.patch(`/orders/${orderId}/status`, {
@@ -102,11 +105,13 @@ export default function OrderDetails() {
     } catch (err) {
       showToast(err.response?.data?.message || 'تعذّر تحديث الحالة');
     } finally {
+      statusChangeInFlight.current = false;
       setUpdating(false);
     }
   };
 
   const handleConfirmRequest = () => {
+    if (updating || statusChangeInFlight.current) return;
     if (shouldSkipConfirmDisclaimer(userId)) {
       changeStatus('store_accepted');
       return;
@@ -115,6 +120,7 @@ export default function OrderDetails() {
   };
 
   const handleConfirmDialog = () => {
+    if (updating || statusChangeInFlight.current) return;
     setShowConfirmDialog(false);
     changeStatus('store_accepted');
   };
@@ -173,7 +179,8 @@ export default function OrderDetails() {
       <ConfirmOrderDialog
         open={showConfirmDialog}
         userId={userId}
-        onClose={() => setShowConfirmDialog(false)}
+        loading={updating}
+        onClose={() => !updating && setShowConfirmDialog(false)}
         onConfirm={handleConfirmDialog}
       />
 

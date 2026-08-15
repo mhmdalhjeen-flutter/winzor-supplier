@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { setSkipConfirmDisclaimer } from '../../utils/storeOrderLabels';
 
-export default function ConfirmOrderDialog({ open, userId, onClose, onConfirm }) {
+export default function ConfirmOrderDialog({ open, userId, onClose, onConfirm, loading = false }) {
   const [dontShowAgain, setDontShowAgain] = useState(false);
 
   if (!open) return null;
 
   const handleConfirm = () => {
+    if (loading) return;
     if (dontShowAgain && userId) {
       setSkipConfirmDisclaimer(userId, true);
     }
@@ -29,11 +30,11 @@ export default function ConfirmOrderDialog({ open, userId, onClose, onConfirm })
           <span>لا تظهر هذه الرسالة مرة أخرى</span>
         </label>
         <div className="store-order-dialog__actions">
-          <button type="button" className="store-order-dialog__secondary" onClick={onClose}>
+          <button type="button" className="store-order-dialog__secondary" onClick={onClose} disabled={loading}>
             إلغاء
           </button>
-          <button type="button" className="store-order-dialog__primary" onClick={handleConfirm}>
-            موافق
+          <button type="button" className="store-order-dialog__primary" onClick={handleConfirm} disabled={loading}>
+            {loading ? 'جارٍ...' : 'موافق'}
           </button>
         </div>
       </div>
