@@ -767,7 +767,6 @@
 .variants-section__header {
   display: flex;
   align-items: flex-start;
-  justify-content: space-between;
   gap: 14px;
   padding: 16px;
   background: #f8fafc;

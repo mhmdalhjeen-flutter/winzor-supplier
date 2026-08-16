@@ -357,9 +357,12 @@
 }
 
 .msg-image {
+  width: auto;
   max-width: 260px;
+  max-height: 280px;
   border-radius: 14px;
   display: block;
+  object-fit: contain;
   transition: transform 0.2s ease;
 }
 
@@ -952,6 +955,11 @@
     max-width: 88%;
   }
 
+  .msg-image {
+    max-width: 210px;
+    max-height: 220px;
+  }
+
   .chat-composer {
     padding: 8px 10px calc(8px + env(safe-area-inset-bottom, 0px));
   }
@@ -965,6 +973,10 @@
 
   .chat-media-btn {
     padding: 12px;
+  }
+
+  .chat-window:has(.chat-window-header) .chat-messages {
+    padding-top: 108px;
   }
 }
 

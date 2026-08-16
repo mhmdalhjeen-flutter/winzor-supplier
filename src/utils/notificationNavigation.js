@@ -3,6 +3,17 @@
  * @returns {boolean} true when navigation was handled
  */
 export function handleStoreNotificationClick(navigate, baseRoute, notification) {
+  const offerId = notification?.data?.offerId;
+  if (
+    offerId &&
+    (notification?.type === "offer_expiring" ||
+      notification?.type === "offer_expired" ||
+      notification?.type === "offer_renewed")
+  ) {
+    navigate(`${baseRoute}/my-store`);
+    return true;
+  }
+
   const orderId = notification?.data?.orderId;
   if (!orderId) return false;
 

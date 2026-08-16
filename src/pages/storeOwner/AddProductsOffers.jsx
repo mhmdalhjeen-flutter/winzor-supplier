@@ -769,74 +769,63 @@ export default function AddProductsOffers() {
           <p className="variants-section__title">متغيرات العنصر</p>
           <p className="variants-section__desc">أضف خيارات مثل اللون أو المقاس</p>
         </div>
-        <label className="switch">
-          <input
-            id="variants-toggle"
-            type="checkbox"
-            checked={activeData.variantsEnabled}
-            onChange={(e) => updateInventory({ variantsEnabled: e.target.checked })}
-          />
-          <span className="switch__slider" />
-        </label>
       </div>
-      {activeData.variantsEnabled && (
-        <div className="variants-section__body">
-          {activeData.variants.length > 0 && (
-            <div className="variant-chips">
-              {activeData.variants.map((variant, index) => (
-                <div key={variant.id ?? `variant-${index}`} className="variant-chip">
-                  <span className="variant-chip__label">{variant.name}</span>
-                  <span className="variant-chip__value">{variant.values}</span>
-                  <button
-                    type="button"
-                    className="variant-chip__remove"
-                    onClick={() => removeVariant(index)}
-                    aria-label={`حذف ${variant.name}`}
-                  >
-                    ×
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {(showVariantForm || activeData.variants.length === 0) ? (
-            <div className="variant-editor">
-              <label className="field-label">اسم المتغير</label>
-              <input
-                value={variantDraft.name}
-                onChange={(e) => setVariantDraft((prev) => ({ ...prev, name: e.target.value }))}
-                placeholder="مثال: اللون"
-              />
-              <label className="field-label">قيمة المتغير</label>
-              <input
-                value={variantDraft.value}
-                onChange={(e) => setVariantDraft((prev) => ({ ...prev, value: e.target.value }))}
-                placeholder="مثال: أحمر"
-              />
-              <div className="variant-editor__actions">
-                <button type="button" className="variant-editor__save" onClick={saveVariantDraft}>
-                  حفظ المتغير
-                </button>
-                <button type="button" className="variant-editor__delete" onClick={clearVariantDraft}>
-                  حذف
+      <div className="variants-section__body">
+        {activeData.variants.length > 0 && (
+          <div className="variant-chips">
+            {activeData.variants.map((variant, index) => (
+              <div key={variant.id ?? `variant-${index}`} className="variant-chip">
+                <span className="variant-chip__label">{variant.name}</span>
+                <span className="variant-chip__value">{variant.values}</span>
+                <button
+                  type="button"
+                  className="variant-chip__remove"
+                  onClick={() => removeVariant(index)}
+                  aria-label={`حذف ${variant.name}`}
+                >
+                  ×
                 </button>
               </div>
+            ))}
+          </div>
+        )}
+
+        {(showVariantForm || activeData.variants.length === 0) ? (
+          <div className="variant-editor">
+            <label className="field-label">اسم المتغير</label>
+            <input
+              value={variantDraft.name}
+              onChange={(e) => setVariantDraft((prev) => ({ ...prev, name: e.target.value }))}
+              placeholder="مثال: اللون"
+            />
+            <label className="field-label">قيمة المتغير</label>
+            <input
+              value={variantDraft.value}
+              onChange={(e) => setVariantDraft((prev) => ({ ...prev, value: e.target.value }))}
+              placeholder="مثال: أحمر"
+            />
+            <div className="variant-editor__actions">
+              <button type="button" className="variant-editor__save" onClick={saveVariantDraft}>
+                حفظ المتغير
+              </button>
+              <button type="button" className="variant-editor__delete" onClick={clearVariantDraft}>
+                حذف
+              </button>
             </div>
-          ) : (
-            <button
-              type="button"
-              className="variant-add-more"
-              onClick={() => {
-                setShowVariantForm(true);
-                setVariantDraft({ name: '', value: '' });
-              }}
-            >
-              + إضافة متغير آخر
-            </button>
-          )}
-        </div>
-      )}
+          </div>
+        ) : (
+          <button
+            type="button"
+            className="variant-add-more"
+            onClick={() => {
+              setShowVariantForm(true);
+              setVariantDraft({ name: '', value: '' });
+            }}
+          >
+            + إضافة متغير آخر
+          </button>
+        )}
+      </div>
     </div>
   );
 
@@ -986,25 +975,16 @@ export default function AddProductsOffers() {
 
           <CollapsibleSection
             title="خيارات أخرى"
-            subtitle="طريقة الشراء، التوصيل، المتغيرات والوسوم"
+            subtitle="طريقة الشراء، المتغيرات والوسوم"
             open={advancedOpen}
             onToggle={() => setAdvancedOpen((v) => !v)}
           >
-            <PurchaseModeSelect
-              value={product.purchaseMode}
-              onChange={(mode) => setProduct({ ...product, purchaseMode: mode })}
-              id="product-purchase-mode"
-            />
-            <label className="field-label">التوصيل المجاني</label>
-            <div className="radio-row">
-              <label>
-                <input type="radio" name="pDelivery" checked={product.freeDelivery === 'yes'} onChange={() => setProduct({ ...product, freeDelivery: 'yes' })} />
-                نعم
-              </label>
-              <label>
-                <input type="radio" name="pDelivery" checked={product.freeDelivery === 'no'} onChange={() => setProduct({ ...product, freeDelivery: 'no' })} />
-                لا
-              </label>
+            <div className="purchase-method-block">
+              <PurchaseModeSelect
+                value={product.purchaseMode}
+                onChange={(mode) => setProduct({ ...product, purchaseMode: mode })}
+                id="product-purchase-mode"
+              />
             </div>
             {renderInventorySection()}
             <TagsInput label="الوسوم" value={product.tags} onChange={(tags) => setProduct({ ...product, tags })} />
@@ -1107,26 +1087,16 @@ export default function AddProductsOffers() {
 
           <CollapsibleSection
             title="خيارات أخرى"
-            subtitle="طريقة الشراء، التوصيل والوسوم"
+            subtitle="طريقة الشراء، المتغيرات والوسوم"
             open={advancedOpen}
             onToggle={() => setAdvancedOpen((v) => !v)}
           >
-            <PurchaseModeSelect
-              value={offer.purchaseMode}
-              onChange={(mode) => setOffer({ ...offer, purchaseMode: mode })}
-              id="offer-purchase-mode"
-            />
-
-            <label className="field-label">التوصيل المجاني</label>
-            <div className="radio-row">
-              <label>
-                <input type="radio" name="oDelivery" checked={offer.freeDelivery === 'yes'} onChange={() => setOffer({ ...offer, freeDelivery: 'yes' })} />
-                نعم
-              </label>
-              <label>
-                <input type="radio" name="oDelivery" checked={offer.freeDelivery === 'no'} onChange={() => setOffer({ ...offer, freeDelivery: 'no' })} />
-                لا
-              </label>
+            <div className="purchase-method-block">
+              <PurchaseModeSelect
+                value={offer.purchaseMode}
+                onChange={(mode) => setOffer({ ...offer, purchaseMode: mode })}
+                id="offer-purchase-mode"
+              />
             </div>
             {renderInventorySection()}
             <TagsInput label="الوسوم" value={offer.tags} onChange={(tags) => setOffer({ ...offer, tags })} />
@@ -1192,9 +1162,6 @@ export default function AddProductsOffers() {
                       <span key={t}>#{t}</span>
                     ))}
                   </div>
-                )}
-                {activeData.freeDelivery === 'yes' && (
-                  <span className="preview-phone__delivery">توصيل مجاني</span>
                 )}
               </div>
             </div>

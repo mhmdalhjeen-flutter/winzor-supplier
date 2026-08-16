@@ -26,6 +26,7 @@ export default function Support() {
   const [error, setError] = useState("");
   const messagesEndRef = useRef(null);
   const pollingRef = useRef(null);
+  const sendInFlightRef = useRef(false);
 
   const scrollToBottom = () => {
     setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }), 80);
@@ -89,8 +90,9 @@ export default function Support() {
   const sendMessage = async (e) => {
     e.preventDefault();
     const body = text.trim();
-    if (!body || !conversation || sending) return;
+    if (!body || !conversation || sending || sendInFlightRef.current) return;
 
+    sendInFlightRef.current = true;
     setSending(true);
     const prefix = subject.trim() ? `[${subject.trim()}] ` : "";
     const fullText = `${prefix}${body}`;
@@ -110,6 +112,7 @@ export default function Support() {
     } catch (err) {
       setError(err.message || "تعذّر إرسال الرسالة");
     } finally {
+      sendInFlightRef.current = false;
       setSending(false);
     }
   };

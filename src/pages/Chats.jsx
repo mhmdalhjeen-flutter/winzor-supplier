@@ -93,6 +93,7 @@ export default function Chats() {
   const [imagePreview, setImagePreview] = useState(null);
   const [imageFile, setImageFile] = useState(null);
   const [lightboxUrl, setLightboxUrl] = useState(null);
+  const [bootError, setBootError] = useState('');
 
   const messagesEndRef = useRef(null);
   const pollingRef = useRef(null);
@@ -100,6 +101,7 @@ export default function Chats() {
   const fileInputRef = useRef(null);
   const cameraInputRef = useRef(null);
   const textareaRef = useAutoResizeTextarea(text);
+  const sendInFlightRef = useRef(false);
 
   useEffect(() => { activeConvRef.current = activeConv; }, [activeConv]);
 
@@ -226,7 +228,8 @@ export default function Chats() {
   };
 
   const sendMessage = async () => {
-    if ((!text.trim() && !imageFile) || !activeConv || sending) return;
+    if ((!text.trim() && !imageFile) || !activeConv || sending || sendInFlightRef.current) return;
+    sendInFlightRef.current = true;
     setSending(true);
 
     const optimistic = {
@@ -279,6 +282,7 @@ export default function Chats() {
       setReplyTo(sentReply);
       alert(`خطأ: ${err.message}`);
     } finally {
+      sendInFlightRef.current = false;
       setSending(false);
     }
   };
@@ -374,6 +378,8 @@ export default function Chats() {
           </button>
         </div>
       )}
+
+      {bootError && <div className="chat-boot-error">{bootError}</div>}
 
       <input
         ref={fileInputRef}
@@ -583,7 +589,7 @@ export default function Chats() {
               <div className="chat-composer__input-wrap">
                 <textarea
                   ref={textareaRef}
-                  className="chat-composer__textarea"
+                  className="chat-composer__input"
                   placeholder="اكتب رسالة..."
                   value={text}
                   rows={1}

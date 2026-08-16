@@ -23,11 +23,12 @@ export default function PurchaseModeSelect({ value, onChange, id = 'purchase-mod
             onClick={() => onChange(opt.value)}
             aria-pressed={mode === opt.value}
           >
-            {opt.label}
+            <span className="purchase-mode-select__option-label">{opt.label}</span>
+            <span className="purchase-mode-select__option-desc">{opt.desc}</span>
           </button>
         ))}
       </div>
-      <p className="purchase-mode-select__hint">{purchaseModeLabel(mode)} — {OPTIONS.find((o) => o.value === mode)?.desc}</p>
+      <p className="purchase-mode-select__hint">الطريقة المختارة: {purchaseModeLabel(mode)}</p>
     </div>
   );
 }
