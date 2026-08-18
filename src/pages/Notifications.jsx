@@ -16,6 +16,7 @@ function typeMeta(type) {
     case "offer_renewed": return { Icon: RefreshCw, tone: "info" };
     case "order_rejected": return { Icon: AlertCircle, tone: "danger" };
     case "order_modification_resolved": return { Icon: PackageCheck, tone: "info" };
+    case "store_new_reservation": return { Icon: Bell, tone: "info" };
     default: return { Icon: Tag, tone: "default" };
   }
 }

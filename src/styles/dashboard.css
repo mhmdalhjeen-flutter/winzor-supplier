@@ -674,6 +674,15 @@ body { font-family: 'Cairo', sans-serif; background-color: var(--bg-body); color
   font-weight: 600;
 }
 
+.profile-store-status {
+  cursor: default;
+}
+
+.profile-store-status .switch {
+  margin-inline-start: auto;
+  flex-shrink: 0;
+}
+
 .profile-container .create-section--collapsible {
   margin-bottom: 20px;
 }

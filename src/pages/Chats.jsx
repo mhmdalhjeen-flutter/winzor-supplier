@@ -189,7 +189,7 @@ export default function Chats() {
           method: 'POST',
           headers,
           body: JSON.stringify({
-            recipientId: parsed.storeOwnerId,
+            recipientId: parsed.recipientId || parsed.storeOwnerId,
             context: {
               itemId: parsed.productId || parsed.context?.itemId,
               itemType: parsed.itemType || parsed.context?.itemType || 'Product',

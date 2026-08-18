@@ -3,6 +3,11 @@
  * @returns {boolean} true when navigation was handled
  */
 export function handleStoreNotificationClick(navigate, baseRoute, notification) {
+  if (notification?.type === "store_new_reservation") {
+    navigate(`${baseRoute}/reservations`);
+    return true;
+  }
+
   const offerId = notification?.data?.offerId;
   if (
     offerId &&

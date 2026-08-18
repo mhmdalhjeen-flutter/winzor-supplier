@@ -40,6 +40,7 @@ const PendingUploads = lazy(() => import("./pages/storeOwner/PendingUploads"));
 const MemberPrizes = lazy(() => import("./pages/storeOwner/MemberPrizes"));
 const OffersRedirect = lazy(() => import("./pages/OffersRedirect"));
 const Drafts = lazy(() => import("./pages/storeOwner/Drafts"));
+const Reservations = lazy(() => import("./pages/Reservations"));
 const Notifications = lazy(() => import("./pages/Notifications"));
 const StoreSubscription = lazy(() => import("./pages/StoreSubscription"));
 
@@ -77,6 +78,7 @@ function MerchantApp() {
         <Route path="orders/history" element={<LazyPage><OrderHistory /></LazyPage>} />
         <Route path="orders/invoices" element={<LazyPage><OrderInvoices /></LazyPage>} />
         <Route path="chats" element={<LazyPage><Chats /></LazyPage>} />
+        <Route path="reservations" element={<LazyPage><Reservations /></LazyPage>} />
         <Route path="cart" element={<StoreOnlyRoute><StoreFeatureRoute feature="cart"><LazyPage><Cart /></LazyPage></StoreFeatureRoute></StoreOnlyRoute>} />
         <Route path="competitions" element={<StoreOnlyRoute><StoreFeatureRoute feature="competitions"><LazyPage><Competitions /></LazyPage></StoreFeatureRoute></StoreOnlyRoute>} />
         <Route path="buy-codes" element={<StoreOnlyRoute><LazyPage><BuyCodes /></LazyPage></StoreOnlyRoute>} />
@@ -113,6 +115,7 @@ function MerchantApp() {
         <Route path="orders/history" element={<LazyPage><OrderHistory /></LazyPage>} />
         <Route path="orders/invoices" element={<LazyPage><OrderInvoices /></LazyPage>} />
         <Route path="chats" element={<LazyPage><Chats /></LazyPage>} />
+        <Route path="reservations" element={<LazyPage><Reservations /></LazyPage>} />
         <Route path="cart" element={<Navigate to="/supplier" replace />} />
         <Route path="competitions" element={<Navigate to="/supplier" replace />} />
         <Route path="buy-codes" element={<Navigate to="/supplier" replace />} />

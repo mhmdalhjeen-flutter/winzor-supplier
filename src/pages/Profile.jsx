@@ -41,6 +41,7 @@ export default function Profile() {
     subRegion: "",
   });
   const [saving, setSaving] = useState(false);
+  const [statusSaving, setStatusSaving] = useState(false);
   const [message, setMessage] = useState({ text: "", isError: false });
 
   const isSupplier = user?.role === "supplier";
@@ -151,6 +152,32 @@ export default function Profile() {
       showMsg(err.response?.data?.message || "تعذّر حفظ المتجر", true);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleStoreClosedToggle = async (closed) => {
+    if (!store || statusSaving) return;
+    const previousOpen = store.isOpen !== false;
+    queryClient.setQueryData(queryKeys.myStore, (prev) => ({
+      ...(prev || {}),
+      store: { ...(prev?.store || store), isOpen: !closed },
+    }));
+    setStatusSaving(true);
+    try {
+      const { data } = await updateMyStore({ isOpen: !closed });
+      queryClient.setQueryData(queryKeys.myStore, (prev) => ({
+        ...(prev || {}),
+        store: data.store,
+      }));
+      showMsg(closed ? "تم إغلاق المتجر" : "تم فتح المتجر");
+    } catch (err) {
+      queryClient.setQueryData(queryKeys.myStore, (prev) => ({
+        ...(prev || {}),
+        store: { ...(prev?.store || store), isOpen: previousOpen },
+      }));
+      showMsg(err.response?.data?.message || "تعذّر تحديث حالة المتجر", true);
+    } finally {
+      setStatusSaving(false);
     }
   };
 
@@ -269,6 +296,28 @@ export default function Profile() {
         </div>
 
         <div className="profile-settings-links">
+          {!isSupplier && isStoreOwner && store && (
+            <div className="profile-settings-link profile-store-status">
+              <span className="profile-settings-link__icon" aria-hidden>🏪</span>
+              <span className="profile-settings-link__text">
+                <strong>إغلاق المتجر</strong>
+                <small>
+                  {store.isOpen === false
+                    ? "المتجر مغلق حالياً. الزبائن يمكنهم إرسال الطلب ليتم التعامل معه عند الفتح."
+                    : "المتجر مفتوح. فعّل المفتاح لإغلاقه أمام الطلبات الجديدة مع إبقاء المتجر ظاهراً."}
+                </small>
+              </span>
+              <label className="switch switch--danger" title={store.isOpen === false ? "فتح المتجر" : "إغلاق المتجر"}>
+                <input
+                  type="checkbox"
+                  checked={store.isOpen === false}
+                  disabled={statusSaving}
+                  onChange={(e) => handleStoreClosedToggle(e.target.checked)}
+                />
+                <span className="switch__slider" />
+              </label>
+            </div>
+          )}
           {!isSupplier && isStoreOwner && (
             <>
               <Link to={`${baseRoute}/payment-settings`} className="profile-settings-link">

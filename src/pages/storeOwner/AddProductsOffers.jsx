@@ -17,9 +17,11 @@ import { queryKeys } from '../../lib/queryClient';
 import { enqueuePublishItem, getPublishItem, updatePublishItem, resolveQueueBlob } from '../../lib/offlinePublishQueue';
 import ItemCategorySelect from '../../components/ItemCategorySelect';
 import PurchaseModeSelect from '../../components/PurchaseModeSelect';
+import ReservationSettingsSection from '../../components/ReservationSettingsSection';
 import AvailabilitySwitch from '../../components/AvailabilitySwitch';
 import NumericInput from '../../components/NumericInput';
 import { saveDraftEntry, getDraft, deleteDraft } from '../../utils/draftsStorage';
+import { EMPTY_RESERVATION_SETTINGS, normalizeReservationSettings, toReservationSettingsPayload } from '../../utils/reservationSettings';
 import '../../styles/AddProductsOffers.css';
 import '../../styles/itemCategories.css';
 import '../../styles/Drafts.css';
@@ -70,6 +72,7 @@ const EMPTY_PRODUCT = {
   relatedProductId: '',
   isActive: true,
   purchaseMode: 'both',
+  reservationSettings: EMPTY_RESERVATION_SETTINGS,
 };
 
 const EMPTY_OFFER = {
@@ -92,6 +95,7 @@ const EMPTY_OFFER = {
   relatedProductId: '',
   isActive: true,
   purchaseMode: 'both',
+  reservationSettings: EMPTY_RESERVATION_SETTINGS,
 };
 
 function loadDraft(key, fallback) {
@@ -287,6 +291,7 @@ export default function AddProductsOffers() {
             storeItemCategoryId: item.storeItemCategory?._id || item.storeItemCategory || '',
             isActive: item.isActive !== false,
             purchaseMode: item.purchaseMode || 'quantity',
+            reservationSettings: normalizeReservationSettings(item.reservationSettings),
           });
         } catch {
           showNotice('تعذّر تحميل العنصر', 'error');
@@ -324,6 +329,7 @@ export default function AddProductsOffers() {
             relatedProductId: item.relatedProduct?._id || item.relatedProduct || '',
             isActive: item.isActive !== false,
             purchaseMode: item.purchaseMode || 'both',
+            reservationSettings: normalizeReservationSettings(item.reservationSettings),
           });
         } catch {
           showNotice('تعذّر تحميل العرض', 'error');
@@ -356,6 +362,7 @@ export default function AddProductsOffers() {
             freeDelivery: p.freeDelivery ? 'yes' : 'no',
             isWholesale: p.isWholesale || false,
             purchaseMode: p.purchaseMode || 'both',
+            reservationSettings: normalizeReservationSettings(p.reservationSettings),
           });
         } else {
           setTab('offer');
@@ -374,6 +381,7 @@ export default function AddProductsOffers() {
             freeDelivery: o.freeDelivery ? 'yes' : 'no',
             expiresAt: isoToDateInput(o.expiresAt),
             purchaseMode: o.purchaseMode || 'both',
+            reservationSettings: normalizeReservationSettings(o.reservationSettings),
           });
         }
         const blob = await resolveQueueBlob(item.imageBlob);
@@ -517,6 +525,7 @@ export default function AddProductsOffers() {
       storeItemCategoryId: product.storeItemCategoryId || undefined,
       isActive: product.isActive !== false,
       purchaseMode: product.purchaseMode || 'quantity',
+      reservationSettings: toReservationSettingsPayload(product.reservationSettings),
     };
 
     if (editProductId) {
@@ -619,6 +628,7 @@ export default function AddProductsOffers() {
       relatedProductId: offer.relatedProductId || undefined,
       isActive: offer.isActive !== false,
       purchaseMode: offer.purchaseMode || 'quantity',
+      reservationSettings: toReservationSettingsPayload(offer.reservationSettings),
     };
 
     if (editOfferId) {
@@ -741,6 +751,9 @@ export default function AddProductsOffers() {
   const saveVariantDraft = () => {
     const name = variantDraft.name.trim();
     const value = variantDraft.value.trim();
+    if (!name && !value) {
+      return;
+    }
     if (!name || !value) {
       showNotice('أدخل اسم المتغير وقيمته', 'error');
       return;
@@ -975,7 +988,7 @@ export default function AddProductsOffers() {
 
           <CollapsibleSection
             title="خيارات أخرى"
-            subtitle="طريقة الشراء، المتغيرات والوسوم"
+            subtitle="طريقة الشراء، المتغيرات، الحجوزات والوسوم"
             open={advancedOpen}
             onToggle={() => setAdvancedOpen((v) => !v)}
           >
@@ -987,6 +1000,11 @@ export default function AddProductsOffers() {
               />
             </div>
             {renderInventorySection()}
+            <ReservationSettingsSection
+              value={product.reservationSettings}
+              onChange={(reservationSettings) => setProduct({ ...product, reservationSettings })}
+              idPrefix="product-reservation"
+            />
             <TagsInput label="الوسوم" value={product.tags} onChange={(tags) => setProduct({ ...product, tags })} />
             {isEditMode && (
               <div className="availability-row">
@@ -1087,7 +1105,7 @@ export default function AddProductsOffers() {
 
           <CollapsibleSection
             title="خيارات أخرى"
-            subtitle="طريقة الشراء، المتغيرات والوسوم"
+            subtitle="طريقة الشراء، المتغيرات، الحجوزات والوسوم"
             open={advancedOpen}
             onToggle={() => setAdvancedOpen((v) => !v)}
           >
@@ -1099,6 +1117,11 @@ export default function AddProductsOffers() {
               />
             </div>
             {renderInventorySection()}
+            <ReservationSettingsSection
+              value={offer.reservationSettings}
+              onChange={(reservationSettings) => setOffer({ ...offer, reservationSettings })}
+              idPrefix="offer-reservation"
+            />
             <TagsInput label="الوسوم" value={offer.tags} onChange={(tags) => setOffer({ ...offer, tags })} />
             {isEditMode && (
               <div className="availability-row">

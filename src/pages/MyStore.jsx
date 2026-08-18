@@ -12,8 +12,10 @@ import { unwrapList } from "../utils/unwrapList";
 import LightLoadingHint from "../shared/LightLoadingHint";
 import { invalidateCatalog } from "../utils/catalogRefresh";
 import { getStoredUser } from "../utils/safeStorage";
+import { getMyStore } from "../services/store.service";
 import { getMyProducts, deleteProduct, toggleProductActive } from "../services/products.service";
 import { getMyOffers, deleteOffer, toggleOfferActive, renewOffer } from "../services/offers.service";
+import { buildCustomerStoreUrl } from "../lib/customerAppUrl";
 import "../styles/MyStore.css";
 
 const offerLifecycleLabel = (o) => {
@@ -51,6 +53,20 @@ export default function MyStore() {
   const [confirmDelete, setConfirmDelete] = useState(null);
   const [deleting, setDeleting] = useState(false);
   const [togglingId, setTogglingId] = useState(null);
+
+  const { data: storeResponse } = useQuery({
+    queryKey: queryKeys.myStore,
+    queryFn: async () => {
+      const { data } = await getMyStore();
+      return data;
+    },
+    staleTime: 5 * 60 * 1000,
+    enabled: !isSupplier,
+  });
+
+  const publicStoreUrl = !isSupplier
+    ? buildCustomerStoreUrl(storeResponse?.store?._id || storeResponse?.store?.id)
+    : null;
 
   const {
     data: products = [],
@@ -184,6 +200,16 @@ export default function MyStore() {
           <h2 className="my-store-page__title">{isSupplier ? "مستودعي" : "متجري"}</h2>
           <p className="my-store-page__subtitle">إدارة العناصر والعروض من مكان واحد</p>
         </div>
+        {publicStoreUrl && (
+          <a
+            className="my-store-page__public-btn"
+            href={publicStoreUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            متجري الإلكتروني
+          </a>
+        )}
       </header>
 
       <div className="my-store-tabs">

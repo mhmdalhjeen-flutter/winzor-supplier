@@ -27,6 +27,7 @@ export const queryKeys = {
   warehouses: ["stores", "warehouses"],
   notifications: ["notifications"],
   storeOrders: ["orders", "store"],
+  storeReservations: (status = "") => ["reservations", "store", status],
   storeCart: (base) => ["cart", base],
   storeMyOrders: ["orders", "my"],
   me: ["me"],
