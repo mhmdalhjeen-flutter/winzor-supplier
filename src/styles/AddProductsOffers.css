@@ -2041,6 +2041,23 @@
   gap: 10px;
 }
 
+.reservation-field-card__row--note {
+  grid-template-columns: 1fr;
+}
+
+.reservation-field-card textarea {
+  width: 100%;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  color: #0f172a;
+  resize: vertical;
+  min-height: 72px;
+}
+
 .reservation-field-card__actions {
   display: flex;
   flex-wrap: wrap;

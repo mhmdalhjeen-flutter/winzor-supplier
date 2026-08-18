@@ -215,7 +215,8 @@ export default function Chats() {
     })();
   }, [openConversation, fetchConversations, token]);
 
-  const handleImageSelect = async (file) => {
+  const handleImageSelect = async (file, inputEl) => {
+    if (inputEl) inputEl.value = '';
     if (!file) return;
     if (file.size > 5 * 1024 * 1024) return alert('الصورة أكبر من 5MB');
     try {
@@ -279,6 +280,7 @@ export default function Chats() {
       setMessages((prev) => prev.filter((m) => m._id !== optimistic._id));
       setText(sentText);
       setImageFile(sentImage);
+      setImagePreview(sentImage);
       setReplyTo(sentReply);
       alert(`خطأ: ${err.message}`);
     } finally {
@@ -386,7 +388,7 @@ export default function Chats() {
         type="file"
         accept="image/jpeg,image/png,image/webp"
         className="hidden-input"
-        onChange={(e) => handleImageSelect(e.target.files?.[0])}
+        onChange={(e) => handleImageSelect(e.target.files?.[0], e.target)}
       />
       <input
         ref={cameraInputRef}
@@ -394,7 +396,7 @@ export default function Chats() {
         accept="image/jpeg,image/png,image/webp"
         capture="environment"
         className="hidden-input"
-        onChange={(e) => handleImageSelect(e.target.files?.[0])}
+        onChange={(e) => handleImageSelect(e.target.files?.[0], e.target)}
       />
 
       <div className="messenger-container">

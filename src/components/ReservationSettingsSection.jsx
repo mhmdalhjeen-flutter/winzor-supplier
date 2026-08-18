@@ -1,6 +1,7 @@
 import {
   RESERVATION_FIELD_TYPES,
   createEmptyReservationField,
+  isReservationNoteField,
   normalizeReservationSettings,
 } from "../utils/reservationSettings";
 
@@ -15,6 +16,16 @@ export default function ReservationSettingsSection({ value, onChange, idPrefix =
     update({
       fields: settings.fields.map((field, i) => (i === index ? { ...field, ...patch } : field)),
     });
+  };
+
+  const changeFieldType = (index, type) => {
+    const field = settings.fields[index];
+    const patch = { type };
+    if (type === "note") {
+      patch.required = false;
+      if (!String(field.label || "").trim()) patch.label = "ملاحظة";
+    }
+    updateField(index, patch);
   };
 
   const addField = () => {
@@ -63,51 +74,73 @@ export default function ReservationSettingsSection({ value, onChange, idPrefix =
         <div className="reservation-settings__fields">
           <p className="reservation-settings__fields-title">معلومات الحجز المطلوبة من الزبون</p>
 
-          {settings.fields.map((field, index) => (
-            <div key={field.id} className="reservation-field-card">
-              <label className="field-label" htmlFor={`${idPrefix}-label-${field.id}`}>اسم الحقل</label>
-              <input
-                id={`${idPrefix}-label-${field.id}`}
-                value={field.label}
-                onChange={(e) => updateField(index, { label: e.target.value })}
-                placeholder="مثال: الاسم"
-              />
+          {settings.fields.map((field, index) => {
+            const isNote = isReservationNoteField(field);
+            return (
+              <div key={field.id} className="reservation-field-card">
+                {!isNote && (
+                  <>
+                    <label className="field-label" htmlFor={`${idPrefix}-label-${field.id}`}>اسم الحقل</label>
+                    <input
+                      id={`${idPrefix}-label-${field.id}`}
+                      value={field.label}
+                      onChange={(e) => updateField(index, { label: e.target.value })}
+                      placeholder="مثال: الاسم"
+                    />
+                  </>
+                )}
 
-              <div className="reservation-field-card__row">
-                <div>
-                  <label className="field-label" htmlFor={`${idPrefix}-type-${field.id}`}>النوع</label>
-                  <select
-                    id={`${idPrefix}-type-${field.id}`}
-                    value={field.type}
-                    onChange={(e) => updateField(index, { type: e.target.value })}
-                  >
-                    {RESERVATION_FIELD_TYPES.map((type) => (
-                      <option key={type.value} value={type.value}>{type.label}</option>
-                    ))}
-                  </select>
+                <div className={`reservation-field-card__row${isNote ? " reservation-field-card__row--note" : ""}`}>
+                  <div>
+                    <label className="field-label" htmlFor={`${idPrefix}-type-${field.id}`}>النوع</label>
+                    <select
+                      id={`${idPrefix}-type-${field.id}`}
+                      value={field.type}
+                      onChange={(e) => changeFieldType(index, e.target.value)}
+                    >
+                      {RESERVATION_FIELD_TYPES.map((type) => (
+                        <option key={type.value} value={type.value}>{type.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                  {!isNote && (
+                    <div>
+                      <label className="field-label" htmlFor={`${idPrefix}-req-${field.id}`}>إلزامي</label>
+                      <select
+                        id={`${idPrefix}-req-${field.id}`}
+                        value={field.required ? "required" : "optional"}
+                        onChange={(e) => updateField(index, { required: e.target.value === "required" })}
+                      >
+                        <option value="required">مطلوب</option>
+                        <option value="optional">اختياري</option>
+                      </select>
+                    </div>
+                  )}
                 </div>
-                <div>
-                  <label className="field-label" htmlFor={`${idPrefix}-req-${field.id}`}>إلزامي</label>
-                  <select
-                    id={`${idPrefix}-req-${field.id}`}
-                    value={field.required ? "required" : "optional"}
-                    onChange={(e) => updateField(index, { required: e.target.value === "required" })}
-                  >
-                    <option value="required">مطلوب</option>
-                    <option value="optional">اختياري</option>
-                  </select>
+
+                {isNote && (
+                  <>
+                    <label className="field-label" htmlFor={`${idPrefix}-content-${field.id}`}>نص الملاحظة</label>
+                    <textarea
+                      id={`${idPrefix}-content-${field.id}`}
+                      rows={3}
+                      value={field.content || ""}
+                      onChange={(e) => updateField(index, { content: e.target.value })}
+                      placeholder="مثال: يرجى الحضور قبل الموعد بـ 15 دقيقة"
+                    />
+                  </>
+                )}
+
+                <div className="reservation-field-card__actions">
+                  <button type="button" onClick={() => moveField(index, -1)} disabled={index === 0}>↑</button>
+                  <button type="button" onClick={() => moveField(index, 1)} disabled={index === settings.fields.length - 1}>↓</button>
+                  <button type="button" className="reservation-field-card__remove" onClick={() => removeField(index)}>
+                    {isNote ? "حذف الملاحظة" : "حذف الحقل"}
+                  </button>
                 </div>
               </div>
-
-              <div className="reservation-field-card__actions">
-                <button type="button" onClick={() => moveField(index, -1)} disabled={index === 0}>↑</button>
-                <button type="button" onClick={() => moveField(index, 1)} disabled={index === settings.fields.length - 1}>↓</button>
-                <button type="button" className="reservation-field-card__remove" onClick={() => removeField(index)}>
-                  حذف الحقل
-                </button>
-              </div>
-            </div>
-          ))}
+            );
+          })}
 
           <button type="button" className="reservation-settings__add" onClick={addField}>
             + إضافة حقل

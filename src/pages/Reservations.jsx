@@ -161,7 +161,7 @@ export default function Reservations() {
             )}
 
             <dl className="reservation-answers">
-              {(reservation.answers || []).map((answer) => (
+              {(reservation.answers || []).filter((answer) => answer.type !== "note").map((answer) => (
                 <div key={`${reservation._id}-${answer.fieldId}`}>
                   <dt>{answer.label}</dt>
                   <dd>{answer.value || "—"}</dd>

@@ -6,6 +6,15 @@ const MAX_BYTES = 5 * 1024 * 1024;
 const ALLOWED_MIME = new Set(['image/jpeg', 'image/png', 'image/webp']);
 const ALLOWED_EXT = new Set(['jpg', 'jpeg', 'png', 'webp']);
 
+function ensureUploadableFile(file) {
+  if (!file) return file;
+  const type = file.type || 'image/jpeg';
+  const extFromType = type.includes('png') ? 'png' : type.includes('webp') ? 'webp' : 'jpg';
+  const name = file.name && file.name.includes('.') ? file.name : `photo-${Date.now()}.${extFromType}`;
+  if (file.name === name && file.type === type) return file;
+  return new File([file], name, { type, lastModified: file.lastModified || Date.now() });
+}
+
 function assertValidImageFile(file) {
   if (!file) throw new Error('لم تُختر صورة');
   if (!file.type?.startsWith('image/')) throw new Error('ملف غير صالح');
@@ -24,6 +33,7 @@ function assertValidImageFile(file) {
 /**
  * Canonical upload path: File → optimize → POST /upload/image → Cloudinary URL.
  * Uses authenticated axios client (same as other store-owner API calls).
+ * Do not set Content-Type on FormData — the browser must add the multipart boundary.
  */
 export async function uploadImage(file) {
   if (!file) throw new Error('لم تُختر صورة');
@@ -31,16 +41,30 @@ export async function uploadImage(file) {
   const converted = await normalizePickedImage(file);
   if (!converted) throw new Error('لم تُختر صورة');
 
-  assertValidImageFile(converted);
+  const prepared = ensureUploadableFile(converted);
+  assertValidImageFile(prepared);
 
-  const optimized = await optimizeImageFile(converted);
-  assertValidImageFile(optimized);
+  const optimized = await optimizeImageFile(prepared);
+  const uploadable = ensureUploadableFile(optimized);
+  assertValidImageFile(uploadable);
 
   const formData = new FormData();
-  formData.append('image', optimized);
+  formData.append('image', uploadable);
 
   const { data } = await api.post('/upload/image', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
+    timeout: 60_000,
+    transformRequest: [
+      (body, headers) => {
+        if (headers) {
+          if (typeof headers.delete === 'function') {
+            headers.delete('Content-Type');
+          } else {
+            delete headers['Content-Type'];
+          }
+        }
+        return body;
+      },
+    ],
   });
 
   if (!data?.url) {
