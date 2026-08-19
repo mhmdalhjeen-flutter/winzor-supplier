@@ -185,9 +185,9 @@ export default function MyStore() {
 
   const openEdit = (item) => {
     if (view === "items") {
-      navigate(`${baseRoute}/add-product-offer?editProduct=${item._id}`);
+      navigate(`${baseRoute}/add-product-offer?editProduct=${item._id}`, { state: { editItem: item } });
     } else {
-      navigate(`${baseRoute}/add-product-offer?editOffer=${item._id}`);
+      navigate(`${baseRoute}/add-product-offer?editOffer=${item._id}`, { state: { editItem: item } });
     }
   };
 

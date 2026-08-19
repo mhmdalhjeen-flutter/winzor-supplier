@@ -4,6 +4,7 @@ import '../styles/dashboard.css';
 import '../styles/BuyCodes.css';
 
 import { API_URL } from "../lib/apiUrl";
+import { CARD_QTY_STEP, parseCardQuantity, stepCardQuantity, cardQuantityInputValue } from '../utils/cardQuantity';
 
 const API = API_URL;
 
@@ -22,6 +23,8 @@ export default function BuyCodes() {
   const [error, setError]             = useState("");
   const [loading, setLoading]         = useState(true);
   const [orderingId, setOrderingId]   = useState(null);
+
+  const [focusedQtyId, setFocusedQtyId] = useState(null);
 
   const showMsg = (msg, isError = false) => {
     isError ? setError(msg) : setMessage(msg);
@@ -66,8 +69,7 @@ export default function BuyCodes() {
   }, [fetchCardTypes, fetchOrders]);
 
   const updateQty = (id, val) => {
-    const num = parseInt(val, 10) || 0;
-    setQuantities(prev => ({ ...prev, [id]: Math.max(0, num) }));
+    setQuantities((prev) => ({ ...prev, [id]: parseCardQuantity(val) }));
   };
 
   const handleOrder = async (cardTypeId) => {
@@ -163,15 +165,18 @@ export default function BuyCodes() {
 
               <div className="code-order-row">
                 <div className="qty-picker">
-                  <button type="button" aria-label="تقليل" onClick={() => updateQty(card._id, (quantities[card._id] || 0) - 1)}>−</button>
+                  <button type="button" aria-label="تقليل" onClick={() => updateQty(card._id, stepCardQuantity(quantities[card._id], -1))}>−</button>
                   <input
                     type="number"
                     min="0"
+                    step={CARD_QTY_STEP}
                     inputMode="numeric"
-                    value={quantities[card._id] || 0}
-                    onChange={e => updateQty(card._id, e.target.value)}
+                    value={cardQuantityInputValue(quantities[card._id], focusedQtyId === card._id)}
+                    onFocus={() => setFocusedQtyId(card._id)}
+                    onBlur={() => setFocusedQtyId((current) => (current === card._id ? null : current))}
+                    onChange={(e) => updateQty(card._id, e.target.value)}
                   />
-                  <button type="button" aria-label="زيادة" onClick={() => updateQty(card._id, (quantities[card._id] || 0) + 1)}>+</button>
+                  <button type="button" aria-label="زيادة" onClick={() => updateQty(card._id, stepCardQuantity(quantities[card._id], 1))}>+</button>
                 </div>
                 <button
                   type="button"

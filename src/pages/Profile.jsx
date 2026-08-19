@@ -9,6 +9,7 @@ import CollapsibleSection from "../components/CollapsibleSection";
 import api from "../services/api";
 import { getMyStore, updateMyStore } from "../services/store.service";
 import { queryKeys } from "../lib/queryClient";
+import { readCachedMyStore, writeCachedMyStore } from "../utils/settingsCache";
 import {
   LOCAL_PHONE_PLACEHOLDER,
   sanitizeLocalPhoneInput,
@@ -52,9 +53,11 @@ export default function Profile() {
     queryKey: queryKeys.myStore,
     queryFn: async () => {
       const { data } = await getMyStore();
+      writeCachedMyStore(data);
       return data;
     },
-    staleTime: 5 * 60 * 1000,
+    placeholderData: () => readCachedMyStore(),
+    staleTime: 0,
     enabled: !isSupplier,
   });
 
@@ -131,10 +134,12 @@ export default function Profile() {
         logo: storeForm.logo,
         coverImage: storeForm.coverImage,
       });
-      queryClient.setQueryData(queryKeys.myStore, (prev) => ({
-        ...(prev || {}),
+      const next = {
+        ...(queryClient.getQueryData(queryKeys.myStore) || {}),
         store: data.store,
-      }));
+      };
+      queryClient.setQueryData(queryKeys.myStore, next);
+      writeCachedMyStore(next);
       setStoreForm({
         name: data.store.name || "",
         description: data.store.description || "",
@@ -158,23 +163,29 @@ export default function Profile() {
   const handleStoreClosedToggle = async (closed) => {
     if (!store || statusSaving) return;
     const previousOpen = store.isOpen !== false;
-    queryClient.setQueryData(queryKeys.myStore, (prev) => ({
-      ...(prev || {}),
-      store: { ...(prev?.store || store), isOpen: !closed },
-    }));
+    const optimistic = {
+      ...(queryClient.getQueryData(queryKeys.myStore) || {}),
+      store: { ...(storeResponse?.store || store), isOpen: !closed },
+    };
+    queryClient.setQueryData(queryKeys.myStore, optimistic);
+    writeCachedMyStore(optimistic);
     setStatusSaving(true);
     try {
       const { data } = await updateMyStore({ isOpen: !closed });
-      queryClient.setQueryData(queryKeys.myStore, (prev) => ({
-        ...(prev || {}),
+      const next = {
+        ...(queryClient.getQueryData(queryKeys.myStore) || {}),
         store: data.store,
-      }));
+      };
+      queryClient.setQueryData(queryKeys.myStore, next);
+      writeCachedMyStore(next);
       showMsg(closed ? "تم إغلاق المتجر" : "تم فتح المتجر");
     } catch (err) {
-      queryClient.setQueryData(queryKeys.myStore, (prev) => ({
-        ...(prev || {}),
-        store: { ...(prev?.store || store), isOpen: previousOpen },
-      }));
+      const rolledBack = {
+        ...(queryClient.getQueryData(queryKeys.myStore) || {}),
+        store: { ...(storeResponse?.store || store), isOpen: previousOpen },
+      };
+      queryClient.setQueryData(queryKeys.myStore, rolledBack);
+      writeCachedMyStore(rolledBack);
       showMsg(err.response?.data?.message || "تعذّر تحديث حالة المتجر", true);
     } finally {
       setStatusSaving(false);

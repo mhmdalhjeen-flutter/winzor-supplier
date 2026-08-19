@@ -1,6 +1,7 @@
 import api from "../services/api";
 import { getStoredUser } from "./safeStorage";
 import { setDeviceId, clearDeviceId, getDeviceId } from "./deviceId";
+import { clearSettingsCache } from "./settingsCache";
 
 export const setAuth = (data) => {
   localStorage.setItem("token", data.token);
@@ -24,6 +25,7 @@ export const logout = () => {
   localStorage.removeItem("token");
   localStorage.removeItem("refreshToken");
   localStorage.removeItem("user");
+  clearSettingsCache();
   clearDeviceId();
 
   if (token) {

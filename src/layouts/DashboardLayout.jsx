@@ -19,6 +19,7 @@ import { getMyStore } from "../services/store.service";
 import { getStoredUser } from "../utils/safeStorage";
 import { logout as authLogout } from "../utils/auth";
 import { queryKeys } from "../lib/queryClient";
+import { readCachedMyStore, writeCachedMyStore } from "../utils/settingsCache";
 
 export default function DashboardLayout() {
   const user = getStoredUser({});
@@ -39,8 +40,10 @@ export default function DashboardLayout() {
     queryKey: queryKeys.myStore,
     queryFn: async () => {
       const { data } = await getMyStore();
+      writeCachedMyStore(data);
       return data;
     },
+    placeholderData: () => readCachedMyStore(),
     staleTime: 5 * 60 * 1000,
   });
 

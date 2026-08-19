@@ -16,6 +16,8 @@ import { getMyStore, updateMyStore } from '../services/store.service';
 
 import { getStoredUser } from '../utils/safeStorage';
 
+import { readCachedMyStore, writeCachedMyStore } from '../utils/settingsCache';
+
 
 
 const DEFAULT_RECEIVING = {
@@ -100,11 +102,15 @@ export default function ReceivingSettings() {
 
       const { data } = await getMyStore();
 
+      writeCachedMyStore(data);
+
       return data;
 
     },
 
-    staleTime: 5 * 60 * 1000,
+    placeholderData: () => readCachedMyStore(),
+
+    staleTime: 0,
 
   });
 
@@ -150,13 +156,20 @@ export default function ReceivingSettings() {
 
       const { data } = await updateMyStore({ receivingMethods: next });
 
-      queryClient.setQueryData(queryKeys.myStore, (prev) => ({
+      queryClient.setQueryData(queryKeys.myStore, (prev) => {
+        const nextCache = {
 
-        ...(prev || {}),
+          ...(prev || {}),
 
-        store: data.store,
+          store: data.store,
 
-      }));
+        };
+
+        writeCachedMyStore(nextCache);
+
+        return nextCache;
+
+      });
 
       if (data?.store?.receivingMethods) {
 
@@ -282,7 +295,7 @@ export default function ReceivingSettings() {
 
 
 
-      {isLoading && (
+      {isLoading && !storeData && (
 
         <div className="payment-settings-page__loading">
 
@@ -294,7 +307,7 @@ export default function ReceivingSettings() {
 
 
 
-      {!isLoading && (
+      {storeData && (
 
         <div className="payment-methods-list">
 

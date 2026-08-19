@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import api from '../../services/api';
 import MediaUploader from '../../components/MediaUploader';
@@ -173,8 +173,56 @@ function isoToDateInput(iso) {
   return `${yyyy}-${mm}-${dd}`;
 }
 
+function productToForm(item) {
+  return {
+    ...EMPTY_PRODUCT,
+    name: item.name || '',
+    price: item.price ?? '',
+    currency: item.currency || DEFAULT_CURRENCY,
+    ...parsePriceUnit(item.priceUnit),
+    image: item.image || '',
+    description: item.description || '',
+    freeDelivery: item.freeDelivery ? 'yes' : 'no',
+    isWholesale: item.isWholesale || false,
+    tags: item.tags || [],
+    storeItemCategoryId: item.storeItemCategory?._id || item.storeItemCategory || '',
+    isActive: item.isActive !== false,
+    purchaseMode: item.purchaseMode || 'quantity',
+    reservationSettings: normalizeReservationSettings(item.reservationSettings),
+  };
+}
+
+function offerToForm(item) {
+  return {
+    ...EMPTY_OFFER,
+    title: item.title || '',
+    offerType: item.offerType || 'discount',
+    currency: item.currency || DEFAULT_CURRENCY,
+    ...parsePriceUnit(item.priceUnit),
+    originalPrice: item.originalPrice ?? '',
+    value: item.value ?? '',
+    finalPrice: item.finalPrice ?? '',
+    image: item.image || '',
+    description: item.description || '',
+    freeDelivery: item.freeDelivery ? 'yes' : 'no',
+    expiresAt: isoToDateInput(item.expiresAt),
+    tags: item.tags || [],
+    storeItemCategoryId: item.storeItemCategory?._id || item.storeItemCategory || '',
+    relatedProductId: item.relatedProduct?._id || item.relatedProduct || '',
+    isActive: item.isActive !== false,
+    purchaseMode: item.purchaseMode || 'both',
+    reservationSettings: normalizeReservationSettings(item.reservationSettings),
+  };
+}
+
+function findCachedItem(list, id) {
+  if (!Array.isArray(list) || !id) return null;
+  return list.find((item) => item?._id === id) || null;
+}
+
 export default function AddProductsOffers() {
   const navigate = useNavigate();
+  const location = useLocation();
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const editProductId = searchParams.get('editProduct');
@@ -268,73 +316,53 @@ export default function AddProductsOffers() {
   useEffect(() => {
     if (editProductId) {
       setTab('product');
+      const fromState = location.state?.editItem?._id === editProductId ? location.state.editItem : null;
+      const cached = fromState || findCachedItem(queryClient.getQueryData(queryKeys.myProducts), editProductId);
+      if (cached) setProduct(productToForm(cached));
+      let cancelled = false;
       (async () => {
         try {
           const { data } = await api.get('/products/my');
           const list = data.products || data || [];
           const item = list.find((p) => p._id === editProductId);
+          if (cancelled) return;
           if (!item) {
-            showNotice('العنصر غير موجود', 'error');
+            if (!cached) showNotice('العنصر غير موجود', 'error');
             return;
           }
-          setProduct({
-            ...EMPTY_PRODUCT,
-            name: item.name || '',
-            price: item.price ?? '',
-            currency: item.currency || DEFAULT_CURRENCY,
-            ...parsePriceUnit(item.priceUnit),
-            image: item.image || '',
-            description: item.description || '',
-            freeDelivery: item.freeDelivery ? 'yes' : 'no',
-            isWholesale: item.isWholesale || false,
-            tags: item.tags || [],
-            storeItemCategoryId: item.storeItemCategory?._id || item.storeItemCategory || '',
-            isActive: item.isActive !== false,
-            purchaseMode: item.purchaseMode || 'quantity',
-            reservationSettings: normalizeReservationSettings(item.reservationSettings),
-          });
+          setProduct(productToForm(item));
         } catch {
-          showNotice('تعذّر تحميل العنصر', 'error');
+          if (!cached && !cancelled) showNotice('تعذّر تحميل العنصر', 'error');
         }
       })();
-      return;
+      return () => { cancelled = true; };
     }
     if (editOfferId) {
       setTab('offer');
+      const fromState = location.state?.editItem?._id === editOfferId ? location.state.editItem : null;
+      const cached = fromState || findCachedItem(queryClient.getQueryData(queryKeys.myOffersAll), editOfferId);
+      if (cached) {
+        setOfferCreatedAt(cached.createdAt || null);
+        setOffer(offerToForm(cached));
+      }
+      let cancelled = false;
       (async () => {
         try {
           const { data } = await api.get('/offers/my?all=true');
           const list = data.offers || data || [];
           const item = list.find((o) => o._id === editOfferId);
+          if (cancelled) return;
           if (!item) {
-            showNotice('العرض غير موجود', 'error');
+            if (!cached) showNotice('العرض غير موجود', 'error');
             return;
           }
           setOfferCreatedAt(item.createdAt || null);
-          setOffer({
-            ...EMPTY_OFFER,
-            title: item.title || '',
-            offerType: item.offerType || 'discount',
-            currency: item.currency || DEFAULT_CURRENCY,
-            ...parsePriceUnit(item.priceUnit),
-            originalPrice: item.originalPrice ?? '',
-            value: item.value ?? '',
-            finalPrice: item.finalPrice ?? '',
-            image: item.image || '',
-            description: item.description || '',
-            freeDelivery: item.freeDelivery ? 'yes' : 'no',
-            expiresAt: isoToDateInput(item.expiresAt),
-            tags: item.tags || [],
-            storeItemCategoryId: item.storeItemCategory?._id || item.storeItemCategory || '',
-            relatedProductId: item.relatedProduct?._id || item.relatedProduct || '',
-            isActive: item.isActive !== false,
-            purchaseMode: item.purchaseMode || 'both',
-            reservationSettings: normalizeReservationSettings(item.reservationSettings),
-          });
+          setOffer(offerToForm(item));
         } catch {
-          showNotice('تعذّر تحميل العرض', 'error');
+          if (!cached && !cancelled) showNotice('تعذّر تحميل العرض', 'error');
         }
       })();
+      return () => { cancelled = true; };
     }
   }, [editProductId, editOfferId]);
 

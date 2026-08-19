@@ -25,6 +25,7 @@ import PaymentAccountCard from '../components/paymentSettings/PaymentAccountCard
 import PaymentAccountForm from '../components/paymentSettings/PaymentAccountForm';
 import CurrencyPreferencesSection from '../components/paymentSettings/CurrencyPreferencesSection';
 import { getStoredUser } from '../utils/safeStorage';
+import { readCachedMyStore, writeCachedMyStore, readCachedPaymentMethods, writeCachedPaymentMethods } from '../utils/settingsCache';
 
 export default function PaymentSettings() {
   const queryClient = useQueryClient();
@@ -51,18 +52,22 @@ export default function PaymentSettings() {
     queryKey: queryKeys.myStore,
     queryFn: async () => {
       const { data } = await getMyStore();
+      writeCachedMyStore(data);
       return data;
     },
-    staleTime: 5 * 60 * 1000,
+    placeholderData: () => readCachedMyStore(),
+    staleTime: 0,
   });
 
   const { data: paymentData, isLoading, refetch } = useQuery({
     queryKey: queryKeys.storePaymentMethods,
     queryFn: async () => {
       const { data } = await getMyPaymentMethods();
+      writeCachedPaymentMethods(data);
       return data;
     },
-    staleTime: 30 * 1000,
+    placeholderData: () => readCachedPaymentMethods(),
+    staleTime: 0,
   });
 
   const methods = paymentData?.methods || [];
@@ -115,11 +120,15 @@ export default function PaymentSettings() {
         });
         setMethodNotes(notes);
       }
-      queryClient.setQueryData(queryKeys.storePaymentMethods, (prev) => ({
-        ...(prev || {}),
-        paymentMethods: data?.paymentMethods || payload,
-        methods: data?.methods ?? prev?.methods,
-      }));
+      queryClient.setQueryData(queryKeys.storePaymentMethods, (prev) => {
+        const next = {
+          ...(prev || {}),
+          paymentMethods: data?.paymentMethods || payload,
+          methods: data?.methods ?? prev?.methods,
+        };
+        writeCachedPaymentMethods(next);
+        return next;
+      });
       queryClient.invalidateQueries({ queryKey: queryKeys.myStore });
     } catch (err) {
       throw err;
@@ -264,13 +273,13 @@ export default function PaymentSettings() {
         <div className={message.isError ? 'alert-error' : 'alert-success'}>{message.text}</div>
       )}
 
-      {isLoading && (
+      {isLoading && !paymentData && (
         <div className="payment-settings-page__loading">
           <Loader2 className="animate-spin" size={28} />
         </div>
       )}
 
-      {!isLoading && (
+      {paymentData && (
         <div className="payment-methods-list">
           {ALL_PAYMENT_METHODS.map((method) => {
             const enabled = toggles[method.settingsKey]?.enabled !== false;
