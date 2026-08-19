@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Send, Camera, ChevronRight, Check, CheckCheck,
@@ -6,8 +6,12 @@ import {
 } from 'lucide-react';
 import '../styles/Chats.css';
 import { mergeChatMessages, messagesShallowEqual } from '../utils/chatMessages';
-import ReferencedItemsBar from '../components/ReferencedItemsBar';
-import { getChatItemPath, getReferencedItems } from '../utils/chatItemRoutes';
+import {
+  getChatItemPath,
+  getReferencedItems,
+  buildChatTimeline,
+  itemTypeIcon,
+} from '../utils/chatItemRoutes';
 import { getStoredUser } from '../utils/safeStorage';
 import { getUnreadCountForUser } from '../utils/unreadCount';
 import { uploadImage } from '../utils/imageUpload';
@@ -17,6 +21,39 @@ const API = API_URL;
 const POLL_MS = 3000;
 const WARN_KEY = 'chatExpiryWarned';
 const MAX_INPUT_LINES = 3;
+
+const ITEM_TYPE_LABEL = {
+  Product: 'منتج',
+  Offer: 'عرض',
+  BazaarListing: 'إعلان في السوق',
+  Support: 'دعم',
+};
+
+function getItemTypeLabel(type) {
+  return ITEM_TYPE_LABEL[type] || 'عنصر';
+}
+
+function SharedItemCard({ item, onClick }) {
+  const typeLabel = getItemTypeLabel(item.itemType);
+
+  return (
+    <div className="msg msg--shared-item msg--animate received">
+      <button type="button" className="shared-item-card" onClick={() => onClick(item)}>
+        {item.itemImage ? (
+          <img src={item.itemImage} alt="" className="shared-item-card__media" />
+        ) : (
+          <span className="shared-item-card__media shared-item-card__media--fallback" aria-hidden>
+            {itemTypeIcon(item.itemType)}
+          </span>
+        )}
+        <div className="shared-item-card__body">
+          <h5 className="shared-item-card__title">{item.itemName || typeLabel}</h5>
+          <p className="shared-item-card__desc">{typeLabel} · اضغط لعرض التفاصيل</p>
+        </div>
+      </button>
+    </div>
+  );
+}
 
 function isMessageSenderMine(sender, myId) {
   const senderId = sender?._id || sender;
@@ -330,6 +367,10 @@ export default function Chats() {
   };
 
   const referencedItems = activeConv ? getReferencedItems(activeConv) : [];
+  const timeline = useMemo(
+    () => buildChatTimeline(messages, referencedItems),
+    [messages, referencedItems],
+  );
   const showList = !activeConv;
   const showWindow = !!activeConv;
 
@@ -485,17 +526,27 @@ export default function Chats() {
               </button>
             </div>
 
-            <ReferencedItemsBar items={referencedItems} onItemClick={openItemInStore} />
-
             <div className="chat-messages">
-              {messages.length === 0 && (
+              {timeline.length === 0 && (
                 <div className="chat-messages-empty">
                   <span>👋</span>
                   <p>ابدأ المحادثة الآن</p>
                 </div>
               )}
 
-              {messages.map((msg, i) => {
+              {timeline.map((entry, i) => {
+                if (entry.type === 'item') {
+                  const item = entry.item;
+                  return (
+                    <SharedItemCard
+                      key={`item:${item.itemType}:${item.itemId}:${item.addedAt || i}`}
+                      item={item}
+                      onClick={openItemInStore}
+                    />
+                  );
+                }
+
+                const msg = entry.msg;
                 const isMine = isMessageSenderMine(msg.sender, myId);
                 return (
                   <div
