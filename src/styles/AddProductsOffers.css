@@ -1938,6 +1938,124 @@
   margin-top: 8px;
 }
 
+/* ===== Independent feature toggles (variants / selling / reservation / tags) ===== */
+.feature-options {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.feature-toggle {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.feature-toggle__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 16px;
+  background: #f8fafc;
+}
+
+.feature-toggle.is-on .feature-toggle__header {
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.feature-toggle__title {
+  margin: 0 0 4px;
+  font-size: 15px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.feature-toggle__desc {
+  margin: 0;
+  font-size: 12px;
+  color: #64748b;
+  line-height: 1.5;
+}
+
+.feature-toggle__switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.feature-toggle__switch input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.feature-toggle__track {
+  width: 44px;
+  height: 26px;
+  border-radius: 999px;
+  background: #cbd5e1;
+  position: relative;
+  transition: background 0.15s ease;
+}
+
+.feature-toggle__thumb {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.2);
+  transition: transform 0.15s ease;
+}
+
+.feature-toggle__switch input:checked + .feature-toggle__track {
+  background: #059669;
+}
+
+.feature-toggle__switch input:checked + .feature-toggle__track .feature-toggle__thumb {
+  transform: translateX(-18px);
+}
+
+.feature-toggle__state {
+  font-size: 12px;
+  font-weight: 800;
+  color: #334155;
+}
+
+.feature-toggle__body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+}
+
+.feature-toggle__body .variants-section__header {
+  display: none;
+}
+
+.feature-toggle__body .tags-input > .field-label,
+.feature-toggle__body .tags-input > .field-hint {
+  display: none;
+}
+
+.feature-toggle__body .purchase-mode-select > .field-label {
+  display: none;
+}
+
+.feature-options .availability-row {
+  margin-top: 4px;
+  padding: 14px 16px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+}
+
 .reservation-settings__header {
   display: flex;
   align-items: flex-start;
@@ -2081,10 +2199,11 @@
 }
 
 .reservation-settings__add {
+  align-self: flex-start;
+  padding: 10px 14px;
+  border-radius: 12px;
   border: 1px dashed #94a3b8;
   background: #fff;
-  border-radius: 12px;
-  padding: 12px;
   font-family: inherit;
   font-size: 13px;
   font-weight: 800;

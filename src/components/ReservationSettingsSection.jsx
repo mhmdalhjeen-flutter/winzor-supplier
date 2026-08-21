@@ -5,8 +5,14 @@ import {
   normalizeReservationSettings,
 } from "../utils/reservationSettings";
 
-export default function ReservationSettingsSection({ value, onChange, idPrefix = "reservation" }) {
+export default function ReservationSettingsSection({
+  value,
+  onChange,
+  idPrefix = "reservation",
+  hideEnableToggle = false,
+}) {
   const settings = normalizeReservationSettings(value);
+  const showFields = hideEnableToggle || settings.enabled;
 
   const update = (patch) => {
     onChange?.({ ...settings, ...patch });
@@ -51,26 +57,28 @@ export default function ReservationSettingsSection({ value, onChange, idPrefix =
 
   return (
     <div className="reservation-settings">
-      <div className="reservation-settings__header">
-        <div>
-          <p className="reservation-settings__title">السماح بالحجز</p>
-          <p className="reservation-settings__desc">عند التفعيل يظهر للزبون زر احجز الآن بدل إضافة للسلة</p>
+      {!hideEnableToggle && (
+        <div className="reservation-settings__header">
+          <div>
+            <p className="reservation-settings__title">السماح بالحجز</p>
+            <p className="reservation-settings__desc">عند التفعيل يظهر للزبون زر احجز الآن بدل إضافة للسلة</p>
+          </div>
+          <label className="reservation-settings__switch" htmlFor={`${idPrefix}-enabled`}>
+            <input
+              id={`${idPrefix}-enabled`}
+              type="checkbox"
+              checked={settings.enabled}
+              onChange={(e) => update({ enabled: e.target.checked })}
+            />
+            <span className="reservation-settings__track" aria-hidden="true">
+              <span className="reservation-settings__thumb" />
+            </span>
+            <span className="reservation-settings__state">{settings.enabled ? "تشغيل" : "إيقاف"}</span>
+          </label>
         </div>
-        <label className="reservation-settings__switch" htmlFor={`${idPrefix}-enabled`}>
-          <input
-            id={`${idPrefix}-enabled`}
-            type="checkbox"
-            checked={settings.enabled}
-            onChange={(e) => update({ enabled: e.target.checked })}
-          />
-          <span className="reservation-settings__track" aria-hidden="true">
-            <span className="reservation-settings__thumb" />
-          </span>
-          <span className="reservation-settings__state">{settings.enabled ? "تشغيل" : "إيقاف"}</span>
-        </label>
-      </div>
+      )}
 
-      {settings.enabled && (
+      {showFields && (
         <div className="reservation-settings__fields">
           <p className="reservation-settings__fields-title">معلومات الحجز المطلوبة من الزبون</p>
 

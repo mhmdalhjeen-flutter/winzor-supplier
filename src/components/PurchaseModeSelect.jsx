@@ -12,7 +12,7 @@ export default function PurchaseModeSelect({ value, onChange, id = 'purchase-mod
 
   return (
     <div className="purchase-mode-select">
-      <label className="field-label" htmlFor={id}>طريقة الشراء</label>
+      <label className="field-label" htmlFor={id}>طريقة البيع</label>
       <div className="purchase-mode-select__options" role="radiogroup" aria-labelledby={id}>
         {OPTIONS.map((opt) => (
           <button

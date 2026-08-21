@@ -4,7 +4,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import api from '../../services/api';
 import MediaUploader from '../../components/MediaUploader';
 import TagsInput from '../../components/TagsInput';
-import CollapsibleSection from '../../components/CollapsibleSection';
+import FeatureToggleSection from '../../components/FeatureToggleSection';
 import { FormNoticeToast, FormRulesPopup, useFormNotice } from '../../components/FormNotice';
 import { OFFER_TYPE_OPTIONS, validateOfferPricing, resolveOfferType } from '../../utils/offerPricing';
 import PriceCurrencyInput from '../../components/PriceCurrencyInput';
@@ -53,6 +53,25 @@ function withVariantIds(variants = []) {
   return variants.map((variant) => (variant.id ? variant : { ...variant, id: createVariantId() }));
 }
 
+const DEFAULT_OPTION_SWITCHES = {
+  variants: false,
+  purchaseMode: false,
+  reservation: false,
+  tags: false,
+};
+
+/** Derive which feature switches should start ON from existing form/item data. */
+function deriveOptionSwitches(data = {}) {
+  const mode = String(data.purchaseMode || 'quantity').toLowerCase();
+  const reservation = normalizeReservationSettings(data.reservationSettings);
+  return {
+    variants: !!(data.variantsEnabled || (Array.isArray(data.variants) && data.variants.length > 0)),
+    purchaseMode: mode !== 'quantity',
+    reservation: !!reservation.enabled,
+    tags: Array.isArray(data.tags) && data.tags.length > 0,
+  };
+}
+
 const DRAFT_PRODUCT_KEY = 'create-draft-product';
 const DRAFT_OFFER_KEY = 'create-draft-offer';
 
@@ -71,7 +90,7 @@ const EMPTY_PRODUCT = {
   storeItemCategoryId: '',
   relatedProductId: '',
   isActive: true,
-  purchaseMode: 'both',
+  purchaseMode: 'quantity',
   reservationSettings: EMPTY_RESERVATION_SETTINGS,
 };
 
@@ -94,7 +113,7 @@ const EMPTY_OFFER = {
   storeItemCategoryId: '',
   relatedProductId: '',
   isActive: true,
-  purchaseMode: 'both',
+  purchaseMode: 'quantity',
   reservationSettings: EMPTY_RESERVATION_SETTINGS,
 };
 
@@ -189,6 +208,8 @@ function productToForm(item) {
     isActive: item.isActive !== false,
     purchaseMode: item.purchaseMode || 'quantity',
     reservationSettings: normalizeReservationSettings(item.reservationSettings),
+    variantsEnabled: !!(item.variantsEnabled || (Array.isArray(item.variants) && item.variants.length)),
+    variants: withVariantIds(item.variants || []),
   };
 }
 
@@ -210,8 +231,10 @@ function offerToForm(item) {
     storeItemCategoryId: item.storeItemCategory?._id || item.storeItemCategory || '',
     relatedProductId: item.relatedProduct?._id || item.relatedProduct || '',
     isActive: item.isActive !== false,
-    purchaseMode: item.purchaseMode || 'both',
+    purchaseMode: item.purchaseMode || 'quantity',
     reservationSettings: normalizeReservationSettings(item.reservationSettings),
+    variantsEnabled: !!(item.variantsEnabled || (Array.isArray(item.variants) && item.variants.length)),
+    variants: withVariantIds(item.variants || []),
   };
 }
 
@@ -235,7 +258,7 @@ export default function AddProductsOffers() {
   const [tab, setTab] = useState(tabParam === 'offer' ? 'offer' : 'product');
   const [loading, setLoading] = useState(false);
   const [rulesOpen, setRulesOpen] = useState(false);
-  const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [optionSwitches, setOptionSwitches] = useState(DEFAULT_OPTION_SWITCHES);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [mediaResetKey, setMediaResetKey] = useState(0);
   const [currentDraftId, setCurrentDraftId] = useState(draftIdParam || null);
@@ -255,10 +278,6 @@ export default function AddProductsOffers() {
   const hideTypeTabs = !isEditMode && dedicatedTab;
 
   useEffect(() => {
-    if (isEditMode) setAdvancedOpen(true);
-  }, [isEditMode]);
-
-  useEffect(() => {
     if (tabParam === 'offer' || tabParam === 'product') {
       setTab(tabParam);
     }
@@ -272,9 +291,11 @@ export default function AddProductsOffers() {
     if (tab === 'product') {
       if (data.variants?.length) data.variants = withVariantIds(data.variants);
       setProduct(data);
+      setOptionSwitches(deriveOptionSwitches(data));
     } else {
       if (data.variants?.length) data.variants = withVariantIds(data.variants);
       setOffer(data);
+      setOptionSwitches(deriveOptionSwitches(data));
     }
     if (data.image) setMediaResetKey((k) => k + 1);
   }, [tab, isEditMode, isPendingEdit, draftIdParam, pendingId]);
@@ -295,10 +316,12 @@ export default function AddProductsOffers() {
       const data = { ...EMPTY_PRODUCT, ...draft.data };
       if (data.variants?.length) data.variants = withVariantIds(data.variants);
       setProduct(data);
+      setOptionSwitches(deriveOptionSwitches(data));
     } else {
       const data = { ...EMPTY_OFFER, offerType: 'fixed_price', ...draft.data };
       if (data.variants?.length) data.variants = withVariantIds(data.variants);
       setOffer(data);
+      setOptionSwitches(deriveOptionSwitches(data));
     }
     if (draft.data?.image) setMediaResetKey((k) => k + 1);
   }, [draftIdParam, isEditMode, isPendingEdit]);
@@ -319,6 +342,7 @@ export default function AddProductsOffers() {
       const fromState = location.state?.editItem?._id === editProductId ? location.state.editItem : null;
       const cached = fromState || findCachedItem(queryClient.getQueryData(queryKeys.myProducts), editProductId);
       if (cached) setProduct(productToForm(cached));
+      if (cached) setOptionSwitches(deriveOptionSwitches(productToForm(cached)));
       let cancelled = false;
       (async () => {
         try {
@@ -330,7 +354,9 @@ export default function AddProductsOffers() {
             if (!cached) showNotice('العنصر غير موجود', 'error');
             return;
           }
-          setProduct(productToForm(item));
+          const form = productToForm(item);
+          setProduct(form);
+          setOptionSwitches(deriveOptionSwitches(form));
         } catch {
           if (!cached && !cancelled) showNotice('تعذّر تحميل العنصر', 'error');
         }
@@ -343,7 +369,9 @@ export default function AddProductsOffers() {
       const cached = fromState || findCachedItem(queryClient.getQueryData(queryKeys.myOffersAll), editOfferId);
       if (cached) {
         setOfferCreatedAt(cached.createdAt || null);
-        setOffer(offerToForm(cached));
+        const form = offerToForm(cached);
+        setOffer(form);
+        setOptionSwitches(deriveOptionSwitches(form));
       }
       let cancelled = false;
       (async () => {
@@ -357,7 +385,9 @@ export default function AddProductsOffers() {
             return;
           }
           setOfferCreatedAt(item.createdAt || null);
-          setOffer(offerToForm(item));
+          const form = offerToForm(item);
+          setOffer(form);
+          setOptionSwitches(deriveOptionSwitches(form));
         } catch {
           if (!cached && !cancelled) showNotice('تعذّر تحميل العرض', 'error');
         }
@@ -389,9 +419,16 @@ export default function AddProductsOffers() {
             description: p.description || '',
             freeDelivery: p.freeDelivery ? 'yes' : 'no',
             isWholesale: p.isWholesale || false,
-            purchaseMode: p.purchaseMode || 'both',
+            purchaseMode: p.purchaseMode || 'quantity',
             reservationSettings: normalizeReservationSettings(p.reservationSettings),
           });
+          setOptionSwitches(deriveOptionSwitches({
+            purchaseMode: p.purchaseMode || 'quantity',
+            reservationSettings: p.reservationSettings,
+            tags: p.tags,
+            variants: p.variants,
+            variantsEnabled: p.variantsEnabled,
+          }));
         } else {
           setTab('offer');
           const o = item.payload || {};
@@ -408,9 +445,16 @@ export default function AddProductsOffers() {
             description: o.description || '',
             freeDelivery: o.freeDelivery ? 'yes' : 'no',
             expiresAt: isoToDateInput(o.expiresAt),
-            purchaseMode: o.purchaseMode || 'both',
+            purchaseMode: o.purchaseMode || 'quantity',
             reservationSettings: normalizeReservationSettings(o.reservationSettings),
           });
+          setOptionSwitches(deriveOptionSwitches({
+            purchaseMode: o.purchaseMode || 'quantity',
+            reservationSettings: o.reservationSettings,
+            tags: o.tags,
+            variants: o.variants,
+            variantsEnabled: o.variantsEnabled,
+          }));
         }
         const blob = await resolveQueueBlob(item.imageBlob);
         if (blob) setLocalImageFile(blob);
@@ -489,6 +533,119 @@ export default function AddProductsOffers() {
     }));
   };
 
+  const setOptionSwitch = (key, enabled) => {
+    setOptionSwitches((prev) => ({ ...prev, [key]: enabled }));
+
+    if (key === 'variants') {
+      setActiveData((prev) => ({ ...prev, variantsEnabled: enabled }));
+      if (enabled) {
+        setShowVariantForm(true);
+        setVariantDraft({ name: '', value: '' });
+      }
+      return;
+    }
+
+    if (key === 'purchaseMode') {
+      if (!enabled) {
+        setActiveData((prev) => ({ ...prev, purchaseMode: 'quantity' }));
+      }
+      return;
+    }
+
+    if (key === 'reservation') {
+      setActiveData((prev) => ({
+        ...prev,
+        reservationSettings: {
+          ...normalizeReservationSettings(prev.reservationSettings),
+          enabled,
+        },
+      }));
+    }
+  };
+
+  const renderFeatureOptions = (kind) => {
+    const data = kind === 'product' ? product : offer;
+    const setData = kind === 'product' ? setProduct : setOffer;
+    const idPrefix = kind === 'product' ? 'product' : 'offer';
+
+    return (
+      <div className="feature-options">
+        <FeatureToggleSection
+          id={`${idPrefix}-opt-variants`}
+          title="متغيرات العنصر"
+          description="أضف خيارات مثل اللون أو المقاس"
+          enabled={optionSwitches.variants}
+          onToggle={(on) => setOptionSwitch('variants', on)}
+        >
+          {renderInventorySection()}
+        </FeatureToggleSection>
+
+        <FeatureToggleSection
+          id={`${idPrefix}-opt-purchase`}
+          title="طريقة البيع"
+          description="حدد كيف يشتري الزبون هذا العنصر"
+          enabled={optionSwitches.purchaseMode}
+          onToggle={(on) => setOptionSwitch('purchaseMode', on)}
+        >
+          <PurchaseModeSelect
+            value={data.purchaseMode || 'quantity'}
+            onChange={(mode) => setData({ ...data, purchaseMode: mode })}
+            id={`${idPrefix}-purchase-mode`}
+          />
+        </FeatureToggleSection>
+
+        <FeatureToggleSection
+          id={`${idPrefix}-opt-reservation`}
+          title="الحجز"
+          description="عند التفعيل يظهر للزبون زر احجز الآن بدل إضافة للسلة"
+          enabled={optionSwitches.reservation}
+          onToggle={(on) => setOptionSwitch('reservation', on)}
+        >
+          <ReservationSettingsSection
+            value={{
+              ...normalizeReservationSettings(data.reservationSettings),
+              enabled: true,
+            }}
+            onChange={(reservationSettings) => setData({
+              ...data,
+              reservationSettings: { ...reservationSettings, enabled: true },
+            })}
+            idPrefix={`${idPrefix}-reservation`}
+            hideEnableToggle
+          />
+        </FeatureToggleSection>
+
+        <FeatureToggleSection
+          id={`${idPrefix}-opt-tags`}
+          title="الوسوم"
+          description="تساعد في البحث الداخلي واكتشاف العناصر"
+          enabled={optionSwitches.tags}
+          onToggle={(on) => setOptionSwitch('tags', on)}
+        >
+          <TagsInput
+            label="الوسوم"
+            value={data.tags}
+            onChange={(tags) => setData({ ...data, tags })}
+          />
+        </FeatureToggleSection>
+
+        {isEditMode && (
+          <div className="availability-row">
+            <span className="field-label">التوفر</span>
+            <AvailabilitySwitch
+              id={`${idPrefix}-availability`}
+              checked={data.isActive !== false}
+              onChange={(checked) => setData({ ...data, isActive: checked })}
+            />
+            <span className="availability-row__hint">
+              {data.isActive !== false ? 'متاح للزبائن' : 'غير متوفر حالياً'}
+            </span>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const clearCurrentDraft = () => {
     if (currentDraftId) {
       deleteDraft(currentDraftId);
@@ -502,6 +659,7 @@ export default function AddProductsOffers() {
     setLocalImageFile(null);
     setVariantDraft({ name: '', value: '' });
     setShowVariantForm(true);
+    setOptionSwitches(DEFAULT_OPTION_SWITCHES);
     setMediaResetKey((k) => k + 1);
     if (tab === 'product') {
       setProduct({ ...EMPTY_PRODUCT });
@@ -552,8 +710,11 @@ export default function AddProductsOffers() {
       freeDelivery: product.freeDelivery === 'yes',
       storeItemCategoryId: product.storeItemCategoryId || undefined,
       isActive: product.isActive !== false,
-      purchaseMode: product.purchaseMode || 'quantity',
-      reservationSettings: toReservationSettingsPayload(product.reservationSettings),
+      purchaseMode: optionSwitches.purchaseMode ? (product.purchaseMode || 'quantity') : 'quantity',
+      reservationSettings: toReservationSettingsPayload({
+        ...normalizeReservationSettings(product.reservationSettings),
+        enabled: optionSwitches.reservation,
+      }),
     };
 
     if (editProductId) {
@@ -587,6 +748,7 @@ export default function AddProductsOffers() {
       }
       setLocalImageFile(null);
       setPendingItemId(null);
+      setOptionSwitches(DEFAULT_OPTION_SWITCHES);
       setMediaResetKey((k) => k + 1);
       if (wasPending) navigate(`${baseRoute}/pending-uploads`);
       else goToMyStoreSection();
@@ -601,6 +763,7 @@ export default function AddProductsOffers() {
       clearCurrentDraft();
       setProduct(EMPTY_PRODUCT);
       setLocalImageFile(null);
+      setOptionSwitches(DEFAULT_OPTION_SWITCHES);
       setMediaResetKey((k) => k + 1);
       goToMyStoreSection();
     } catch (err) {
@@ -655,8 +818,11 @@ export default function AddProductsOffers() {
       storeItemCategoryId: offer.storeItemCategoryId || undefined,
       relatedProductId: offer.relatedProductId || undefined,
       isActive: offer.isActive !== false,
-      purchaseMode: offer.purchaseMode || 'quantity',
-      reservationSettings: toReservationSettingsPayload(offer.reservationSettings),
+      purchaseMode: optionSwitches.purchaseMode ? (offer.purchaseMode || 'quantity') : 'quantity',
+      reservationSettings: toReservationSettingsPayload({
+        ...normalizeReservationSettings(offer.reservationSettings),
+        enabled: optionSwitches.reservation,
+      }),
     };
 
     if (editOfferId) {
@@ -690,6 +856,7 @@ export default function AddProductsOffers() {
       }
       setLocalImageFile(null);
       setPendingItemId(null);
+      setOptionSwitches(DEFAULT_OPTION_SWITCHES);
       setMediaResetKey((k) => k + 1);
       if (wasPending) navigate(`${baseRoute}/pending-uploads`);
       else goToMyStoreSection();
@@ -704,6 +871,7 @@ export default function AddProductsOffers() {
       clearCurrentDraft();
       setOffer(EMPTY_OFFER);
       setLocalImageFile(null);
+      setOptionSwitches(DEFAULT_OPTION_SWITCHES);
       setMediaResetKey((k) => k + 1);
       goToMyStoreSection();
     } catch (err) {
@@ -795,6 +963,7 @@ export default function AddProductsOffers() {
       variantsEnabled: true,
       variants: [...prev.variants, { id: createVariantId(), name, values: value }],
     }));
+    setOptionSwitches((prev) => ({ ...prev, variants: true }));
     setVariantDraft({ name: '', value: '' });
     setShowVariantForm(false);
   };
@@ -805,12 +974,6 @@ export default function AddProductsOffers() {
 
   const renderInventorySection = () => (
     <div className="variants-section">
-      <div className="variants-section__header">
-        <div>
-          <p className="variants-section__title">متغيرات العنصر</p>
-          <p className="variants-section__desc">أضف خيارات مثل اللون أو المقاس</p>
-        </div>
-      </div>
       <div className="variants-section__body">
         {activeData.variants.length > 0 && (
           <div className="variant-chips">
@@ -1014,38 +1177,7 @@ export default function AddProductsOffers() {
             />
           </div>
 
-          <CollapsibleSection
-            title="خيارات أخرى"
-            subtitle="طريقة الشراء، المتغيرات، الحجوزات والوسوم"
-            open={advancedOpen}
-            onToggle={() => setAdvancedOpen((v) => !v)}
-          >
-            <div className="purchase-method-block">
-              <PurchaseModeSelect
-                value={product.purchaseMode}
-                onChange={(mode) => setProduct({ ...product, purchaseMode: mode })}
-                id="product-purchase-mode"
-              />
-            </div>
-            {renderInventorySection()}
-            <ReservationSettingsSection
-              value={product.reservationSettings}
-              onChange={(reservationSettings) => setProduct({ ...product, reservationSettings })}
-              idPrefix="product-reservation"
-            />
-            <TagsInput label="الوسوم" value={product.tags} onChange={(tags) => setProduct({ ...product, tags })} />
-            {isEditMode && (
-              <div className="availability-row">
-                <span className="field-label">التوفر</span>
-                <AvailabilitySwitch
-                  id="product-availability"
-                  checked={product.isActive !== false}
-                  onChange={(checked) => setProduct({ ...product, isActive: checked })}
-                />
-                <span className="availability-row__hint">{product.isActive !== false ? 'متاح للزبائن' : 'غير متوفر حالياً'}</span>
-              </div>
-            )}
-          </CollapsibleSection>
+          {renderFeatureOptions('product')}
 
           {renderPublishSection()}
         </form>
@@ -1131,38 +1263,7 @@ export default function AddProductsOffers() {
             )}
           </div>
 
-          <CollapsibleSection
-            title="خيارات أخرى"
-            subtitle="طريقة الشراء، المتغيرات، الحجوزات والوسوم"
-            open={advancedOpen}
-            onToggle={() => setAdvancedOpen((v) => !v)}
-          >
-            <div className="purchase-method-block">
-              <PurchaseModeSelect
-                value={offer.purchaseMode}
-                onChange={(mode) => setOffer({ ...offer, purchaseMode: mode })}
-                id="offer-purchase-mode"
-              />
-            </div>
-            {renderInventorySection()}
-            <ReservationSettingsSection
-              value={offer.reservationSettings}
-              onChange={(reservationSettings) => setOffer({ ...offer, reservationSettings })}
-              idPrefix="offer-reservation"
-            />
-            <TagsInput label="الوسوم" value={offer.tags} onChange={(tags) => setOffer({ ...offer, tags })} />
-            {isEditMode && (
-              <div className="availability-row">
-                <span className="field-label">التوفر</span>
-                <AvailabilitySwitch
-                  id="offer-availability"
-                  checked={offer.isActive !== false}
-                  onChange={(checked) => setOffer({ ...offer, isActive: checked })}
-                />
-                <span className="availability-row__hint">{offer.isActive !== false ? 'متاح للزبائن' : 'غير متوفر حالياً'}</span>
-              </div>
-            )}
-          </CollapsibleSection>
+          {renderFeatureOptions('offer')}
 
           {renderPublishSection()}
         </form>
