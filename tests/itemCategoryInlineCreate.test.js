@@ -8,13 +8,14 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const selectSrc = fs.readFileSync(path.join(root, 'src/components/ItemCategorySelect.jsx'), 'utf8');
 const addFormSrc = fs.readFileSync(path.join(root, 'src/pages/storeOwner/AddProductsOffers.jsx'), 'utf8');
 
-test('ItemCategorySelect exposes inline add-type UI and API create', () => {
-  assert.match(selectSrc, /\+ إضافة نوع/);
-  assert.match(selectSrc, /اسم النوع/);
-  assert.match(selectSrc, /أضف/);
+test('ItemCategorySelect puts + إضافة نوع as last dropdown option', () => {
+  assert.match(selectSrc, /CREATE_OPTION_VALUE/);
+  assert.match(selectSrc, /<option value=\{CREATE_OPTION_VALUE\}>\+ إضافة نوع<\/option>/);
   assert.match(selectSrc, /createItemCategory/);
   assert.match(selectSrc, /onChange\(category\._id\)/);
-  assert.doesNotMatch(selectSrc, /<form[\s\S]*item-category-select__create/);
+  assert.match(selectSrc, /اكتب نوع العنصر/);
+  assert.match(selectSrc, /'أضف'/);
+  assert.doesNotMatch(selectSrc, /item-category-select__add/);
 });
 
 test('Add Product and Add Offer both mount ItemCategorySelect', () => {

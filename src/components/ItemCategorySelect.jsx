@@ -4,6 +4,8 @@ import { queryKeys } from '../lib/queryClient';
 import { createItemCategory, getMyItemCategories } from '../services/itemCategories.service';
 import '../styles/itemCategories.css';
 
+const CREATE_OPTION_VALUE = '__create_item_type__';
+
 export default function ItemCategorySelect({ value, onChange, id = 'item-category' }) {
   const queryClient = useQueryClient();
   const [creating, setCreating] = useState(false);
@@ -20,11 +22,31 @@ export default function ItemCategorySelect({ value, onChange, id = 'item-categor
     staleTime: 60 * 1000,
   });
 
-  const resetCreate = () => {
+  const resetCreate = ({ clearError = true } = {}) => {
     setCreating(false);
     setNewName('');
     setSaving(false);
+    if (clearError) setError('');
+  };
+
+  const openCreate = () => {
+    setCreating(true);
+    setNewName('');
+    setSaving(false);
     setError('');
+  };
+
+  const cancelCreate = () => {
+    resetCreate();
+  };
+
+  const handleSelectChange = (e) => {
+    const next = e.target.value;
+    if (next === CREATE_OPTION_VALUE) {
+      openCreate();
+      return;
+    }
+    onChange(next || null);
   };
 
   const handleCreate = async (e) => {
@@ -54,65 +76,72 @@ export default function ItemCategorySelect({ value, onChange, id = 'item-categor
 
   return (
     <div className="item-category-select">
-      <label className="field-label" htmlFor={id}>نوع العنصر</label>
-      <div className="item-category-select__wrap">
-        <select
-          id={id}
-          className="item-category-select__dropdown"
-          value={value || ''}
-          onChange={(e) => onChange(e.target.value || null)}
-          disabled={isLoading}
-        >
-          <option value="">— بدون تصنيف —</option>
-          {categories.map((cat) => (
-            <option key={cat._id} value={cat._id}>{cat.name}</option>
-          ))}
-        </select>
-      </div>
+      <label className="field-label" htmlFor={creating ? `${id}-new-name` : id}>
+        نوع العنصر
+      </label>
 
-      {creating ? (
-        <div className="item-category-select__create">
-          <label className="item-category-select__create-label" htmlFor={`${id}-new-name`}>
-            اسم النوع
-          </label>
-          <input
-            id={`${id}-new-name`}
-            type="text"
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                handleCreate(e);
-              }
-            }}
-            placeholder="اكتب اسم النوع"
-            maxLength={80}
-            autoFocus
-            disabled={saving}
-          />
-          <button type="button" onClick={handleCreate} disabled={saving || !newName.trim()}>
-            {saving ? 'جارٍ...' : 'أضف'}
-          </button>
-          <button type="button" className="muted" onClick={resetCreate} disabled={saving}>
-            إلغاء
-          </button>
-        </div>
-      ) : (
-        <button
-          type="button"
-          className="item-category-select__add"
-          onClick={() => { setCreating(true); setError(''); }}
-        >
-          + إضافة نوع
-        </button>
-      )}
+      <div className="item-category-select__wrap">
+        {creating ? (
+          <div className="item-category-select__inline-create">
+            <input
+              id={`${id}-new-name`}
+              type="text"
+              className="item-category-select__input"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleCreate(e);
+                } else if (e.key === 'Escape') {
+                  e.preventDefault();
+                  cancelCreate();
+                }
+              }}
+              placeholder="اكتب نوع العنصر..."
+              maxLength={80}
+              autoFocus
+              disabled={saving}
+            />
+            <button
+              type="button"
+              className="item-category-select__submit"
+              onClick={handleCreate}
+              disabled={saving || !newName.trim()}
+            >
+              {saving ? 'جارٍ...' : 'أضف'}
+            </button>
+            <button
+              type="button"
+              className="item-category-select__cancel"
+              onClick={cancelCreate}
+              disabled={saving}
+            >
+              إلغاء
+            </button>
+          </div>
+        ) : (
+          <select
+            id={id}
+            className="item-category-select__dropdown"
+            value={value || ''}
+            onChange={handleSelectChange}
+            disabled={isLoading}
+          >
+            <option value="">— بدون تصنيف —</option>
+            {categories.map((cat) => (
+              <option key={cat._id} value={cat._id}>{cat.name}</option>
+            ))}
+            <option value={CREATE_OPTION_VALUE}>+ إضافة نوع</option>
+          </select>
+        )}
+      </div>
 
       {error && <p className="item-category-select__error">{error}</p>}
 
       {!isLoading && categories.length === 0 && !creating && (
         <p className="item-category-select__hint">
-          أنشئ أنواعاً من هنا أو من إعدادات المتجر ← الملف الشخصي ← أنواع العناصر
+          اختر &quot;+ إضافة نوع&quot; من القائمة أو أدر الأنواع من إعدادات المتجر
         </p>
       )}
     </div>
