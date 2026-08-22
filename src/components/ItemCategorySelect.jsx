@@ -28,7 +28,7 @@ export default function ItemCategorySelect({ value, onChange, id = 'item-categor
   };
 
   const handleCreate = async (e) => {
-    e.preventDefault();
+    e?.preventDefault?.();
     const name = newName.trim();
     if (!name || saving) return;
     setSaving(true);
@@ -71,23 +71,33 @@ export default function ItemCategorySelect({ value, onChange, id = 'item-categor
       </div>
 
       {creating ? (
-        <form className="item-category-select__create" onSubmit={handleCreate}>
+        <div className="item-category-select__create">
+          <label className="item-category-select__create-label" htmlFor={`${id}-new-name`}>
+            اسم النوع
+          </label>
           <input
+            id={`${id}-new-name`}
             type="text"
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                handleCreate(e);
+              }
+            }}
             placeholder="اكتب اسم النوع"
             maxLength={80}
             autoFocus
             disabled={saving}
           />
-          <button type="submit" disabled={saving || !newName.trim()}>
+          <button type="button" onClick={handleCreate} disabled={saving || !newName.trim()}>
             {saving ? 'جارٍ...' : 'أضف'}
           </button>
           <button type="button" className="muted" onClick={resetCreate} disabled={saving}>
             إلغاء
           </button>
-        </form>
+        </div>
       ) : (
         <button
           type="button"
